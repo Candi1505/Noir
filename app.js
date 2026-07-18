@@ -3025,6 +3025,13 @@
       "click",
       savePriorities
     );
+        
+    getElement(
+      "toggleFullTableButton"
+    )?.addEventListener(
+      "click",
+      toggleFullTable
+    );
 
 
     getElement(
