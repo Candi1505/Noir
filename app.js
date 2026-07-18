@@ -1027,7 +1027,7 @@
         "loadingStatus"
       ),
 
-      "Connecting to the Crystal Nexus..."
+      "Connecting to Nexus..."
 
     );
 
