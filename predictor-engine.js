@@ -44,28 +44,48 @@
   }
 
   function getRawDatabase(chestType) {
-    const chest = normalise(chestType);
+  const chest = normalise(chestType);
 
-    if (chest === "gold") {
-      return (
-        global.GOLD_CHEST_DATA ||
-        global.GOLD_DATABASE ||
-        global.CHEST_DATA?.gold ||
-        null
-      );
-    }
+  /*
+   * Cloud data is now the preferred source.
+   */
+  const cloudDatabase =
+    global.CHEST_DATA?.[chest];
 
-    if (chest === "platinum") {
-      return (
-        global.PLATINUM_CHEST_DATA ||
-        global.PLATINUM_DATABASE ||
-        global.CHEST_DATA?.platinum ||
-        null
-      );
-    }
-
-    return null;
+  if (cloudDatabase) {
+    return cloudDatabase;
   }
+
+  /*
+   * Legacy JavaScript databases remain only
+   * as an optional offline fallback.
+   */
+  if (chest === "gold") {
+    return (
+      global.GOLD_CHEST_DATA ||
+      global.GOLD_DATABASE ||
+      null
+    );
+  }
+
+  if (chest === "platinum") {
+    return (
+      global.PLATINUM_CHEST_DATA ||
+      global.PLATINUM_DATABASE ||
+      null
+    );
+  }
+
+  if (chest === "draconic") {
+    return (
+      global.DRACONIC_CHEST_DATA ||
+      global.DRACONIC_DATABASE ||
+      null
+    );
+  }
+
+  return null;
+}
 
   function findProfile(database, profileName) {
     if (!database) return null;
