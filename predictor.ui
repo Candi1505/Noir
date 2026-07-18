@@ -1260,3 +1260,807 @@
         );
       });
   }
+  function candidateText(
+    candidates,
+    usedCount
+  ) {
+    if (!candidates?.length) {
+      return "No match";
+    }
+
+    if (candidates.length === 1) {
+      const position =
+        candidates[0] + usedCount + 1;
+
+      return `Position ${position}`;
+    }
+
+    return (
+      `${candidates.length} possible ` +
+      "positions"
+    );
+  }
+
+  function renderResults() {
+    const drops = currentDrops();
+
+    const result = Engine.solve(
+      state.chestType,
+      state.profileName,
+      drops
+    );
+
+    const message =
+      document.getElementById(
+        "ccSolverMessage"
+      );
+
+    const confidence =
+      document.getElementById(
+        "ccConfidence"
+      );
+
+    const trackGrid =
+      document.getElementById(
+        "ccTrackGrid"
+      );
+
+    const predictionList =
+      document.getElementById(
+        "ccPredictionList"
+      );
+
+    if (!result.available) {
+      confidence.textContent = "0%";
+
+      message.className =
+        "cc-muted cc-status-bad";
+
+      message.textContent =
+        "The selected predictor database could not be loaded.";
+
+      trackGrid.innerHTML = "";
+
+      predictionList.innerHTML = `
+        <div class="cc-muted">
+          Predictions are unavailable.
+        </div>
+      `;
+
+      renderSequenceTable(null);
+      return;
+    }
+
+    if (!drops.length) {
+      confidence.textContent = "0%";
+
+      message.className = "cc-muted";
+
+      message.textContent =
+        `${titleCase(
+          state.profileName
+        )} ${titleCase(
+          state.chestType
+        )} data is loaded. ` +
+        "Enter your first chest result.";
+
+      trackGrid.innerHTML = "";
+
+      predictionList.innerHTML = `
+        <div class="cc-muted">
+          Upcoming rewards will appear
+          as the sequence narrows.
+        </div>
+      `;
+
+      renderSequenceTable(null);
+      return;
+    }
+
+    if (!result.matched) {
+      const mismatch =
+        Engine.findFirstMismatch(
+          state.chestType,
+          state.profileName,
+          drops
+        );
+
+      confidence.textContent = "0%";
+
+      message.className =
+        "cc-muted cc-status-bad";
+
+      message.textContent = mismatch
+        ? (
+            `Entry ${mismatch} is the first ` +
+            "result that does not match. " +
+            "Check its rarity, exact reward, " +
+            "event profile and bonus marker."
+          )
+        : (
+            "The entered results do not " +
+            "match this sequence."
+          );
+
+      trackGrid.innerHTML = "";
+
+      predictionList.innerHTML = `
+        <div class="cc-muted">
+          Correct the mismatched result
+          before relying on predictions.
+        </div>
+      `;
+
+      renderSequenceTable(null);
+      return;
+    }
+
+    confidence.textContent =
+      `${result.confidence}%`;
+
+    const currentPosition =
+      Engine.getLikelyCurrentPosition(
+        result
+      );
+
+    const unresolved =
+      result.totalTracks -
+      result.exactTracks;
+
+    if (currentPosition !== null) {
+      message.className =
+        "cc-muted cc-status-good";
+
+      message.textContent =
+        "Sequence located. Your latest " +
+        "regular chest is at position " +
+        `${currentPosition + 1}.`;
+    } else {
+      message.className =
+        "cc-muted cc-status-warning";
+
+      message.textContent =
+        `Still narrowing: ${unresolved} ` +
+        `sequence track${
+          unresolved === 1 ? "" : "s"
+        } still ${
+          unresolved === 1 ? "has" : "have"
+        } multiple possible positions.`;
+    }
+
+    const tracks = [
+      {
+        label: "Main rarity",
+        candidates:
+          result.rarity.mainCandidates,
+        used:
+          result.rarity.regularCount
+      }
+    ];
+
+    if (
+      result.profile.bonusSequence.length
+    ) {
+      tracks.push({
+        label: "Bonus rarity",
+        candidates:
+          result.rarity.bonusCandidates,
+        used:
+          result.rarity.bonusCount
+      });
+    }
+
+    Object.entries(result.rewards)
+      .filter(
+        ([, solution]) =>
+          solution.observations.length > 0
+      )
+      .forEach(
+        ([rarity, solution]) => {
+          tracks.push({
+            label:
+              `${rarity} rewards`,
+            candidates:
+              solution.candidates,
+            used:
+              solution.observations.length
+          });
+        }
+      );
+
+    trackGrid.innerHTML = tracks
+      .map(
+        track => `
+          <div class="cc-track">
+            <span>
+              ${escapeHTML(track.label)}
+            </span>
+
+            <strong>
+              ${escapeHTML(
+                candidateText(
+                  track.candidates,
+                  track.used
+                )
+              )}
+            </strong>
+          </div>
+        `
+      )
+      .join("");
+
+    const predictions =
+      Engine.predictUpcoming(
+        state.chestType,
+        state.profileName,
+        drops,
+        5
+      );
+
+    if (!predictions.length) {
+      predictionList.innerHTML = `
+        <div class="cc-muted">
+          Keep entering results to narrow
+          the main rarity sequence to one
+          position.
+        </div>
+      `;
+    } else {
+      predictionList.innerHTML =
+        predictions
+          .map(
+            prediction => `
+              <div class="cc-prediction">
+                <div
+                  class="cc-prediction-number"
+                >
+                  ${prediction.number}
+                </div>
+
+                <div>
+                  <strong
+                    class="${rarityClass(
+                      prediction.rarity
+                    )}"
+                  >
+                    ${escapeHTML(
+                      prediction.reward
+                    )}
+                  </strong>
+
+                  <small>
+                    Position
+                    ${prediction.position}
+                    •
+                    ${escapeHTML(
+                      prediction.rarity
+                    )}
+                  </small>
+                </div>
+              </div>
+            `
+          )
+          .join("");
+    }
+
+    renderSequenceTable(
+      currentPosition
+    );
+  }
+
+  function renderSequenceTable(
+    currentPosition
+  ) {
+    const table =
+      document.getElementById(
+        "ccSequenceTable"
+      );
+
+    const rows =
+      Engine.buildSequenceTable(
+        state.chestType,
+        state.profileName
+      );
+
+    if (!rows.length) {
+      table.innerHTML = `
+        <div
+          class="cc-muted"
+          style="padding: 14px"
+        >
+          No sequence table is available.
+        </div>
+      `;
+
+      return;
+    }
+
+    table.innerHTML = `
+      <table class="cc-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Rarity</th>
+            <th>Reward</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          ${rows
+            .map(
+              row => `
+                <tr
+                  class="${
+                    currentPosition !== null &&
+                    row.position ===
+                      currentPosition + 1
+                      ? "cc-current-row"
+                      : ""
+                  }"
+                >
+                  <td
+                    class="cc-table-position"
+                  >
+                    ${row.position}
+                  </td>
+
+                  <td>
+                    <span
+                      class="${rarityClass(
+                        row.rarity
+                      )}"
+                    >
+                      ${escapeHTML(
+                        row.rarity
+                      )}
+                    </span>
+                  </td>
+
+                  <td>
+                    ${escapeHTML(
+                      row.reward
+                    )}
+                  </td>
+                </tr>
+              `
+            )
+            .join("")}
+        </tbody>
+      </table>
+    `;
+
+    const bonusSection =
+      document.getElementById(
+        "ccBonusTableSection"
+      );
+
+    const bonusRows =
+      Engine.buildBonusTable(
+        state.chestType,
+        state.profileName
+      );
+
+    if (!bonusRows.length) {
+      bonusSection.classList.add(
+        "cc-hidden"
+      );
+
+      return;
+    }
+
+    bonusSection.classList.remove(
+      "cc-hidden"
+    );
+
+    document.getElementById(
+      "ccBonusTable"
+    ).innerHTML = `
+      <table class="cc-table">
+        <thead>
+          <tr>
+            <th>Bonus #</th>
+            <th>Rarity</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          ${bonusRows
+            .map(
+              row => `
+                <tr>
+                  <td
+                    class="cc-table-position"
+                  >
+                    ${row.position}
+                  </td>
+
+                  <td>
+                    <span
+                      class="${rarityClass(
+                        row.rarity
+                      )}"
+                    >
+                      ${escapeHTML(
+                        row.rarity
+                      )}
+                    </span>
+                  </td>
+                </tr>
+              `
+            )
+            .join("")}
+        </tbody>
+      </table>
+    `;
+  }
+
+  function renderEverything() {
+    renderHeader();
+    renderSelectors();
+    renderRarityButtons();
+
+    document.getElementById(
+      "ccRewardSearch"
+    ).value = "";
+
+    renderRewardButtons();
+    renderDropList();
+    renderResults();
+
+    const sequenceContainer =
+      document.getElementById(
+        "ccSequenceContainer"
+      );
+
+    const toggleButton =
+      document.getElementById(
+        "ccToggleSequence"
+      );
+
+    sequenceContainer.classList.toggle(
+      "cc-hidden",
+      !state.sequenceVisible
+    );
+
+    toggleButton.textContent =
+      state.sequenceVisible
+        ? "Hide full sequence"
+        : "Show full sequence";
+  }
+
+  function openPredictor(
+    chestType = null
+  ) {
+    if (
+      chestType === "gold" ||
+      chestType === "platinum"
+    ) {
+      state.chestType = chestType;
+      state.selectedRarity = "";
+      saveState();
+    }
+
+    renderEverything();
+
+    document
+      .getElementById(
+        "ccPredictorOverlay"
+      )
+      .classList.add("cc-open");
+
+    document.body.style.overflow =
+      "hidden";
+  }
+
+  function closePredictor() {
+    document
+      .getElementById(
+        "ccPredictorOverlay"
+      )
+      .classList.remove("cc-open");
+
+    document.body.style.overflow = "";
+  }
+
+  function detectChestType(
+    element
+  ) {
+    const text = [
+      element.dataset.chest,
+      element.dataset.chestType,
+      element.dataset.predictor,
+      element.id,
+      element.className,
+      element.textContent,
+      element.getAttribute(
+        "aria-label"
+      ),
+      element.getAttribute("title")
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+
+    if (
+      text.includes("platinum")
+    ) {
+      return "platinum";
+    }
+
+    if (text.includes("gold")) {
+      return "gold";
+    }
+
+    return null;
+  }
+
+  function attachExistingPredictorButtons() {
+    const elements =
+      document.querySelectorAll(
+        [
+          "button",
+          "[role='button']",
+          "[data-chest]",
+          "[data-predictor]",
+          "[id*='predictor' i]",
+          "[class*='predictor' i]"
+        ].join(",")
+      );
+
+    elements.forEach(element => {
+      if (
+        element.dataset
+          .ccPredictorBound === "true"
+      ) {
+        return;
+      }
+
+      const chestType =
+        detectChestType(element);
+
+      if (!chestType) {
+        return;
+      }
+
+      const description = [
+        element.textContent,
+        element.id,
+        element.className
+      ]
+        .join(" ")
+        .toLowerCase();
+
+      const looksLikePredictor =
+        description.includes(
+          "predictor"
+        ) ||
+        description.includes(
+          "sequence"
+        ) ||
+        description.includes(
+          "engine ready"
+        );
+
+      if (!looksLikePredictor) {
+        return;
+      }
+
+      element.dataset
+        .ccPredictorBound = "true";
+
+      element.addEventListener(
+        "click",
+        event => {
+          event.preventDefault();
+          event.stopPropagation();
+
+          openPredictor(
+            chestType
+          );
+        },
+        true
+      );
+    });
+  }
+
+  function addPredictorLauncher() {
+    if (
+      document.getElementById(
+        "ccPredictorLauncher"
+      )
+    ) {
+      return;
+    }
+
+    const button =
+      document.createElement(
+        "button"
+      );
+
+    button.id =
+      "ccPredictorLauncher";
+
+    button.type = "button";
+
+    button.textContent =
+      "🔮 Predictor";
+
+    button.addEventListener(
+      "click",
+      () => {
+        openPredictor();
+      }
+    );
+
+    document.body.appendChild(
+      button
+    );
+  }
+
+  function attachPredictorEvents() {
+    document
+      .getElementById(
+        "ccClosePredictor"
+      )
+      .addEventListener(
+        "click",
+        closePredictor
+      );
+
+    document
+      .getElementById(
+        "ccRewardSearch"
+      )
+      .addEventListener(
+        "input",
+        renderRewardButtons
+      );
+
+    document
+      .getElementById(
+        "ccUndoDrop"
+      )
+      .addEventListener(
+        "click",
+        () => {
+          const drops = [
+            ...currentDrops()
+          ];
+
+          drops.pop();
+
+          setCurrentDrops(drops);
+          renderDropList();
+          renderResults();
+        }
+      );
+
+    document
+      .getElementById(
+        "ccResetDrops"
+      )
+      .addEventListener(
+        "click",
+        () => {
+          const confirmed =
+            window.confirm(
+              "Reset every recorded result for this chest and profile?"
+            );
+
+          if (!confirmed) {
+            return;
+          }
+
+          setCurrentDrops([]);
+          renderDropList();
+          renderResults();
+        }
+      );
+
+    document
+      .getElementById(
+        "ccToggleSequence"
+      )
+      .addEventListener(
+        "click",
+        () => {
+          state.sequenceVisible =
+            !state.sequenceVisible;
+
+          saveState();
+
+          const container =
+            document.getElementById(
+              "ccSequenceContainer"
+            );
+
+          const button =
+            document.getElementById(
+              "ccToggleSequence"
+            );
+
+          container.classList.toggle(
+            "cc-hidden",
+            !state.sequenceVisible
+          );
+
+          button.textContent =
+            state.sequenceVisible
+              ? "Hide full sequence"
+              : "Show full sequence";
+        }
+      );
+
+    document
+      .getElementById(
+        "ccPredictorOverlay"
+      )
+      .addEventListener(
+        "click",
+        event => {
+          if (
+            event.target.id ===
+            "ccPredictorOverlay"
+          ) {
+            closePredictor();
+          }
+        }
+      );
+
+    document.addEventListener(
+      "keydown",
+      event => {
+        if (
+          event.key === "Escape"
+        ) {
+          closePredictor();
+        }
+      }
+    );
+  }
+
+  function initialise() {
+    addPredictorStyles();
+    createPredictorOverlay();
+    attachPredictorEvents();
+    attachExistingPredictorButtons();
+    addPredictorLauncher();
+
+    const observer =
+      new MutationObserver(() => {
+        attachExistingPredictorButtons();
+      });
+
+    observer.observe(
+      document.body,
+      {
+        childList: true,
+        subtree: true
+      }
+    );
+
+    console.info(
+      "[Chest Companion] Predictor UI ready.",
+      Engine.databaseStatus()
+    );
+  }
+
+  if (
+    document.readyState ===
+    "loading"
+  ) {
+    document.addEventListener(
+      "DOMContentLoaded",
+      initialise
+    );
+  } else {
+    initialise();
+  }
+
+  window.ChestPredictorUI =
+    Object.freeze({
+      open: openPredictor,
+      close: closePredictor,
+      render: renderEverything
+    });
+})(window);
