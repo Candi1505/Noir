@@ -2744,6 +2744,51 @@
      FULL SEQUENCE TABLE
   ======================================================= */
 
+  function toggleFullTable() {
+
+    const tableContainer =
+      getElement("fullSequenceTable");
+
+    const toggleButton =
+      getElement("toggleFullTableButton");
+
+    if (!tableContainer) {
+
+      return;
+
+    }
+
+    const isHidden =
+      tableContainer.hidden ||
+      tableContainer.style.display === "none";
+
+    if (isHidden) {
+
+      tableContainer.hidden = false;
+      tableContainer.style.display = "block";
+
+      renderFullSequenceTable();
+
+      if (toggleButton) {
+
+        toggleButton.textContent = "Hide";
+
+      }
+
+    } else {
+
+      tableContainer.hidden = true;
+      tableContainer.style.display = "none";
+
+      if (toggleButton) {
+
+        toggleButton.textContent = "Show";
+
+      }
+
+    }
+
+  }
   function renderFullSequenceTable() {
 
     const tableContainer =
