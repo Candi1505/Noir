@@ -932,7 +932,37 @@
             </span>
           </label>
         </section>
+        <section class="cc-card">
+          <h2>Recorded drops</h2>
 
+          <p
+            id="ccDropCount"
+            class="cc-muted"
+          ></p>
+
+          <div
+            id="ccDropList"
+            class="cc-drop-list"
+          ></div>
+
+          <div class="cc-actions">
+            <button
+              id="ccUndoDrop"
+              class="cc-action"
+              type="button"
+            >
+              Undo last
+            </button>
+
+            <button
+              id="ccResetDrops"
+              class="cc-action cc-action-danger"
+              type="button"
+            >
+              Reset tracker
+            </button>
+          </div>
+        </section>
         <section class="cc-card">
           <div class="cc-result-header">
             <div>
@@ -2485,8 +2515,6 @@
           event.detail?.eventId ||
           "";
 
-        state.selectedRarity =
-          "";
 
         saveState();
 
