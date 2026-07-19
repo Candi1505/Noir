@@ -3112,6 +3112,29 @@
       .join("");
 
   }
+  /* =========================================================
+   DOUBLE ARMORY HELPERS
+========================================================= */
+
+function getSequenceBlock(position) {
+
+    if (position >= 1 && position <= 33) return "1–33";
+
+    if (position >= 34 && position <= 66) return "34–66";
+
+    if (position >= 67 && position <= 100) return "67–100";
+
+    return "Unknown";
+
+}
+
+function getArmoryPage(position, positionsPerPage = 20) {
+
+    if (!position || position < 1) return "-";
+
+    return Math.ceil(position / positionsPerPage);
+
+}
 
 
   /* =======================================================
