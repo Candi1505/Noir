@@ -989,6 +989,26 @@
           ></div>
         </section>
 
+<section class="cc-card">
+  <h2>Double Armory</h2>
+
+  <div id="ccArmoryGrid" class="cc-track-grid">
+    <div class="cc-track">
+      <span>Sequence Position</span>
+      <strong id="ccArmoryPosition">-</strong>
+    </div>
+
+    <div class="cc-track">
+      <span>Sequence Block</span>
+      <strong id="ccArmoryBlock">-</strong>
+    </div>
+
+    <div class="cc-track">
+      <span>Suggested Page</span>
+      <strong id="ccArmoryPage">-</strong>
+    </div>
+  </div>
+</section>
         <section class="cc-card">
           <h2>Upcoming rewards</h2>
 
@@ -1711,6 +1731,45 @@
       "positions"
     );
   }
+function getSequenceBlock(position) {
+  if (position >= 1 && position <= 33) {
+    return "1–33";
+  }
+
+  if (position >= 34 && position <= 66) {
+    return "34–66";
+  }
+
+  if (position >= 67 && position <= 100) {
+    return "67–100";
+  }
+
+  return "Unknown";
+}
+
+function getArmoryPage(
+  position,
+  positionsPerPage = 20
+) {
+  const safePosition =
+    Number(position);
+
+  const safePageSize =
+    Number(positionsPerPage);
+
+  if (
+    !Number.isFinite(safePosition) ||
+    !Number.isFinite(safePageSize) ||
+    safePosition < 1 ||
+    safePageSize < 1
+  ) {
+    return "-";
+  }
+
+  return Math.ceil(
+    safePosition / safePageSize
+  );
+}
 
   function renderResults() {
     const drops = currentDrops();
@@ -1740,6 +1799,27 @@
       document.getElementById(
         "ccPredictionList"
       );
+      
+      const armoryPosition =
+  document.getElementById(
+    "ccArmoryPosition"
+  );
+
+const armoryBlock =
+  document.getElementById(
+    "ccArmoryBlock"
+  );
+
+const armoryPage =
+  document.getElementById(
+    "ccArmoryPage"
+  );
+
+function resetArmoryDisplay() {
+  armoryPosition.textContent = "-";
+  armoryBlock.textContent = "-";
+  armoryPage.textContent = "-";
+}
 
     if (!result.available) {
       confidence.textContent = "0%";
@@ -1757,8 +1837,9 @@
           Predictions are unavailable.
         </div>
       `;
-
-      renderSequenceTable(null);
+    
+resetArmoryDisplay();
+    renderSequenceTable(null);
       return;
     }
 
@@ -1781,7 +1862,7 @@
           as the sequence narrows.
         </div>
       `;
-
+resetArmoryDisplay();
       renderSequenceTable(null);
       return;
     }
@@ -1819,7 +1900,7 @@
           before relying on predictions.
         </div>
       `;
-
+resetArmoryDisplay();
       renderSequenceTable(null);
       return;
     }
@@ -1831,6 +1912,20 @@
       Engine.getLikelyCurrentPosition(
         result
       );
+      const predictedPosition =
+  currentPosition !== null
+    ? currentPosition + 1
+    : null;
+
+const block =
+  predictedPosition
+    ? getSequenceBlock(predictedPosition)
+    : "-";
+
+const page =
+  predictedPosition
+    ? getArmoryPage(predictedPosition)
+    : "-";
 
     const unresolved =
       result.totalTracks -
@@ -1971,7 +2066,21 @@
           )
           .join("");
     }
+document.getElementById(
+  "ccArmoryPosition"
+).textContent =
+  predictedPosition ?? "-";
 
+document.getElementById(
+  "ccArmoryBlock"
+).textContent =
+  block;
+
+document.getElementById(
+  "ccArmoryPage"
+).textContent =
+  page;
+  
     renderSequenceTable(
       currentPosition
     );
