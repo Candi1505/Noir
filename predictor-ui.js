@@ -1223,9 +1223,6 @@
                   .ccChest;
 
 
-              state.selectedRarity =
-                "";
-
 
               saveState();
 
@@ -2142,14 +2139,18 @@
     `;
   }
 
-  function renderEverything() {
+    function renderEverything() {
+
     renderHeader();
+
     renderSelectors();
-    renderRarityButtons();
+
 
     document.getElementById(
       "ccRewardSearch"
-    ).value = "";
+    ).value =
+      "";
+
 
     renderRewardButtons();
     renderDropList();
@@ -2188,8 +2189,6 @@
       state.chestType =
         chestType;
 
-      state.selectedRarity =
-        "";
 
     }
 
