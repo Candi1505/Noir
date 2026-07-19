@@ -23,86 +23,211 @@
     return;
   }
 
-  const STORAGE_KEY = "chestCompanionBetaPredictor";
+    const STORAGE_KEY =
+    "chestCompanionBetaPredictor";
 
-  const defaultState = {
-    chestType: "gold",
-    profileName: "breeding",
-    selectedRarity: "",
-    sequenceVisible: false,
-    drops: {
-      gold: {
-        breeding: [],
-        pvp: []
-      },
-      platinum: {
-        breeding: [],
-        pvp: []
-      }
-    }
+
+  const EVENT_NAMES = {
+
+    breeding:
+      "Breeding",
+
+    fortification:
+      "Fortification",
+
+    "crystal-caves":
+      "Crystal Caves",
+
+    "temple-raids":
+      "Temple Raids",
+
+    "team-gauntlet":
+      "Team Gauntlet",
+
+    "fight-pits":
+      "Fight Pits"
+
   };
 
-  let state = loadState();
+
+  const defaultState = {
+
+    chestType:
+      "gold",
+
+    eventId:
+      "",
+
+    selectedRarity:
+      "",
+
+    sequenceVisible:
+      false,
+
+    drops:
+      {}
+
+  };
+
+
+  let state =
+    loadState();
+
 
   function cloneDefaultState() {
-    return JSON.parse(JSON.stringify(defaultState));
+
+    return JSON.parse(
+      JSON.stringify(
+        defaultState
+      )
+    );
+
   }
 
-  function loadState() {
-    try {
-      const saved = JSON.parse(
-        localStorage.getItem(STORAGE_KEY) || "{}"
-      );
 
-      const fresh = cloneDefaultState();
+  function getActiveEventId() {
+
+    return (
+      window
+        .ChestPredictorUpload
+        ?.getSelectedEvent?.() ||
+
+      state.eventId ||
+
+      ""
+    );
+
+  }
+
+
+  function getActiveEventName() {
+
+    const eventId =
+      getActiveEventId();
+
+
+    return (
+      window
+        .ChestPredictorUpload
+        ?.getEventName?.(
+          eventId
+        ) ||
+
+      EVENT_NAMES[eventId] ||
+
+      eventId ||
+
+      "No event selected"
+    );
+
+  }
+
+
+  function getDropStorageKey() {
+
+    const eventId =
+      getActiveEventId();
+
+
+    return (
+      `${eventId}:${state.chestType}`
+    );
+
+  }
+
+
+  function loadState() {
+
+    try {
+
+      const saved =
+        JSON.parse(
+
+          localStorage.getItem(
+            STORAGE_KEY
+          ) ||
+
+          "{}"
+
+        );
+
 
       return {
-        ...fresh,
+
+        ...cloneDefaultState(),
+
         ...saved,
-        drops: {
-          gold: {
-            breeding:
-              saved?.drops?.gold?.breeding || [],
-            pvp:
-              saved?.drops?.gold?.pvp || []
-          },
-          platinum: {
-            breeding:
-              saved?.drops?.platinum?.breeding || [],
-            pvp:
-              saved?.drops?.platinum?.pvp || []
-          }
-        }
+
+        eventId:
+          saved.eventId ||
+          "",
+
+        drops:
+
+          saved.drops &&
+          typeof saved.drops ===
+            "object"
+
+            ? saved.drops
+
+            : {}
+
       };
+
     } catch (error) {
+
       console.warn(
         "[Chest Companion] Could not restore predictor state.",
         error
       );
 
+
       return cloneDefaultState();
+
     }
+
   }
+
 
   function saveState() {
+
     localStorage.setItem(
+
       STORAGE_KEY,
-      JSON.stringify(state)
+
+      JSON.stringify(
+        state
+      )
+
     );
+
   }
+
 
   function currentDrops() {
+
     return (
-      state.drops[state.chestType][state.profileName] ||
+      state.drops[
+        getDropStorageKey()
+      ] ||
+
       []
     );
+
   }
 
-  function setCurrentDrops(drops) {
-    state.drops[state.chestType][state.profileName] =
-      drops;
+
+  function setCurrentDrops(
+    drops
+  ) {
+
+    state.drops[
+      getDropStorageKey()
+    ] = drops;
+
 
     saveState();
+
   }
 
   function escapeHTML(value) {
