@@ -2,8 +2,7 @@
    CHEST COMPANION V2
    Database and Authentication
 
-   Built by Cherubim
-   Artwork by Eff
+   
 ========================================================= */
 
 window.ChestDatabase = {
