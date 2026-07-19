@@ -592,7 +592,7 @@
   }
 
 
-  /*   /* =======================================================
+  /* =======================================================
      UPLOADED PREDICTOR DATA HELPERS
   ======================================================= */
 
@@ -1883,11 +1883,13 @@
   }
 
 
-  function resumeActiveSession() {
+    async function resumeActiveSession() {
 
-    if (
-      !appState.activeSession
-    ) {
+    const activeSession =
+      appState.activeSession;
+
+
+    if (!activeSession) {
 
       return;
 
@@ -1895,9 +1897,61 @@
 
 
     currentChest =
-      appState
-        .activeSession
-        .chest;
+      activeSession.chest;
+
+
+    const eventId =
+      activeSession.eventId ||
+      getSelectedEventId();
+
+
+    try {
+
+      const profile =
+        await window
+          .ChestPredictorEngine
+          ?.activate?.(
+            currentChest,
+            eventId
+          );
+
+
+      if (!profile) {
+
+        window.alert(
+          `The saved ${capitalise(
+            currentChest
+          )} predictor workbook could not be loaded.`
+        );
+
+
+        showView(
+          "predictorView",
+          "Predictor"
+        );
+
+
+        return;
+
+      }
+
+    } catch (error) {
+
+      console.error(
+        "Saved predictor session could not be resumed:",
+        error
+      );
+
+
+      window.alert(
+        error?.message ||
+        "The saved predictor session could not be resumed."
+      );
+
+
+      return;
+
+    }
 
 
     renderTrackerScreen();
@@ -1912,22 +1966,16 @@
       )} Tracker`
 
     );
-    
-        setText(
-
-      getElement(
-        "trackerEventLabel"
-      ),
-
-      getSelectedEventName()
-
-    );
 
   }
     
 
 
-  function renderTrackerScreen() {
+    function renderTrackerScreen() {
+
+    const activeSession =
+      appState.activeSession;
+
 
     setText(
 
@@ -1940,18 +1988,22 @@
     );
 
 
+    setText(
+
+      getElement(
+        "trackerEventLabel"
+      ),
+
+      activeSession?.eventName ||
+      getSelectedEventName()
+
+    );
+
+
     const searchInput =
       getElement(
         "dropSearchInput"
       );
-
-
-    if (
-      searchInput
-    ) {
-
-      searchInput.value =
-        "";
 
     }
 
