@@ -511,9 +511,26 @@
         padding-right: 3px;
       }
 
-      .cc-reward-button {
+           .cc-reward-button {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        width: 100%;
         text-align: left;
         line-height: 1.3;
+      }
+
+      .cc-reward-name {
+        min-width: 0;
+        font-weight: 850;
+      }
+
+      .cc-reward-rarity {
+        flex: 0 0 auto;
+        font-size: 12px;
+        font-weight: 850;
+        opacity: .95;
       }
 
       .cc-reward-button:active {
@@ -922,36 +939,44 @@
           </label>
         </section>
 
-        <section class="cc-card">
-          <h2>Recorded drops</h2>
+                <section class="cc-card">
+          <h2>Record chest drop</h2>
 
-          <p
-            id="ccDropCount"
-            class="cc-muted"
-          ></p>
+          <p class="cc-muted">
+            Search for the reward you received,
+            then tap it to record the chest.
+          </p>
+
+          <span class="cc-field-label">
+            Reward received
+          </span>
+
+          <input
+            id="ccRewardSearch"
+            class="cc-search"
+            type="search"
+            placeholder="Search Food, shards, tokens..."
+            autocomplete="off"
+          />
 
           <div
-            id="ccDropList"
-            class="cc-drop-list"
+            id="ccRewardButtons"
+            class="cc-reward-grid"
           ></div>
 
-          <div class="cc-actions">
-            <button
-              id="ccUndoDrop"
-              class="cc-action"
-              type="button"
-            >
-              Undo last
-            </button>
+          <label
+            id="ccBonusRow"
+            class="cc-bonus-row"
+          >
+            <input
+              id="ccBonusCheck"
+              type="checkbox"
+            />
 
-            <button
-              id="ccResetDrops"
-              class="cc-action cc-action-danger"
-              type="button"
-            >
-              Reset tracker
-            </button>
-          </div>
+            <span>
+              This was a Platinum bonus chest
+            </span>
+          </label>
         </section>
 
         <section class="cc-card">
@@ -1264,178 +1289,338 @@
 
   }
   
-  function renderRarityButtons() {
-    const container =
-      document.getElementById(
-        "ccRarityButtons"
-      );
+    function getAllRewardOptions() {
 
-    const rarities = Engine.getRarities(
-      state.chestType,
-      getActiveEventId()
-    );
+    const eventId =
+      getActiveEventId();
 
-    if (!rarities.length) {
-      container.innerHTML = `
-        <div class="cc-muted">
-          No rarity data was found for this profile.
-        </div>
-      `;
 
-      state.selectedRarity = "";
-      return;
+    if (!eventId) {
+
+      return [];
+
     }
 
-    const selectedStillExists =
-      rarities.some(
-        rarity =>
-          Engine.normalise(rarity) ===
-          Engine.normalise(
-            state.selectedRarity
-          )
-      );
 
-    if (!selectedStillExists) {
-      state.selectedRarity = rarities[0];
-      saveState();
-    }
-
-    container.innerHTML = rarities
-      .map(
-        rarity => `
-          <button
-            type="button"
-            class="
-              cc-rarity-button
-              ${rarityClass(rarity)}
-              ${
-                Engine.normalise(rarity) ===
-                Engine.normalise(
-                  state.selectedRarity
-                )
-                  ? "cc-active"
-                  : ""
-              }
-            "
-            data-cc-rarity="${escapeHTML(rarity)}"
-          >
-            ${escapeHTML(rarity)}
-          </button>
-        `
+    const rarities =
+      Engine.getRarities(
+        state.chestType,
+        eventId
       )
-      .join("");
+        .filter(
+          isValidRarity
+        );
 
-    container
-      .querySelectorAll("[data-cc-rarity]")
-      .forEach(button => {
-        button.addEventListener(
-          "click",
-          () => {
-            state.selectedRarity =
-              button.dataset.ccRarity;
 
-            saveState();
-            renderRarityButtons();
-            renderRewardButtons();
+    const options =
+      [];
+
+
+    rarities.forEach(
+      rarity => {
+
+        const rewards =
+          Engine.getRewardCatalogue(
+            state.chestType,
+            eventId,
+            rarity
+          ) || [];
+
+
+        rewards.forEach(
+          reward => {
+
+            const cleanReward =
+              String(
+                reward ||
+                ""
+              ).trim();
+
+
+            if (!cleanReward) {
+
+              return;
+
+            }
+
+
+            options.push({
+              reward:
+                cleanReward,
+
+              rarity:
+                rarity
+            });
+
           }
         );
-      });
+
+      }
+    );
+
+
+    const unique =
+      new Map();
+
+
+    options.forEach(
+      option => {
+
+        const key =
+          `${Engine.normalise(
+            option.reward
+          )}:${Engine.normalise(
+            option.rarity
+          )}`;
+
+
+        if (!unique.has(key)) {
+
+          unique.set(
+            key,
+            option
+          );
+
+        }
+
+      }
+    );
+
+
+    return Array.from(
+      unique.values()
+    ).sort(
+      (
+        first,
+        second
+      ) =>
+
+        first.reward.localeCompare(
+          second.reward,
+          undefined,
+          {
+            numeric: true,
+            sensitivity: "base"
+          }
+        )
+
+    );
+
   }
 
-  function renderRewardButtons() {
+    function renderRewardButtons() {
+
     const container =
       document.getElementById(
         "ccRewardButtons"
       );
 
+
     const search =
       document
-        .getElementById("ccRewardSearch")
+        .getElementById(
+          "ccRewardSearch"
+        )
         .value
         .trim()
         .toLowerCase();
 
+
     const rewards =
-  Engine.getRewardCatalogue(
-    state.chestType,
-    getActiveEventId(),
-    state.selectedRarity
-  ).filter(reward =>
-    reward.toLowerCase().includes(search)
-  );
+      getAllRewardOptions()
+        .filter(
+          option => {
+
+            const searchable =
+              `${option.reward} ${option.rarity}`
+                .toLowerCase();
+
+
+            return searchable.includes(
+              search
+            );
+
+          }
+        );
+
 
     if (!rewards.length) {
+
       container.innerHTML = `
+
         <div class="cc-muted">
-          No rewards were found for this rarity.
+
+          No matching rewards were found
+          in the uploaded workbook.
+
         </div>
+
       `;
 
       return;
+
     }
 
-    container.innerHTML = rewards
-      .map(
-        reward => `
-          <button
-            type="button"
-            class="cc-reward-button"
-            data-cc-reward="${escapeHTML(reward)}"
-          >
-            ${escapeHTML(reward)}
-          </button>
-        `
-      )
-      .join("");
+
+    container.innerHTML =
+      rewards
+        .map(
+          option => `
+
+            <button
+
+              type="button"
+
+              class="cc-reward-button"
+
+              data-cc-reward="${escapeHTML(
+                option.reward
+              )}"
+
+              data-cc-rarity="${escapeHTML(
+                option.rarity
+              )}"
+
+            >
+
+              <span class="cc-reward-name">
+
+                ${escapeHTML(
+                  option.reward
+                )}
+
+              </span>
+
+              <span
+                class="
+                  cc-reward-rarity
+                  ${rarityClass(
+                    option.rarity
+                  )}
+                "
+              >
+
+                ${escapeHTML(
+                  option.rarity
+                )}
+
+              </span>
+
+            </button>
+
+          `
+        )
+        .join("");
+
 
     container
-      .querySelectorAll("[data-cc-reward]")
-      .forEach(button => {
-        button.addEventListener(
-          "click",
-          () => {
-            recordDrop(
-              button.dataset.ccReward
-            );
-          }
-        );
-      });
+      .querySelectorAll(
+        "[data-cc-reward]"
+      )
+      .forEach(
+        button => {
+
+          button.addEventListener(
+
+            "click",
+
+            () => {
+
+              recordDrop(
+
+                button.dataset
+                  .ccReward,
+
+                button.dataset
+                  .ccRarity
+
+              );
+
+            }
+
+          );
+
+        }
+      );
+
   }
 
-  function recordDrop(reward) {
+    function recordDrop(
+    reward,
+    rarity
+  ) {
+
     if (
-      !state.selectedRarity ||
-      !reward
+      !reward ||
+      !isValidRarity(
+        rarity
+      )
     ) {
+
       return;
+
     }
 
+
     const bonus =
-      state.chestType === "platinum" &&
+      state.chestType ===
+        "platinum" &&
+
       document.getElementById(
         "ccBonusCheck"
       ).checked;
 
+
     const drops = [
+
       ...currentDrops(),
+
       {
-        rarity: state.selectedRarity,
-        sequence: state.selectedRarity,
-        reward,
-        bonus,
+
+        rarity:
+          rarity,
+
+        sequence:
+          rarity,
+
+        reward:
+          reward,
+
+        bonus:
+          bonus,
+
         recordedAt:
-          new Date().toISOString()
+          new Date()
+            .toISOString()
+
       }
+
     ];
 
-    setCurrentDrops(drops);
+
+    setCurrentDrops(
+      drops
+    );
+
 
     document.getElementById(
       "ccBonusCheck"
-    ).checked = false;
+    ).checked =
+      false;
+
+
+    document.getElementById(
+      "ccRewardSearch"
+    ).value =
+      "";
+
+
+    renderRewardButtons();
 
     renderDropList();
+
     renderResults();
+
   }
 
   function renderDropList() {
