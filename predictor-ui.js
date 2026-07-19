@@ -1201,6 +1201,50 @@
 
   }
 
+    async function activateCurrentPredictor() {
+
+    const eventId =
+      getActiveEventId();
+
+
+    state.eventId =
+      eventId;
+
+
+    saveState();
+
+
+    if (!eventId) {
+
+      return null;
+
+    }
+
+
+    try {
+
+      return await Engine.activate(
+
+        state.chestType,
+
+        eventId
+
+      );
+
+    } catch (error) {
+
+      console.error(
+        "[Chest Companion] Uploaded predictor activation failed.",
+        error
+      );
+
+
+      return null;
+
+    }
+
+  }
+  
   function renderRarityButtons() {
     const container =
       document.getElementById(
