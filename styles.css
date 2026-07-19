@@ -339,7 +339,7 @@ p{
 
 }
 
-.crystal-loader {
+.noir-loader {
 
     width: 54px;
     height: 54px;
@@ -1483,7 +1483,7 @@ nav {
     display: grid;
 
     grid-template-columns:
-        repeat(4,1fr);
+        repeat(5,1fr);
 
     gap: .45rem;
 
