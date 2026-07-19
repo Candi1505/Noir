@@ -1253,7 +1253,7 @@
 
     const rarities = Engine.getRarities(
       state.chestType,
-      state.profileName
+      getActiveEventId(),
     );
 
     if (!rarities.length) {
@@ -1532,7 +1532,7 @@
 
     const result = Engine.solve(
       state.chestType,
-      state.profileName,
+      getActiveEventId(),
       drops
     );
 
@@ -1607,7 +1607,7 @@
       const mismatch =
         Engine.findFirstMismatch(
           state.chestType,
-          state.profileName,
+          getActiveEventId(),
           drops
         );
 
@@ -1805,7 +1805,7 @@
     const rows =
       Engine.buildSequenceTable(
         state.chestType,
-        state.profileName
+        getActiveEventId()
       );
 
     if (!rows.length) {
