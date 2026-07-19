@@ -1,6 +1,7 @@
 /* ============================================================
    CHEST COMPANION V2 — UPLOADED WORKBOOK PREDICTOR ENGINE
-   
+   Gold + Platinum workbook parser
+   Includes Tables (Combining) and Drop names reward discovery
    ============================================================ */
 
 (function initialiseChestPredictor(global) {
@@ -10,40 +11,48 @@
     "gold",
     "platinum"
   ]);
-  
-    const VALID_RARITIES =
-    new Set([
-      "common",
-      "rare",
-      "epic",
-      "legendary",
-      "mythic"
-    ]);
 
+  const VALID_RARITIES = new Set([
+    "common",
+    "rare",
+    "epic",
+    "legendary",
+    "mythic"
+  ]);
 
-  const INVALID_SEQUENCE_LABELS =
-    new Set([
-      "assault",
-      "pvp",
-      "breeding",
-      "fortification",
-      "crystal caves",
-      "temple raids",
-      "team gauntlet",
-      "fight pits",
-      "gold",
-      "gold chest",
-      "platinum",
-      "platinum chest",
-      "name",
-      "rarity",
-      "reward",
-      "rewards",
-      "valid for",
-      "notes",
-      "sequence",
-      "sequence cycle"
-    ]);
+  const INVALID_SEQUENCE_LABELS = new Set([
+    "assault",
+    "pvp",
+    "breeding",
+    "fortification",
+    "crystal caves",
+    "temple raids",
+    "team gauntlet",
+    "fight pits",
+    "gold",
+    "gold chest",
+    "platinum",
+    "platinum chest",
+    "bonus",
+    "bonus chest",
+    "name",
+    "names",
+    "drop name",
+    "drop names",
+    "item",
+    "items",
+    "rarity",
+    "reward",
+    "rewards",
+    "amount",
+    "quantity",
+    "type",
+    "category",
+    "valid for",
+    "notes",
+    "sequence",
+    "sequence cycle"
+  ]);
 
   const EVENT_PROFILE_MAP = Object.freeze({
     breeding: "breeding",
@@ -101,22 +110,15 @@
     return ((value % length) + length) % length;
   }
 
-    function cleanCell(value) {
-
+  function cleanCell(value) {
     if (
       value === null ||
       value === undefined
     ) {
-
       return "";
-
     }
 
-
-    if (
-      typeof value === "object"
-    ) {
-
+    if (typeof value === "object") {
       return String(
         value.result ||
         value.value ||
@@ -124,136 +126,101 @@
         value.v ||
         ""
       ).trim();
-
     }
 
-
     return String(value).trim();
-
   }
 
-
-  function isValidRarity(
-    value
-  ) {
-
+  function isValidRarity(value) {
     return VALID_RARITIES.has(
       normalise(value)
     );
-
   }
 
+  function formatRarity(value) {
+    const cleaned = normalise(value);
 
-  function isNumericOnly(
-    value
-  ) {
+    if (!VALID_RARITIES.has(cleaned)) {
+      return "";
+    }
 
-    return /^\d+(?:\.\d+)?$/.test(
-      String(
-        value ||
-        ""
-      ).trim()
+    return (
+      cleaned.charAt(0).toUpperCase() +
+      cleaned.slice(1)
     );
-
   }
 
+  function isNumericOnly(value) {
+    return /^\d+(?:\.\d+)?$/.test(
+      String(value || "").trim()
+    );
+  }
 
-  function isInvalidSequenceLabel(
-    value
-  ) {
-
-    const cleaned =
-      normalise(value);
-
+  function isInvalidSequenceLabel(value) {
+    const cleaned = normalise(value);
 
     return (
       !cleaned ||
-
-      INVALID_SEQUENCE_LABELS.has(
-        cleaned
-      ) ||
-
-      cleaned.startsWith(
-        "sequence cycle"
-      ) ||
-
-      cleaned.startsWith(
-        "valid for"
-      )
+      INVALID_SEQUENCE_LABELS.has(cleaned) ||
+      cleaned.startsWith("sequence cycle") ||
+      cleaned.startsWith("valid for")
     );
-
   }
 
-
-  function cleanRaritySequence(
-    sequence
-  ) {
-
+  function cleanRaritySequence(sequence) {
     return sequence
-      .map(
-        cleanCell
-      )
-      .filter(
-        isValidRarity
-      )
-      .map(
-        value => {
-
-          const cleaned =
-            normalise(value);
-
-
-          return (
-            cleaned.charAt(0)
-              .toUpperCase() +
-            cleaned.slice(1)
-          );
-
-        }
-      );
-
+      .map(cleanCell)
+      .filter(isValidRarity)
+      .map(formatRarity);
   }
 
-
-  function cleanRewardSequence(
-    sequence
-  ) {
-
+  function cleanRewardSequence(sequence) {
     return sequence
-      .map(
-        cleanCell
-      )
-      .filter(
-        value => {
-
-          if (
-            !value ||
-            value.startsWith("=")
-          ) {
-
-            return false;
-
-          }
-
-
-          if (
-            isNumericOnly(value) ||
-            isValidRarity(value) ||
-            isInvalidSequenceLabel(
-              value
-            )
-          ) {
-
-            return false;
-
-          }
-
-
-          return true;
-
+      .map(cleanCell)
+      .filter(value => {
+        if (
+          !value ||
+          value.startsWith("=")
+        ) {
+          return false;
         }
-      );
 
+        if (
+          isNumericOnly(value) ||
+          isValidRarity(value) ||
+          isInvalidSequenceLabel(value)
+        ) {
+          return false;
+        }
+
+        return /[a-z]/i.test(value);
+      });
+  }
+
+  function looksLikeRewardName(value) {
+    const cleaned = cleanCell(value);
+
+    if (
+      !cleaned ||
+      cleaned.startsWith("=") ||
+      isNumericOnly(cleaned) ||
+      isValidRarity(cleaned) ||
+      isInvalidSequenceLabel(cleaned)
+    ) {
+      return false;
+    }
+
+    const normalisedValue = normalise(cleaned);
+
+    if (
+      normalisedValue.includes("drop name") ||
+      normalisedValue.includes("sequence cycle") ||
+      normalisedValue.includes("valid for")
+    ) {
+      return false;
+    }
+
+    return /[a-z]/i.test(cleaned);
   }
 
   function normaliseChestType(chestType) {
@@ -373,7 +340,186 @@
     );
   }
 
-  function findHeaderRowIndex(rows) {
+  function findDropNamesSheet(
+    workbookRecord
+  ) {
+    return (
+      getSheetByName(
+        workbookRecord,
+        "Drop names"
+      ) ||
+      findSheetContaining(
+        workbookRecord,
+        ["drop", "names"]
+      ) ||
+      findSheetContaining(
+        workbookRecord,
+        ["drop"]
+      ) ||
+      null
+    );
+  }
+
+  function findRarityNearCell(
+    row,
+    columnIndex
+  ) {
+    const nearbyIndexes = [
+      columnIndex - 1,
+      columnIndex + 1,
+      columnIndex - 2,
+      columnIndex + 2
+    ];
+
+    for (const nearbyIndex of nearbyIndexes) {
+      if (nearbyIndex < 0) {
+        continue;
+      }
+
+      const rarity = formatRarity(
+        row?.[nearbyIndex]
+      );
+
+      if (rarity) {
+        return rarity;
+      }
+    }
+
+    return "";
+  }
+
+  function findColumnRarity(
+    rows,
+    columnIndex,
+    rowIndex
+  ) {
+    const minimumRow = Math.max(
+      0,
+      rowIndex - 12
+    );
+
+    for (
+      let searchRow = rowIndex - 1;
+      searchRow >= minimumRow;
+      searchRow -= 1
+    ) {
+      const directRarity = formatRarity(
+        rows[searchRow]?.[columnIndex]
+      );
+
+      if (directRarity) {
+        return directRarity;
+      }
+
+      const nearbyRarity = findRarityNearCell(
+        rows[searchRow] || [],
+        columnIndex
+      );
+
+      if (nearbyRarity) {
+        return nearbyRarity;
+      }
+    }
+
+    return "";
+  }
+
+  function parseDropNamesSheet(
+    workbookRecord
+  ) {
+    const sheet = findDropNamesSheet(
+      workbookRecord
+    );
+
+    if (
+      !sheet ||
+      !Array.isArray(sheet.rows)
+    ) {
+      return {
+        catalogue: [],
+        rarityMap: {}
+      };
+    }
+
+    const catalogue = [];
+    const rarityMap = {};
+    const currentRarityByColumn = {};
+
+    sheet.rows.forEach(
+      (row, rowIndex) => {
+        if (!Array.isArray(row)) {
+          return;
+        }
+
+        row.forEach(
+          (cell, columnIndex) => {
+            const cellRarity =
+              formatRarity(cell);
+
+            if (cellRarity) {
+              currentRarityByColumn[
+                columnIndex
+              ] = cellRarity;
+            }
+          }
+        );
+
+        const rowRarity =
+          row
+            .map(formatRarity)
+            .find(Boolean) ||
+          "";
+
+        row.forEach(
+          (cell, columnIndex) => {
+            const reward =
+              cleanCell(cell);
+
+            if (
+              !looksLikeRewardName(
+                reward
+              )
+            ) {
+              return;
+            }
+
+            const rarity =
+              findRarityNearCell(
+                row,
+                columnIndex
+              ) ||
+              currentRarityByColumn[
+                columnIndex
+              ] ||
+              findColumnRarity(
+                sheet.rows,
+                columnIndex,
+                rowIndex
+              ) ||
+              rowRarity;
+
+            catalogue.push(reward);
+
+            if (rarity) {
+              rarityMap[
+                compactNormalise(
+                  reward
+                )
+              ] = rarity;
+            }
+          }
+        );
+      }
+    );
+
+    return {
+      catalogue:
+        unique(catalogue),
+
+      rarityMap
+    };
+  }
+    function findHeaderRowIndex(rows) {
     return rows.findIndex(row => {
       const cells = row.map(normalise);
 
@@ -394,12 +540,11 @@
     });
   }
 
-      function findGroupTitle(
+  function findGroupTitle(
     rows,
     columnIndex,
     headerRowIndex
   ) {
-
     const recognisedTitles = [
       "common drop",
       "rare drop",
@@ -412,42 +557,34 @@
       "bonus"
     ];
 
-
     for (
       let rowIndex =
         headerRowIndex - 1;
-
       rowIndex >=
         Math.max(
           0,
           headerRowIndex - 12
         );
-
       rowIndex -= 1
     ) {
-
       for (
         let offset = 0;
         offset <= 3;
         offset += 1
       ) {
-
         const possibleColumns = [
           columnIndex,
           columnIndex - offset,
           columnIndex + offset
         ];
 
-
         for (
           const possibleColumn of
           possibleColumns
         ) {
-
           if (possibleColumn < 0) {
             continue;
           }
-
 
           const value =
             cleanCell(
@@ -456,10 +593,8 @@
               ]
             );
 
-
           const text =
             normalise(value);
-
 
           if (
             recognisedTitles.some(
@@ -467,49 +602,35 @@
                 text.includes(title)
             )
           ) {
-
             return value;
-
           }
-
         }
-
       }
-
     }
 
-
     return "";
-
   }
-
 
   function findSequenceLength(
     rows,
     profileColumnIndex,
     headerRowIndex
   ) {
-
     for (
       let rowIndex =
         headerRowIndex - 1;
-
       rowIndex >= 0;
-
       rowIndex -= 1
     ) {
-
       const value =
         rows[rowIndex]?.[
           profileColumnIndex
         ];
 
-
       const numericValue =
         Number(
           cleanCell(value)
         );
-
 
       if (
         Number.isFinite(
@@ -517,20 +638,14 @@
         ) &&
         numericValue > 0
       ) {
-
         return Math.floor(
           numericValue
         );
-
       }
-
     }
 
-
     return null;
-
   }
-
 
   function readColumnSequence(
     rows,
@@ -545,11 +660,17 @@
       rowIndex < rows.length;
       rowIndex += 1
     ) {
-      const value = cleanCell(
-        rows[rowIndex]?.[columnIndex]
-      );
+      const value =
+        cleanCell(
+          rows[rowIndex]?.[
+            columnIndex
+          ]
+        );
 
-      if (!value || value.startsWith("=")) {
+      if (
+        !value ||
+        value.startsWith("=")
+      ) {
         continue;
       }
 
@@ -557,7 +678,8 @@
 
       if (
         expectedLength &&
-        sequence.length >= expectedLength
+        sequence.length >=
+          expectedLength
       ) {
         break;
       }
@@ -579,23 +701,32 @@
       );
     }
 
-    const headerRow = rows[headerRowIndex];
+    const headerRow =
+      rows[headerRowIndex];
+
     const groups = [];
 
     for (
       let columnIndex = 0;
-      columnIndex < headerRow.length;
+      columnIndex <
+        headerRow.length;
       columnIndex += 1
     ) {
-      const header = normalise(
-        headerRow[columnIndex]
-      );
+      const header =
+        normalise(
+          headerRow[columnIndex]
+        );
 
       const isProfileColumn =
-        selectedProfile === "breeding"
-          ? header.includes("breeding")
+        selectedProfile ===
+        "breeding"
+          ? header.includes(
+              "breeding"
+            )
           : (
-              header.includes("assault") ||
+              header.includes(
+                "assault"
+              ) ||
               header === "pvp"
             );
 
@@ -603,7 +734,7 @@
         continue;
       }
 
-            const title =
+      const title =
         findGroupTitle(
           rows,
           columnIndex,
@@ -617,7 +748,7 @@
           headerRowIndex
         );
 
-            const rawSequence =
+      const rawSequence =
         readColumnSequence(
           rows,
           columnIndex,
@@ -625,10 +756,8 @@
           expectedLength
         );
 
-
       const normalisedTitle =
         normalise(title);
-
 
       const sequence =
         (
@@ -639,11 +768,9 @@
             "bonus"
           )
         )
-
           ? cleanRaritySequence(
               rawSequence
             )
-
           : cleanRewardSequence(
               rawSequence
             );
@@ -655,7 +782,6 @@
       groups.push({
         title,
         normalisedTitle,
-        
         columnIndex,
         expectedLength,
         sequence
@@ -665,13 +791,9 @@
     return groups;
   }
 
-    function isRewardGroup(
-    group
-  ) {
-
+  function isRewardGroup(group) {
     const title =
       group.normalisedTitle;
-
 
     return (
       title.includes(
@@ -690,30 +812,43 @@
         "mythic drop"
       )
     );
-
   }
 
-  function getRarityFromGroup(group) {
+  function getRarityFromGroup(
+    group
+  ) {
     const title =
       group.normalisedTitle;
 
-    if (title.includes("common")) {
+    if (
+      title.includes("common")
+    ) {
       return "Common";
     }
 
-    if (title.includes("rare")) {
+    if (
+      title.includes("rare")
+    ) {
       return "Rare";
     }
 
-    if (title.includes("epic")) {
+    if (
+      title.includes("epic")
+    ) {
       return "Epic";
     }
 
-    if (title.includes("legendary")) {
+    if (
+      title.includes(
+        "legendary"
+      )
+    ) {
       return "Legendary";
     }
 
-    if (title.includes("mythic")) {
+    if (
+      title.includes("mythic")
+    ) {
       return "Mythic";
     }
 
@@ -729,12 +864,16 @@
 
     if (chestType === "gold") {
       return (
-        title.includes("gold chest") ||
+        title.includes(
+          "gold chest"
+        ) ||
         title === "gold"
       );
     }
 
-    if (chestType === "platinum") {
+    if (
+      chestType === "platinum"
+    ) {
       return (
         title.includes(
           "platinum chest"
@@ -752,7 +891,9 @@
 
     return (
       title.includes("bonus") ||
-      title.includes("bonus chest")
+      title.includes(
+        "bonus chest"
+      )
     );
   }
 
@@ -760,37 +901,41 @@
     groups,
     chestType
   ) {
-    const exact = groups.find(group =>
-      isMainChestGroup(
-        group,
-        chestType
-      )
-    );
+    const exact =
+      groups.find(group =>
+        isMainChestGroup(
+          group,
+          chestType
+        )
+      );
 
     if (exact) {
       return exact;
     }
 
-    const rarityNames = new Set([
-      "common",
-      "rare",
-      "epic",
-      "legendary",
-      "mythic"
-    ]);
+    const rarityNames =
+      new Set([
+        "common",
+        "rare",
+        "epic",
+        "legendary",
+        "mythic"
+      ]);
 
     const possible =
       groups.filter(group => {
         const validRarityCount =
-          group.sequence.filter(value =>
-            rarityNames.has(
-              normalise(value)
-            )
+          group.sequence.filter(
+            value =>
+              rarityNames.has(
+                normalise(value)
+              )
           ).length;
 
         return (
           validRarityCount >
-          group.sequence.length * 0.7
+          group.sequence.length *
+            0.7
         );
       });
 
@@ -803,10 +948,12 @@
         possible.find(group =>
           group.sequence.some(
             rarity =>
-              normalise(rarity) ===
-                "common" ||
-              normalise(rarity) ===
-                "rare"
+              normalise(
+                rarity
+              ) === "common" ||
+              normalise(
+                rarity
+              ) === "rare"
           )
         ) ||
         possible[0]
@@ -817,8 +964,9 @@
       possible.find(group =>
         group.sequence.some(
           rarity =>
-            normalise(rarity) ===
-            "mythic"
+            normalise(
+              rarity
+            ) === "mythic"
         )
       ) ||
       possible[0]
@@ -834,15 +982,29 @@
       rewardSequences
     ).forEach(
       ([rarity, sequence]) => {
-        sequence.forEach(reward => {
-          result[
-            compactNormalise(reward)
-          ] = rarity;
-        });
+        sequence.forEach(
+          reward => {
+            result[
+              compactNormalise(
+                reward
+              )
+            ] = rarity;
+          }
+        );
       }
     );
 
     return result;
+  }
+
+  function mergeRewardRarityMaps(
+    sequenceMap,
+    dropNamesMap
+  ) {
+    return {
+      ...dropNamesMap,
+      ...sequenceMap
+    };
   }
 
   function parseWorkbookProfile(
@@ -902,7 +1064,8 @@
     if (!groups.length) {
       throw new Error(
         `No ${
-          profileName === "breeding"
+          profileName ===
+          "breeding"
             ? "Breeding"
             : "PvP / Assault"
         } sequence columns were found.`
@@ -911,80 +1074,62 @@
 
     const rewardSequences = {};
 
-        groups
-      .filter(
-        isRewardGroup
-      )
-      .forEach(
-        group => {
+    groups
+      .filter(isRewardGroup)
+      .forEach(group => {
+        const rarity =
+          getRarityFromGroup(
+            group
+          );
 
-          const rarity =
-            getRarityFromGroup(
-              group
-            );
-
-
-          if (!rarity) {
-
-            return;
-
-          }
-
-
-          const cleanedRewards =
-            cleanRewardSequence(
-              group.sequence
-            );
-
-
-          if (
-            cleanedRewards.length
-          ) {
-
-            rewardSequences[
-              rarity
-            ] =
-              cleanedRewards;
-
-          }
-
+        if (!rarity) {
+          return;
         }
+
+        const cleanedRewards =
+          cleanRewardSequence(
+            group.sequence
+          );
+
+        if (
+          cleanedRewards.length
+        ) {
+          rewardSequences[
+            rarity
+          ] = cleanedRewards;
+        }
+      });
+
+    const dropNamesData =
+      parseDropNamesSheet(
+        workbookRecord
       );
 
-
-        const mainGroup =
+    const mainGroup =
       inferChestSequenceGroup(
         groups,
         chestType
       );
 
-
     if (
       !mainGroup ||
       !mainGroup.sequence.length
     ) {
-
       throw new Error(
         `The ${chestType} chest rarity sequence could not be found.`
       );
-
     }
-
 
     const mainSequence =
       cleanRaritySequence(
         mainGroup.sequence
       );
 
-
     if (!mainSequence.length) {
-
       throw new Error(
         `The ${chestType} chest sequence did not contain valid rarity entries.`
       );
-
     }
-
 
     const bonusGroup =
       groups.find(
@@ -993,7 +1138,6 @@
           group !== mainGroup
       );
 
-
     const bonusSequence =
       bonusGroup
         ? cleanRaritySequence(
@@ -1001,9 +1145,12 @@
           )
         : [];
 
+    const sequenceRarityMap =
+      buildRewardRarityMap(
+        rewardSequences
+      );
 
     const profile = {
-
       source:
         "uploaded-workbook",
 
@@ -1041,16 +1188,19 @@
 
       rewardSequences,
 
+      additionalRewards:
+        dropNamesData.catalogue,
+
       rewardRarityMap:
-        buildRewardRarityMap(
-          rewardSequences
+        mergeRewardRarityMaps(
+          sequenceRarityMap,
+          dropNamesData.rarityMap
         ),
 
       groups,
 
       workbook:
         workbookRecord
-
     };
 
     parsedProfiles.set(
@@ -1063,8 +1213,7 @@
 
     return profile;
   }
-
-  function getCachedProfile(
+    function getCachedProfile(
     chestType,
     eventOrProfile =
       activeEventId
@@ -1101,15 +1250,13 @@
           profile.chestType === chest &&
           profile.profileName ===
             wantedProfile
-        ) ||
-      null
+        ) || null
     );
   }
 
   async function loadProfile(
     chestType,
-    eventId =
-      activeEventId
+    eventId = activeEventId
   ) {
     const chest =
       normaliseChestType(
@@ -1142,7 +1289,8 @@
     }
 
     const workbookRecord =
-      await global.ChestPredictorUpload
+      await global
+        .ChestPredictorUpload
         .getWorkbook(
           eventId,
           chest
@@ -1159,8 +1307,7 @@
 
   async function activate(
     chestType,
-    eventId =
-      activeEventId
+    eventId = activeEventId
   ) {
     activeChestType =
       normaliseChestType(
@@ -1207,7 +1354,8 @@
       eventOrProfile
     );
   }
-    function getRewardSequence(
+
+  function getRewardSequence(
     profile,
     rarity
   ) {
@@ -1233,25 +1381,20 @@
       : [];
   }
 
-    function getRarities(
+  function getRarities(
     chestType,
     eventOrProfile =
       activeEventId
   ) {
-
     const profile =
       getProfile(
         chestType,
         eventOrProfile
       );
 
-
     if (!profile) {
-
       return [];
-
     }
-
 
     return unique([
       ...profile.mainSequence,
@@ -1262,7 +1405,6 @@
     ]).filter(
       isValidRarity
     );
-
   }
 
   function getRewardCatalogue(
@@ -1281,23 +1423,42 @@
       return [];
     }
 
-    if (rarity) {
-      return unique(
-        getRewardSequence(
-          profile,
-          rarity
-        )
-      ).sort(
-        (a, b) =>
-          a.localeCompare(b)
-      );
-    }
-
-    return unique(
+    const sequenceRewards =
       Object.values(
         profile.rewardSequences
-      ).flat()
-    ).sort(
+      ).flat();
+
+    const additionalRewards =
+      Array.isArray(
+        profile.additionalRewards
+      )
+        ? profile.additionalRewards
+        : [];
+
+    const catalogue =
+      unique([
+        ...sequenceRewards,
+        ...additionalRewards
+      ]);
+
+    if (rarity) {
+      return catalogue
+        .filter(reward =>
+          valuesMatch(
+            findRewardRarity(
+              profile,
+              reward
+            ),
+            rarity
+          )
+        )
+        .sort(
+          (a, b) =>
+            a.localeCompare(b)
+        );
+    }
+
+    return catalogue.sort(
       (a, b) =>
         a.localeCompare(b)
     );
@@ -1316,9 +1477,10 @@
 
     return (
       profile.rewardRarityMap[
-        compactNormalise(reward)
-      ] ||
-      ""
+        compactNormalise(
+          reward
+        )
+      ] || ""
     );
   }
 
@@ -1366,9 +1528,10 @@
           };
         }
       )
-      .filter(drop =>
-        drop.rarity ||
-        drop.reward
+      .filter(
+        drop =>
+          drop.rarity ||
+          drop.reward
       );
   }
 
@@ -1408,8 +1571,7 @@
       compactNormalise(second)
     );
   }
-
-  function sequenceMatchesAt(
+    function sequenceMatchesAt(
     sequence,
     observations,
     startPosition
@@ -1469,7 +1631,7 @@
     for (
       let startPosition = 0;
       startPosition <
-      sequence.length;
+        sequence.length;
       startPosition += 1
     ) {
       if (
@@ -1539,7 +1701,7 @@
     };
   }
 
-  function solveRewardSequences(
+    function solveRewardSequences(
     profile,
     drops
   ) {
@@ -1554,12 +1716,31 @@
     Object.keys(
       profile.rewardSequences
     ).forEach(rarity => {
+      const rewardSequence =
+        profile.rewardSequences[
+          rarity
+        ];
+
+      const sequenceRewardKeys =
+        new Set(
+          rewardSequence.map(
+            compactNormalise
+          )
+        );
+
       const observations =
         split.all
           .filter(drop =>
             valuesMatch(
               drop.rarity,
               rarity
+            )
+          )
+          .filter(drop =>
+            sequenceRewardKeys.has(
+              compactNormalise(
+                drop.reward
+              )
             )
           )
           .map(drop =>
@@ -1572,9 +1753,7 @@
 
         candidates:
           findCircularMatches(
-            profile.rewardSequences[
-              rarity
-            ],
+            rewardSequence,
             observations
           )
       };
@@ -1648,7 +1827,7 @@
           total + score,
         0
       ) /
-      scores.length
+        scores.length
     );
   }
 
@@ -1686,7 +1865,9 @@
           !drop.rarity
       );
 
-    if (unknownRewards.length) {
+    if (
+      unknownRewards.length
+    ) {
       return {
         available: true,
         matched: false,
@@ -1787,7 +1968,7 @@
     for (
       let index = 0;
       index <
-      cleaned.length;
+        cleaned.length;
       index += 1
     ) {
       const result =
@@ -2150,9 +2331,16 @@
               profile.profileName,
 
             rewards:
-              Object.values(
-                profile.rewardSequences
-              ).flat().length,
+              unique([
+                ...Object.values(
+                  profile.rewardSequences
+                ).flat(),
+
+                ...(
+                  profile.additionalRewards ||
+                  []
+                )
+              ]).length,
 
             sequenceLength:
               profile.mainSequence
@@ -2185,7 +2373,19 @@
 
             sequenceLength:
               profile.mainSequence
-                .length
+                .length,
+
+            rewardCount:
+              unique([
+                ...Object.values(
+                  profile.rewardSequences
+                ).flat(),
+
+                ...(
+                  profile.additionalRewards ||
+                  []
+                )
+              ]).length
           }
         );
 
