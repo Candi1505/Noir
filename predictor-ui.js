@@ -1,12 +1,10 @@
 /* ============================================================
    CHEST COMPANION BETA — PREDICTOR UI
-   Part 1 of 2
-   Built by Cherubim
 
-   Requires:
-   - data/gold.js
-   - data/platinum.js
-   - predictor-engine.js
+   Community Edition
+
+   Developed by a War Dragons player
+   for the War Dragons community.
 
    This file must load after app.js.
    ============================================================ */
