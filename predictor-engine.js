@@ -1,6 +1,6 @@
 /* ============================================================
    CHEST COMPANION V2 — UPLOADED WORKBOOK PREDICTOR ENGINE
-   Gold + Platinum workbook parser
+   Gold + Platinum + Draconic + Freedom workbook parser
    Includes Tables (Combining) and Drop names reward discovery
    ============================================================ */
 
@@ -8,9 +8,11 @@
   "use strict";
 
   const SUPPORTED_CHESTS = Object.freeze([
-    "gold",
-    "platinum"
-  ]);
+  "gold",
+  "platinum",
+  "draconic",
+  "freedom"
+]);
 
   const VALID_RARITIES = new Set([
     "common",
@@ -53,7 +55,11 @@
         "sequence",
     "sequence cycle",
     "temple raid",
-    "whatever"
+    "whatever",
+    "draconic",
+"draconic chest",
+"freedom",
+"freedom chest",
   ]);
 
   const EVENT_PROFILE_MAP = Object.freeze({
@@ -226,18 +232,26 @@
   }
 
   function normaliseChestType(chestType) {
-    const chest = compactNormalise(chestType);
+  const chest = compactNormalise(chestType);
 
-    if (chest.includes("platinum")) {
-      return "platinum";
-    }
-
-    if (chest.includes("gold")) {
-      return "gold";
-    }
-
-    return chest;
+  if (chest.includes("platinum")) {
+    return "platinum";
   }
+
+  if (chest.includes("gold")) {
+    return "gold";
+  }
+
+  if (chest.includes("draconic")) {
+    return "draconic";
+  }
+
+  if (chest.includes("freedom")) {
+    return "freedom";
+  }
+
+  return chest;
+}
 
   function normaliseProfileName(profileName) {
     const profile = normalise(profileName);
@@ -548,16 +562,18 @@
     headerRowIndex
   ) {
     const recognisedTitles = [
-      "common drop",
-      "rare drop",
-      "epic drop",
-      "legendary drop",
-      "mythic drop",
-      "gold chest",
-      "platinum chest",
-      "bonus chest",
-      "bonus"
-    ];
+  "common drop",
+  "rare drop",
+  "epic drop",
+  "legendary drop",
+  "mythic drop",
+  "gold chest",
+  "platinum chest",
+  "draconic chest",
+  "freedom chest",
+  "bonus chest",
+  "bonus"
+];
 
     for (
       let rowIndex =
@@ -858,34 +874,56 @@
   }
 
   function isMainChestGroup(
-    group,
-    chestType
-  ) {
-    const title =
-      group.normalisedTitle;
+  group,
+  chestType
+) {
+  const title =
+    group.normalisedTitle;
 
-    if (chestType === "gold") {
-      return (
-        title.includes(
-          "gold chest"
-        ) ||
-        title === "gold"
-      );
-    }
-
-    if (
-      chestType === "platinum"
-    ) {
-      return (
-        title.includes(
-          "platinum chest"
-        ) ||
-        title === "platinum"
-      );
-    }
-
-    return false;
+  if (chestType === "gold") {
+    return (
+      title.includes(
+        "gold chest"
+      ) ||
+      title === "gold"
+    );
   }
+
+  if (
+    chestType === "platinum"
+  ) {
+    return (
+      title.includes(
+        "platinum chest"
+      ) ||
+      title === "platinum"
+    );
+  }
+
+  if (
+    chestType === "draconic"
+  ) {
+    return (
+      title.includes(
+        "draconic chest"
+      ) ||
+      title === "draconic"
+    );
+  }
+
+  if (
+    chestType === "freedom"
+  ) {
+    return (
+      title.includes(
+        "freedom chest"
+      ) ||
+      title === "freedom"
+    );
+  }
+
+  return false;
+}
 
   function isBonusGroup(group) {
     const title =
@@ -1024,14 +1062,14 @@
       );
 
     if (
-      !SUPPORTED_CHESTS.includes(
-        chestType
-      )
-    ) {
-      throw new Error(
-        "Only Gold and Platinum predictor files are supported."
-      );
-    }
+  !SUPPORTED_CHESTS.includes(
+    chestType
+  )
+) {
+  throw new Error(
+    "Unsupported chest predictor."
+  );
+}
 
     const eventId =
       workbookRecord.eventId ||
@@ -1167,14 +1205,12 @@
       profileName,
 
       label:
-        `${
-          workbookRecord.eventName ||
-          eventId
-        } ${
-          chestType === "gold"
-            ? "Gold"
-            : "Platinum"
-        }`,
+  `${
+    workbookRecord.eventName || eventId
+  } ${
+    chestType.charAt(0).toUpperCase() +
+    chestType.slice(1)
+  }`,
 
       version:
         workbookRecord.fileName ||
@@ -2319,6 +2355,20 @@
             profile.chestType ===
             "platinum"
         ),
+        
+        draconic:
+  profiles.some(
+    profile =>
+      profile.chestType ===
+      "draconic"
+  ),
+
+freedom:
+  profiles.some(
+    profile =>
+      profile.chestType ===
+      "freedom"
+  ),
 
       loadedProfiles:
         profiles.map(
@@ -2436,16 +2486,11 @@
 
       try {
         await Promise.all([
-          loadProfile(
-            "gold",
-            activeEventId
-          ),
-
-          loadProfile(
-            "platinum",
-            activeEventId
-          )
-        ]);
+  loadProfile("gold", activeEventId),
+  loadProfile("platinum", activeEventId),
+  loadProfile("draconic", activeEventId),
+  loadProfile("freedom", activeEventId)
+]);
 
         console.info(
           "[Chest Companion] Predictor profiles restored for event.",
@@ -2468,16 +2513,11 @@
 
     if (activeEventId) {
       await Promise.all([
-        loadProfile(
-          "gold",
-          activeEventId
-        ),
-
-        loadProfile(
-          "platinum",
-          activeEventId
-        )
-      ]);
+  loadProfile("gold", activeEventId),
+  loadProfile("platinum", activeEventId),
+  loadProfile("draconic", activeEventId),
+  loadProfile("freedom", activeEventId)
+]);
     }
 
     console.info(
