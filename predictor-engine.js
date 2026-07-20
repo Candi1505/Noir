@@ -1965,26 +1965,116 @@
       !rewardMismatch;
 
     const result = {
-      available: true,
-      matched,
-      profile,
-      rarity:
-        raritySolution,
-      rewards:
-        rewardSolutions,
-      confidence: 0,
-      reason: matched
-        ? ""
-        : "The recorded drops do not match this uploaded sequence."
-    };
+  available: true,
+  matched,
+  profile,
 
-    result.confidence =
-      calculateConfidence(
-        result
-      );
+  rarity:
+    raritySolution,
 
-    return result;
+  rewards:
+    rewardSolutions,
+
+  confidence: 0,
+
+  totalTracks: 0,
+
+  exactTracks: 0,
+
+  reason: matched
+    ? ""
+    : "The recorded drops do not match this uploaded sequence."
+};
+
+
+/*
+ * Build the list of sequence tracks currently
+ * being used by the solver.
+ */
+
+const activeTracks = [
+
+  {
+    candidates:
+      raritySolution.mainCandidates,
+
+    observations:
+      raritySolution.mainObservations
   }
+
+];
+
+
+/*
+ * Include the bonus rarity track when the
+ * workbook contains a bonus sequence and the
+ * player has recorded at least one bonus chest.
+ */
+
+if (
+  profile.bonusSequence.length &&
+  raritySolution.bonusObservations.length
+) {
+
+  activeTracks.push({
+
+    candidates:
+      raritySolution.bonusCandidates,
+
+    observations:
+      raritySolution.bonusObservations
+
+  });
+
+}
+
+
+/*
+ * Include reward tracks that have recorded
+ * observations.
+ */
+
+Object.values(
+  rewardSolutions
+).forEach(track => {
+
+  if (
+    track.observations.length
+  ) {
+
+    activeTracks.push({
+
+      candidates:
+        track.candidates,
+
+      observations:
+        track.observations
+
+    });
+
+  }
+
+});
+
+
+result.totalTracks =
+  activeTracks.length;
+
+
+result.exactTracks =
+  activeTracks.filter(
+    track =>
+      track.candidates.length === 1
+  ).length;
+
+
+result.confidence =
+  calculateConfidence(
+    result
+  );
+
+
+return result;
 
   function findFirstMismatch(
     chestType,
