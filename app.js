@@ -24,44 +24,42 @@
 
   const DEFAULT_STATE = {
 
-    profile: {
+  profile: {
 
-      nickname:
-        "Tester",
+    nickname:
+      "Tester",
 
-      alliance_name:
-        "",
+    alliance_name:
+      "",
 
-      favourite_chest:
-        ""
+    favourite_chest:
+      ""
 
-    },
+  },
 
-    activeSession:
-      null,
+  activeSession:
+    null,
 
-    history:
-      [],
+  history:
+    [],
 
-    priorities: {
+  priorities: {
 
-          priorities: {
+    gold:
+      {},
 
-      gold:
-        {},
+    platinum:
+      {},
 
-      platinum:
-        {},
+    draconic:
+      {},
 
-      draconic:
-        {},
+    freedom:
+      {}
 
-      freedom:
-        {}
+  }
 
-    }
-
-  };
+};
 
 
   /*
@@ -715,33 +713,31 @@
 
         priorities: {
 
-                  priorities: {
+  gold:
+    savedState
+      .priorities
+      ?.gold ||
+    {},
 
-          gold:
-            savedState
-              .priorities
-              ?.gold ||
-            {},
+  platinum:
+    savedState
+      .priorities
+      ?.platinum ||
+    {},
 
-          platinum:
-            savedState
-              .priorities
-              ?.platinum ||
-            {},
+  draconic:
+    savedState
+      .priorities
+      ?.draconic ||
+    {},
 
-          draconic:
-            savedState
-              .priorities
-              ?.draconic ||
-            {},
+  freedom:
+    savedState
+      .priorities
+      ?.freedom ||
+    {}
 
-          freedom:
-            savedState
-              .priorities
-              ?.freedom ||
-            {}
-
-        },
+},
 
         history:
           Array.isArray(
