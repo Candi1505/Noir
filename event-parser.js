@@ -2,7 +2,7 @@
 
 /**
  * Noir Chest Companion
- * Phase 1: War Dragons event deck parser
+ * War Dragons live-event deck parser
  *
  * Reads an about_v2 response and extracts:
  * - Event information
@@ -10,6 +10,8 @@
  * - Platinum chest deck
  * - Draconic chest deck
  * - Freedom chest deck
+ * - Freedom reward pools
+ * - Freedom bonus-drop information
  */
 
 class EventParser {
@@ -32,7 +34,9 @@ class EventParser {
       try {
         return JSON.parse(rawData);
       } catch (error) {
-        throw new Error("The imported event data is not valid JSON.");
+        throw new Error(
+          "The imported event data is not valid JSON."
+        );
       }
     }
 
@@ -47,7 +51,10 @@ class EventParser {
    * Finds the gacha object even when the response
    * contains extra wrapper objects.
    */
-  findGachaObject(value = this.data, visited = new WeakSet()) {
+  findGachaObject(
+    value = this.data,
+    visited = new WeakSet()
+  ) {
     if (!value || typeof value !== "object") {
       return null;
     }
@@ -74,7 +81,10 @@ class EventParser {
     }
 
     for (const childValue of Object.values(value)) {
-      const result = this.findGachaObject(childValue, visited);
+      const result = this.findGachaObject(
+        childValue,
+        visited
+      );
 
       if (result) {
         return result;
@@ -99,14 +109,18 @@ class EventParser {
       !params.deck_indices ||
       typeof params.deck_indices !== "object"
     ) {
-      throw new Error("The event response does not contain deck_indices.");
+      throw new Error(
+        "The event response does not contain deck_indices."
+      );
     }
 
     if (
       !params.decks ||
       typeof params.decks !== "object"
     ) {
-      throw new Error("The event response does not contain decks.");
+      throw new Error(
+        "The event response does not contain decks."
+      );
     }
 
     return params;
@@ -114,8 +128,6 @@ class EventParser {
 
   /**
    * Searches common locations for the event name.
-   * This is deliberately flexible because event
-   * responses may use different wrappers.
    */
   getEventName() {
     const possibleNames = [
@@ -128,12 +140,29 @@ class EventParser {
     ];
 
     const eventName = possibleNames.find(
-      value => typeof value === "string" && value.trim()
+      value =>
+        typeof value === "string" &&
+        value.trim()
     );
 
     return eventName?.trim() || "Unknown Event";
   }
 
+  /**
+   * Returns a named deck as a safe copied array.
+   */
+  getDeck(deckKey) {
+    const params = this.getGachaParams();
+    const deck = params.decks?.[deckKey];
+
+    return Array.isArray(deck)
+      ? [...deck]
+      : [];
+  }
+
+  /**
+   * Returns standard chest sequence information.
+   */
   getChest(chestKey, label) {
     const params = this.getGachaParams();
     const deckIndices = params.deck_indices;
@@ -148,7 +177,6 @@ class EventParser {
       rawIndex !== "";
 
     const deckFound = Array.isArray(rawDeck);
-
     const parsedIndex = Number(rawIndex);
 
     const indexIsValid =
@@ -159,13 +187,19 @@ class EventParser {
     const warnings = [];
 
     if (!indexFound) {
-      warnings.push(`No deck index found for ${label}.`);
+      warnings.push(
+        `No deck index found for ${label}.`
+      );
     } else if (!indexIsValid) {
-      warnings.push(`The ${label} deck index is invalid.`);
+      warnings.push(
+        `The ${label} deck index is invalid.`
+      );
     }
 
     if (!deckFound) {
-      warnings.push(`No deck found for ${label}.`);
+      warnings.push(
+        `No deck found for ${label}.`
+      );
     }
 
     if (
@@ -183,9 +217,15 @@ class EventParser {
       key: chestKey,
       label,
       found: deckFound && indexIsValid,
-      index: indexIsValid ? parsedIndex : null,
-      deck: deckFound ? [...rawDeck] : [],
-      deckLength: deckFound ? rawDeck.length : 0,
+      index: indexIsValid
+        ? parsedIndex
+        : null,
+      deck: deckFound
+        ? [...rawDeck]
+        : [],
+      deckLength: deckFound
+        ? rawDeck.length
+        : 0,
       currentValue:
         deckFound &&
         indexIsValid &&
@@ -196,13 +236,190 @@ class EventParser {
     };
   }
 
+  /**
+   * Returns all available spin types.
+   */
+  getSpinTypes() {
+    const params = this.getGachaParams();
+
+    return Array.isArray(params.spin_types)
+      ? [...params.spin_types]
+      : [];
+  }
+
+  /**
+   * Searches spin types using their title,
+   * description, key or drop information.
+   */
+  findSpinType(searchTerms) {
+    const terms = Array.isArray(searchTerms)
+      ? searchTerms
+      : [searchTerms];
+
+    const normalisedTerms = terms
+      .map(term =>
+        String(term || "")
+          .trim()
+          .toLowerCase()
+      )
+      .filter(Boolean);
+
+    if (!normalisedTerms.length) {
+      return null;
+    }
+
+    return (
+      this.getSpinTypes().find(spinType => {
+        let searchableText = "";
+
+        try {
+          searchableText =
+            JSON.stringify(spinType)
+              .toLowerCase();
+        } catch (error) {
+          searchableText =
+            String(spinType || "")
+              .toLowerCase();
+        }
+
+        return normalisedTerms.every(term =>
+          searchableText.includes(term)
+        );
+      }) || null
+    );
+  }
+
+  /**
+   * Attempts to read the bonus frequency from
+   * the Freedom chest description.
+   */
+  getFreedomBonusFrequency(
+    regularSpin,
+    bonusSpin
+  ) {
+    const text = [
+      regularSpin?.title,
+      regularSpin?.desc,
+      regularSpin?.description,
+      bonusSpin?.title,
+      bonusSpin?.desc,
+      bonusSpin?.description
+    ]
+      .filter(Boolean)
+      .join(" ");
+
+    const match = text.match(
+      /(?:open|every)\s+(\d+)|(\d+)\s+(?:chests?|opens?)/i
+    );
+
+    const detectedNumber = Number(
+      match?.[1] || match?.[2]
+    );
+
+    if (
+      Number.isInteger(detectedNumber) &&
+      detectedNumber > 0
+    ) {
+      return detectedNumber;
+    }
+
+    return 15;
+  }
+
+  /**
+   * Extracts the Freedom sequence, reward pools
+   * and bonus-drop configuration.
+   *
+   * The deck index is not automatically treated as
+   * the player's bonus-progress counter because those
+   * values may represent different game systems.
+   */
+  getFreedomData() {
+    const freedomChest = this.getChest(
+      "freedom_chest",
+      "Freedom"
+    );
+
+    const regularSpin =
+      this.findSpinType([
+        "freedom",
+        "open"
+      ]) ||
+      this.findSpinType("freedom");
+
+    const bonusSpin =
+      this.findSpinType([
+        "freedom",
+        "bonus"
+      ]);
+
+    const bonusEvery =
+      this.getFreedomBonusFrequency(
+        regularSpin,
+        bonusSpin
+      );
+
+    const rewardPools = {
+      epic: this.getDeck(
+        "epic_freedom_items"
+      ),
+
+      legendary: this.getDeck(
+        "legendary_freedom_items"
+      ),
+
+      mythic: this.getDeck(
+        "mythic_freedom_items"
+      )
+    };
+
+    const availableRewardPoolCount =
+      Object.values(rewardPools)
+        .filter(pool => pool.length > 0)
+        .length;
+
+    return {
+      ...freedomChest,
+
+      bonusEvery,
+
+      bonusDescription:
+        regularSpin?.desc ||
+        regularSpin?.description ||
+        `Open ${bonusEvery} for a bonus drop.`,
+
+      regularSpinType:
+        regularSpin,
+
+      bonusSpinType:
+        bonusSpin,
+
+      rewardPools,
+
+      availableRewardPoolCount,
+
+      hasRewardPools:
+        availableRewardPoolCount > 0,
+
+      /*
+       * These will be populated by the Freedom
+       * tracking system when the user's personal
+       * Freedom chest count is known.
+       */
+      openedSinceBonus: null,
+      chestsUntilBonus: null,
+      nextChestIsBonus: false
+    };
+  }
+
   parse() {
     const params = this.getGachaParams();
 
     const result = {
       event: this.getEventName(),
 
-      importedAt: new Date().toISOString(),
+      importedAt:
+        new Date().toISOString(),
 
       chests: {
         gold: this.getChest(
@@ -220,22 +437,26 @@ class EventParser {
           "Draconic"
         ),
 
-        freedom: this.getChest(
-          "freedom_chest",
-          "Freedom"
-        )
+        freedom: this.getFreedomData()
       },
 
-      availableDeckKeys: Object.keys(params.decks),
+      availableDeckKeys:
+        Object.keys(params.decks),
 
-      availableIndexKeys: Object.keys(params.deck_indices)
+      availableIndexKeys:
+        Object.keys(params.deck_indices),
+
+      availableSpinTypeCount:
+        this.getSpinTypes().length
     };
 
-    result.readyChestCount = Object.values(result.chests)
-      .filter(chest => chest.found)
-      .length;
+    result.readyChestCount =
+      Object.values(result.chests)
+        .filter(chest => chest.found)
+        .length;
 
-    result.ready = result.readyChestCount > 0;
+    result.ready =
+      result.readyChestCount > 0;
 
     return result;
   }
@@ -247,50 +468,92 @@ class EventParser {
     return new EventParser(rawData).parse();
   }
 }
+
 /**
  * Developer helper.
  * Tests an about_v2 response and prints the results.
  */
-window.testEventParser = function(rawData) {
+window.testEventParser = function testEventParser(
+  rawData
+) {
+  try {
+    const result =
+      EventParser.parse(rawData);
 
-    try {
+    console.group(
+      "🐉 Noir Event Parser"
+    );
 
-        const result = EventParser.parse(rawData);
+    console.log(
+      "Event:",
+      result.event
+    );
 
-        console.group("🐉 Noir Event Parser");
+    console.log(
+      "Ready:",
+      result.ready
+    );
 
-        console.log("Event:", result.event);
-        console.log("Ready:", result.ready);
+    Object.values(
+      result.chests
+    ).forEach(chest => {
+      console.group(
+        chest.label
+      );
 
-        Object.values(result.chests).forEach(chest => {
+      console.log(
+        "Found:",
+        chest.found
+      );
 
-            console.group(chest.label);
+      console.log(
+        "Index:",
+        chest.index
+      );
 
-            console.log("Found:", chest.found);
-            console.log("Index:", chest.index);
-            console.log("Deck Length:", chest.deckLength);
-            console.log("Current Value:", chest.currentValue);
+      console.log(
+        "Deck Length:",
+        chest.deckLength
+      );
 
-            if (chest.warnings.length) {
-                console.warn(chest.warnings);
-            }
+      console.log(
+        "Current Value:",
+        chest.currentValue
+      );
 
-            console.groupEnd();
+      if (
+        chest.label === "Freedom"
+      ) {
+        console.log(
+          "Bonus every:",
+          chest.bonusEvery
+        );
 
-        });
+        console.log(
+          "Reward pools:",
+          chest.rewardPools
+        );
+      }
 
-        console.groupEnd();
+      if (
+        chest.warnings.length
+      ) {
+        console.warn(
+          chest.warnings
+        );
+      }
 
-        return result;
+      console.groupEnd();
+    });
 
-    } catch (error) {
+    console.groupEnd();
 
-        console.error(error);
+    return result;
+  } catch (error) {
+    console.error(error);
 
-        return null;
-
-    }
-
+    return null;
+  }
 };
 
 window.EventParser = EventParser;
