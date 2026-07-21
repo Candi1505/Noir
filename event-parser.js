@@ -415,6 +415,18 @@ class EventParser {
   parse() {
     const params = this.getGachaParams();
 
+    const drops =
+  params.drops &&
+  typeof params.drops === "object"
+    ? structuredClone(params.drops)
+    : {};
+
+const deckIndices =
+  params.deck_indices &&
+  typeof params.deck_indices === "object"
+    ? { ...params.deck_indices }
+    : {};
+    
     const result = {
       event: this.getEventName(),
 
@@ -440,17 +452,35 @@ class EventParser {
         freedom: this.getFreedomData()
       },
 
-      availableDeckKeys:
-        Object.keys(params.decks),
+      decks:
+  structuredClone(
+    params.decks
+  ),
 
-      availableIndexKeys:
-        Object.keys(params.deck_indices),
+      drops,
 
-      spinTypes:
-  this.getSpinTypes(),
+      deckIndices,
 
-availableSpinTypeCount:
-  this.getSpinTypes().length
+    spinTypes:
+      this.getSpinTypes(),
+
+    availableDeckKeys:
+      Object.keys(
+        params.decks
+     ),
+
+     availableDropKeys:
+       Object.keys(
+         drops
+      ),
+
+     availableIndexKeys:
+       Object.keys(
+         deckIndices
+      ),
+
+      availableSpinTypeCount:
+        this.getSpinTypes().length
     };
 
     result.readyChestCount =
