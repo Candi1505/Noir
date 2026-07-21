@@ -12,6 +12,9 @@
  * - Store the parsed event data for the rest of the app
  */
 
+const LIVE_EVENT_STORAGE_KEY =
+  "chestCompanionLiveEventData";
+
 document.addEventListener("DOMContentLoaded", () => {
   const importButton = document.getElementById("importEventDataButton");
   const fileInput = document.getElementById("eventDataFile");
@@ -319,7 +322,21 @@ document.addEventListener("DOMContentLoaded", () => {
         type: file.type || "unknown",
         importedAt: new Date().toISOString()
       };
-
+try {
+  localStorage.setItem(
+    LIVE_EVENT_STORAGE_KEY,
+    JSON.stringify({
+      data: parsed,
+      sourceFile:
+        window.currentEventSourceFile
+    })
+  );
+} catch (error) {
+  console.warn(
+    "[Chest Companion] Could not save live event data.",
+    error
+  );
+}
       setBadge(
         parsed.ready ? "Ready" : "Incomplete",
         parsed.ready ? "ready" : "failed"
@@ -383,7 +400,66 @@ document.addEventListener("DOMContentLoaded", () => {
       fileInput.disabled = false;
     }
   }
+function restoreSavedLiveEvent() {
+  try {
+    const saved = JSON.parse(
+      localStorage.getItem(
+        LIVE_EVENT_STORAGE_KEY
+      ) || "null"
+    );
 
+    if (
+      !saved ||
+      !saved.data ||
+      !saved.data.chests
+    ) {
+      return false;
+    }
+
+    window.currentEventData =
+      saved.data;
+
+    window.currentEventSourceFile =
+      saved.sourceFile || "";
+
+    setBadge("Restored", "ready");
+
+    statusText.textContent =
+      saved.sourceFile
+        ? `${saved.sourceFile} restored automatically.`
+        : "Saved live event data restored automatically.";
+
+    window.dispatchEvent(
+      new CustomEvent(
+        "noir:event-imported",
+        {
+          detail: {
+            restored: true,
+            sourceFile:
+              saved.sourceFile || "",
+            eventData:
+              saved.data
+          }
+        }
+      )
+    );
+
+    console.info(
+      "[Chest Companion] Saved live event restored."
+    );
+
+    return true;
+  } catch (error) {
+    console.warn(
+      "[Chest Companion] Could not restore saved live event.",
+      error
+    );
+
+    return false;
+  }
+}
+
+restoreSavedLiveEvent();
   importButton.addEventListener(
     "click",
     importEventFile
