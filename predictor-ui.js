@@ -2701,23 +2701,25 @@ return null;
   }
 
   /*
-   * Never hijack controls belonging to the
-   * predictor-management upload screen.
-   */
-  if (
-    element.closest("#predictorView") ||
-    element.closest("#ccPredictorOverlay") ||
-    element.id === "uploadGoldPredictorButton" ||
-element.id === "uploadPlatinumPredictorButton" ||
-element.id === "uploadDraconicPredictorButton" ||
-element.id === "uploadFreedomPredictorButton" ||
-element.id === "goldPredictorFile" ||
-element.id === "platinumPredictorFile" ||
-element.id === "draconicPredictorFile" ||
-element.id === "freedomPredictorFile"
-  ) {
-    return;
-  }
+ * Never hijack controls belonging to the
+ * predictor-management or live predictor screens.
+ */
+if (
+  element.closest("#predictorView") ||
+  element.closest("#ccPredictorOverlay") ||
+  element.closest("#ccLivePredictorOverlay") ||
+  element.id === "ccLivePredictorOverlay" ||
+  element.id === "uploadGoldPredictorButton" ||
+  element.id === "uploadPlatinumPredictorButton" ||
+  element.id === "uploadDraconicPredictorButton" ||
+  element.id === "uploadFreedomPredictorButton" ||
+  element.id === "goldPredictorFile" ||
+  element.id === "platinumPredictorFile" ||
+  element.id === "draconicPredictorFile" ||
+  element.id === "freedomPredictorFile"
+) {
+  return;
+}
 
       const chestType =
         detectChestType(element);
