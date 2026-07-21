@@ -654,15 +654,13 @@
   }
 
   function getDeck(
-    chestType =
-      state.activeChest
-  ) {
-    return findDeckArray(
-      getChestData(
-        chestType
-      )
-    );
-  }
+  chestType =
+    state.activeChest
+) {
+  return getRawDeck(
+    chestType
+  );
+}
 
   function getDeckLength(
     chestType =
@@ -732,6 +730,226 @@
      REWARD NORMALISATION
      ========================================================== */
 
+  function getRawDeck(
+    chestType =
+      state.activeChest
+  ) {
+    return findDeckArray(
+      getChestData(
+        chestType
+      )
+    );
+  }
+
+  function getDefinitionSources(
+    chestType =
+      state.activeChest
+  ) {
+    const normalised =
+      normaliseChestType(
+        chestType
+      );
+
+    const chestData =
+      getChestData(
+        normalised
+      );
+
+    const eventData =
+      getEventData();
+
+    const arrays = [
+      chestData?.rewardDefinitions,
+      chestData?.rewardCatalogue,
+      chestData?.rewardCatalog,
+      chestData?.catalogue,
+      chestData?.catalog,
+      chestData?.definitions,
+      chestData?.definitionList,
+      chestData?.rewardTable,
+      chestData?.reward_table,
+      chestData?.items,
+
+      eventData?.rewardDefinitions,
+      eventData?.rewardCatalogue,
+      eventData?.rewardCatalog,
+      eventData?.catalogue,
+      eventData?.catalog,
+      eventData?.definitions,
+      eventData?.definitionList,
+      eventData?.rewardTable,
+      eventData?.reward_table,
+      eventData?.items
+    ].filter(
+      Array.isArray
+    );
+
+    const maps = [
+      chestData?.rewardMap,
+      chestData?.reward_map,
+      chestData?.rewardsById,
+      chestData?.rewards_by_id,
+      chestData?.definitionsById,
+      chestData?.definitions_by_id,
+      chestData?.itemsById,
+      chestData?.items_by_id,
+
+      eventData?.rewardMap,
+      eventData?.reward_map,
+      eventData?.rewardsById,
+      eventData?.rewards_by_id,
+      eventData?.definitionsById,
+      eventData?.definitions_by_id,
+      eventData?.itemsById,
+      eventData?.items_by_id
+    ].filter(
+      isObject
+    );
+
+    return {
+      arrays,
+      maps
+    };
+  }
+
+  function getRewardIdentifier(
+    reward
+  ) {
+    if (
+      reward === null ||
+      reward === undefined
+    ) {
+      return "";
+    }
+
+    if (
+      typeof reward === "string" ||
+      typeof reward === "number" ||
+      typeof reward === "boolean"
+    ) {
+      return String(reward);
+    }
+
+    if (!isObject(reward)) {
+      return "";
+    }
+
+    return normaliseText(
+      firstDefined([
+        reward.rewardId,
+        reward.reward_id,
+        reward.itemId,
+        reward.item_id,
+        reward.typeId,
+        reward.type_id,
+        reward.resourceId,
+        reward.resource_id,
+        reward.code,
+        reward.key,
+        reward.id,
+        reward.value
+      ], "")
+    );
+  }
+
+  function findRewardDefinition(
+    identifier,
+    chestType =
+      state.activeChest
+  ) {
+    if (
+      identifier === null ||
+      identifier === undefined ||
+      identifier === ""
+    ) {
+      return null;
+    }
+
+    const id =
+      String(identifier);
+
+    const sources =
+      getDefinitionSources(
+        chestType
+      );
+
+    for (
+      const map of
+      sources.maps
+    ) {
+      if (
+        Object.prototype
+          .hasOwnProperty.call(
+            map,
+            id
+          )
+      ) {
+        return map[id];
+      }
+
+      const numericId =
+        Number(id);
+
+      if (
+        Number.isFinite(
+          numericId
+        ) &&
+        Object.prototype
+          .hasOwnProperty.call(
+            map,
+            numericId
+          )
+      ) {
+        return map[
+          numericId
+        ];
+      }
+    }
+
+    for (
+      const list of
+      sources.arrays
+    ) {
+      const directIndex =
+        Number(id);
+
+      if (
+        Number.isInteger(
+          directIndex
+        ) &&
+        directIndex >= 0 &&
+        directIndex <
+          list.length
+      ) {
+        const indexedDefinition =
+          list[
+            directIndex
+          ];
+
+        if (
+          indexedDefinition !==
+          undefined
+        ) {
+          return indexedDefinition;
+        }
+      }
+
+      const match =
+        list.find(
+          item =>
+            getRewardIdentifier(
+              item
+            ) === id
+        );
+
+      if (match) {
+        return match;
+      }
+    }
+
+    return null;
+  }
+
   function extractRewardObject(
     entry
   ) {
@@ -739,34 +957,77 @@
       return entry;
     }
 
-    const nestedCandidates = [
+    return firstDefined([
       entry.reward,
       entry.item,
       entry.prize,
       entry.drop,
       entry.result,
       entry.contents,
+      entry.definition,
       entry.rewardData,
-      entry.reward_data
-    ];
-
-    return (
-      nestedCandidates.find(
-        candidate =>
-          candidate !== null &&
-          candidate !== undefined
-      ) ||
+      entry.reward_data,
       entry
-    );
+    ]);
+  }
+
+  function mergeRewardDefinition(
+    entry,
+    chestType =
+      state.activeChest
+  ) {
+    const extracted =
+      extractRewardObject(
+        entry
+      );
+
+    const identifier =
+      getRewardIdentifier(
+        extracted
+      );
+
+    const definition =
+      findRewardDefinition(
+        identifier,
+        chestType
+      );
+
+    if (
+      isObject(definition)
+    ) {
+      return {
+        ...cloneValue(
+          definition
+        ),
+
+        ...(isObject(extracted)
+          ? cloneValue(
+              extracted
+            )
+          : {})
+      };
+    }
+
+    if (
+      definition !== null &&
+      definition !== undefined
+    ) {
+      return definition;
+    }
+
+    return extracted;
   }
 
   function getRewardName(
     entry,
-    index = 0
+    index = 0,
+    chestType =
+      state.activeChest
   ) {
     const reward =
-      extractRewardObject(
-        entry
+      mergeRewardDefinition(
+        entry,
+        chestType
       );
 
     if (
@@ -779,12 +1040,17 @@
       typeof reward === "number" ||
       typeof reward === "boolean"
     ) {
-      return String(reward);
+      return `Reward ${reward}`;
     }
 
     if (!isObject(reward)) {
       return `Reward ${index + 1}`;
     }
+
+    const identifier =
+      getRewardIdentifier(
+        reward
+      );
 
     const name =
       firstDefined([
@@ -802,8 +1068,9 @@
         reward.item_name,
         reward.typeName,
         reward.type_name,
+        reward.type,
         reward.code,
-        reward.id
+        identifier
       ]);
 
     return normaliseText(
@@ -812,11 +1079,31 @@
     );
   }
 
-  function getRewardCode(entry) {
+  function getRewardCode(
+    entry,
+    chestType =
+      state.activeChest
+  ) {
     const reward =
-      extractRewardObject(
-        entry
+      mergeRewardDefinition(
+        entry,
+        chestType
       );
+
+    if (
+      typeof reward === "string"
+    ) {
+      return reward;
+    }
+
+    if (
+      typeof reward === "number" ||
+      typeof reward === "boolean"
+    ) {
+      return String(
+        reward
+      );
+    }
 
     if (!isObject(reward)) {
       return "";
@@ -830,6 +1117,8 @@
         reward.key,
         reward.rewardId,
         reward.reward_id,
+        reward.itemId,
+        reward.item_id,
         reward.typeId,
         reward.type_id,
         reward.id
@@ -837,10 +1126,15 @@
     );
   }
 
-  function getRewardAmount(entry) {
+  function getRewardAmount(
+    entry,
+    chestType =
+      state.activeChest
+  ) {
     const reward =
-      extractRewardObject(
-        entry
+      mergeRewardDefinition(
+        entry,
+        chestType
       );
 
     const amount =
@@ -854,11 +1148,19 @@
           : null,
 
         isObject(entry)
-          ? entry.value
+          ? entry.qty
           : null,
 
         isObject(entry)
           ? entry.count
+          : null,
+
+        isObject(entry)
+          ? entry.valueAmount
+          : null,
+
+        isObject(entry)
+          ? entry.value_amount
           : null,
 
         isObject(reward)
@@ -870,15 +1172,11 @@
           : null,
 
         isObject(reward)
-          ? reward.value
+          ? reward.qty
           : null,
 
         isObject(reward)
           ? reward.count
-          : null,
-
-        isObject(reward)
-          ? reward.qty
           : null,
 
         isObject(reward)
@@ -922,27 +1220,45 @@
       }
     }
 
-    return cloneValue(entry);
+    return cloneValue(
+      entry
+    );
   }
 
   function normaliseDeckEntry(
     entry,
-    index
+    index = 0,
+    chestType =
+      state.activeChest
   ) {
+    const normalisedChest =
+      normaliseChestType(
+        chestType
+      );
+
+    const resolvedReward =
+      mergeRewardDefinition(
+        entry,
+        normalisedChest
+      );
+
     const name =
       getRewardName(
         entry,
-        index
+        index,
+        normalisedChest
       );
 
     const code =
       getRewardCode(
-        entry
+        entry,
+        normalisedChest
       );
 
     const amount =
       getRewardAmount(
-        entry
+        entry,
+        normalisedChest
       );
 
     const matchValue =
@@ -950,8 +1266,17 @@
         entry
       );
 
+    const identifier =
+      getRewardIdentifier(
+        resolvedReward
+      ) ||
+      getRewardIdentifier(
+        entry
+      );
+
     return {
       key: [
+        identifier,
         code,
         name,
         amount ?? "",
@@ -959,6 +1284,11 @@
           matchValue
         )
       ].join("::"),
+
+      id:
+        identifier ||
+        code ||
+        String(index),
 
       index,
 
@@ -975,12 +1305,24 @@
       amount,
 
       value:
-        matchValue,
+        cloneValue(
+          matchValue
+        ),
 
-      matchValue,
+      matchValue:
+        cloneValue(
+          matchValue
+        ),
+
+      definition:
+        cloneValue(
+          resolvedReward
+        ),
 
       raw:
-        cloneValue(entry)
+        cloneValue(
+          entry
+        )
     };
   }
 
@@ -988,10 +1330,20 @@
     chestType =
       state.activeChest
   ) {
-    return getDeck(
-      chestType
+    const normalised =
+      normaliseChestType(
+        chestType
+      );
+
+    return getRawDeck(
+      normalised
     ).map(
-      normaliseDeckEntry
+      (entry, index) =>
+        normaliseDeckEntry(
+          entry,
+          index,
+          normalised
+        )
     );
   }
 
@@ -999,9 +1351,14 @@
     chestType =
       state.activeChest
   ) {
+    const normalised =
+      normaliseChestType(
+        chestType
+      );
+
     const deck =
       getNormalisedDeck(
-        chestType
+        normalised
       );
 
     const rewards =
@@ -1009,6 +1366,7 @@
 
     deck.forEach(entry => {
       const catalogueKey = [
+        entry.id,
         entry.code,
         entry.name,
         entry.amount ?? "",
@@ -1027,6 +1385,9 @@
           {
             key:
               catalogueKey,
+
+            id:
+              entry.id,
 
             name:
               entry.name,
@@ -1048,6 +1409,11 @@
             matchValue:
               cloneValue(
                 entry.matchValue
+              ),
+
+            definition:
+              cloneValue(
+                entry.definition
               ),
 
             raw:
@@ -1073,7 +1439,6 @@
         )
     );
   }
-
   /* ==========================================================
      VALUE COMPARISON
      ========================================================== */
