@@ -2494,24 +2494,32 @@
   }
 
   function getPlayerPosition(chest) {
-    if (!chest) {
-      return null;
-    }
-
-    const possiblePosition =
-      chest.playerPosition ??
-      chest.solvedPosition ??
-      chest.currentPosition ??
-      chest.position ??
-      null;
-
-    const number =
-      Number(possiblePosition);
-
-    return Number.isFinite(number)
-      ? number
-      : null;
+  if (!chest) {
+    return null;
   }
+
+  const possiblePosition =
+    chest.playerPosition ??
+    chest.solvedPosition ??
+    chest.currentPosition ??
+    chest.position ??
+    null;
+
+  if (
+    possiblePosition === null ||
+    possiblePosition === undefined ||
+    possiblePosition === ""
+  ) {
+    return null;
+  }
+
+  const number =
+    Number(possiblePosition);
+
+  return Number.isFinite(number)
+    ? number
+    : null;
+}
 
   function getRecordedHistory(chest) {
     if (!chest) {
@@ -2547,23 +2555,31 @@
   }
 
   function getMatchCount(chest) {
-    if (!chest) {
-      return null;
-    }
-
-    const possibleCount =
-      chest.matchCount ??
-      chest.matchingPositions ??
-      chest.matches?.length ??
-      null;
-
-    const number =
-      Number(possibleCount);
-
-    return Number.isFinite(number)
-      ? number
-      : null;
+  if (!chest) {
+    return null;
   }
+
+  const possibleCount =
+    chest.matchCount ??
+    chest.matchingPositions ??
+    chest.matches?.length ??
+    null;
+
+  if (
+    possibleCount === null ||
+    possibleCount === undefined ||
+    possibleCount === ""
+  ) {
+    return null;
+  }
+
+  const number =
+    Number(possibleCount);
+
+  return Number.isFinite(number)
+    ? number
+    : null;
+}
 
   function getConfidence(chest) {
     if (!chest) {
