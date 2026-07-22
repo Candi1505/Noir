@@ -3004,8 +3004,8 @@ function valuesMatch(
       Math.max(
         1,
         Math.min(
-          Number(count) || 20,
-          25
+          Number(count) || 40,
+          50
         )
       );
 
@@ -3157,7 +3157,7 @@ function valuesMatch(
 
     const predictions =
       predictUpcoming(
-        20,
+        40,
         normalised
       );
 
