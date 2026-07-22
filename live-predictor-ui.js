@@ -3024,6 +3024,13 @@
     }
 
     const name =
+      prediction.name ??
+      prediction.label ??
+      prediction.rewardName ??
+      prediction.reward_name ??
+      prediction.title ??
+      prediction.displayName ??
+      prediction.display_name ??
       reward.name ??
       reward.label ??
       reward.rewardName ??
@@ -3039,6 +3046,9 @@
       `Reward ${index + 1}`;
 
     const code =
+      prediction.code ??
+      prediction.rewardCode ??
+      prediction.reward_code ??
       reward.code ??
       reward.rewardCode ??
       reward.reward_code ??
