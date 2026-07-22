@@ -2101,7 +2101,11 @@ function resolveDeckReward(
     const rewards =
       new Map();
 
-    deck.forEach(entry => {
+    function addReward(entry) {
+      if (!entry) {
+        return;
+      }
+
       const catalogueKey = [
         entry.id,
         entry.code,
@@ -2160,6 +2164,43 @@ function resolveDeckReward(
           }
         );
       }
+    }
+
+    deck.forEach(addReward);
+
+    // The main chest deck contains rarity/pool references rather than every
+    // concrete reward. A player's pool cursors are intentionally independent
+    // from the HAR uploader's cursors, so the recorder must offer every reward
+    // that can occur in any referenced pool.
+    const poolKeys = new Set();
+    const mainDeckKey =
+      getChestDeckKey(normalised);
+    const bonusDeckKey =
+      CHEST_BONUS_DECK_KEYS[normalised] || "";
+
+    [mainDeckKey, bonusDeckKey]
+      .filter(Boolean)
+      .forEach(deckKey => {
+        getNamedDeck(deckKey).forEach(deckValue => {
+          const poolKey =
+            getNestedPoolKey(deckKey, deckValue);
+
+          if (poolKey) {
+            poolKeys.add(poolKey);
+          }
+        });
+      });
+
+    const directBonusPoolKey =
+      CHEST_DIRECT_BONUS_POOL_KEYS[normalised] || "";
+
+    if (directBonusPoolKey) {
+      poolKeys.add(directBonusPoolKey);
+    }
+
+    poolKeys.forEach(poolKey => {
+      getResolvedPoolDeck(poolKey, normalised)
+        .forEach(addReward);
     });
 
     return Array.from(
@@ -3117,40 +3158,54 @@ function valuesMatch(
         )
       );
     const solvedCandidate =
-      candidates.length === 1 &&
-      Object.values(
-        candidates[0]?.poolStarts || {}
-      ).every(
-        starts => starts.length === 1
-      )
+      uniqueRegularStarts.length === 1 &&
+      candidates.length
         ? candidates[0]
         : null;
     let solvedState = null;
 
     if (solvedCandidate) {
       const poolCursors = {};
+      const poolCursorOptions = {};
 
-      Object.entries(
-        solvedCandidate.poolStarts
-      ).forEach(
-        ([poolKey, starts]) => {
+      candidates.forEach(candidate => {
+        Object.entries(candidate.poolStarts)
+          .forEach(([poolKey, starts]) => {
           const poolLength =
             getPoolDeck(poolKey).length;
 
-          poolCursors[poolKey] =
-            (
-              starts[0] +
-              solvedCandidate
-                .poolCounts[poolKey]
-            ) % poolLength;
-        }
-      );
+          if (!poolCursorOptions[poolKey]) {
+            poolCursorOptions[poolKey] = [];
+          }
+
+          starts.forEach(start => {
+            const cursor =
+              (
+                start +
+                candidate.poolCounts[poolKey]
+              ) % poolLength;
+
+            if (!poolCursorOptions[poolKey].includes(cursor)) {
+              poolCursorOptions[poolKey].push(cursor);
+            }
+          });
+        });
+      });
+
+      Object.entries(poolCursorOptions)
+        .forEach(([poolKey, cursors]) => {
+          if (cursors.length === 1) {
+            poolCursors[poolKey] = cursors[0];
+          }
+        });
 
       solvedState = {
         ...solvedCandidate,
+        regularStart: uniqueRegularStarts[0],
         mainDeckKey,
         bonusDeckKey,
-        poolCursors
+        poolCursors,
+        poolCursorOptions
       };
     }
 
@@ -3542,6 +3597,12 @@ function valuesMatch(
             ...nestedState.poolCursors
           }
         : {};
+    const nestedPoolCursorOptions =
+      nestedState
+        ? cloneValue(
+            nestedState.poolCursorOptions || {}
+          )
+        : {};
 
     const bonusEvery = {
       gold: 30,
@@ -3620,23 +3681,65 @@ function valuesMatch(
             poolKey,
             normalised
           );
-        const poolCursor =
+        const knownCursor =
           nestedPoolCursors[poolKey];
+        const cursorOptions =
+          Array.isArray(
+            nestedPoolCursorOptions[poolKey]
+          )
+            ? nestedPoolCursorOptions[poolKey]
+            : (
+                Number.isInteger(knownCursor)
+                  ? [knownCursor]
+                  : []
+              );
 
         if (
           !poolKey ||
           !poolDeck.length ||
-          !Number.isInteger(poolCursor)
+          !cursorOptions.length
         ) {
           break;
         }
 
-        reward =
-          poolDeck[poolCursor];
-        nestedPoolCursors[poolKey] =
-          (
-            poolCursor + 1
-          ) % poolDeck.length;
+        const possibleRewards =
+          cursorOptions.map(
+            cursor => poolDeck[cursor]
+          );
+        const rewardKeys =
+          new Set(
+            possibleRewards.map(
+              possibleReward =>
+                createRewardMatchKey(
+                  possibleReward.matchValue
+                )
+            )
+          );
+
+        // A unique main position can be known before every nested rarity
+        // cursor is unique. Publish the deterministic prefix shared by all
+        // remaining cursor possibilities, then stop at the first divergence.
+        if (rewardKeys.size !== 1) {
+          break;
+        }
+
+        reward = possibleRewards[0];
+        nestedPoolCursorOptions[poolKey] =
+          Array.from(
+            new Set(
+              cursorOptions.map(
+                cursor =>
+                  (cursor + 1) % poolDeck.length
+              )
+            )
+          );
+
+        if (
+          nestedPoolCursorOptions[poolKey].length === 1
+        ) {
+          nestedPoolCursors[poolKey] =
+            nestedPoolCursorOptions[poolKey][0];
+        }
       } else {
         index =
           (
