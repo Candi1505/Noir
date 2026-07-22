@@ -165,7 +165,10 @@
     return candidates;
   }
 
-  function extractRewardDropsFromHar(har) {
+  function extractRewardDropsFromHar(
+    har,
+    preferredEventKey = ""
+  ) {
     const entries = har?.log?.entries;
 
     if (!Array.isArray(entries)) {
@@ -195,7 +198,17 @@
             candidates.push({
               ...candidate,
               entryIndex,
-              url
+              url,
+              score:
+                candidate.score +
+                (
+                  preferredEventKey &&
+                  candidate.path[
+                    candidate.path.length - 1
+                  ] === preferredEventKey
+                    ? 1000000
+                    : 0
+                )
             });
           });
       } catch (error) {
@@ -289,6 +302,24 @@
       );
   }
 
+  function findEventKey(payload) {
+    if (!payload || typeof payload !== "object") {
+      return "";
+    }
+
+    return (
+      Object.keys(payload).find(key => {
+        const params =
+          payload[key]?.gacha?.params;
+
+        return Boolean(
+          params?.deck_indices &&
+          params?.decks
+        );
+      }) || ""
+    );
+  }
+
   function extractAboutV2FromHar(har) {
     const entries = har?.log?.entries;
 
@@ -374,8 +405,13 @@
     }
 
     const extracted = extractAboutV2FromHar(parsed);
+    const eventKey =
+      findEventKey(extracted.payload);
     const rewardData =
-      extractRewardDropsFromHar(parsed);
+      extractRewardDropsFromHar(
+        parsed,
+        eventKey
+      );
 
     const eventPayload =
       attachRewardDrops(
@@ -411,7 +447,8 @@
                 rewardData.drops
               ).length
             : 0,
-        eventName
+        eventName,
+        eventKey
       }
     };
   }
@@ -468,6 +505,7 @@
       extractAboutV2FromHar,
       extractRewardDropsFromHar,
       inferEventName,
+      findEventKey,
       install: installParserWrapper
     });
 

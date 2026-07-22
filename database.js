@@ -544,7 +544,7 @@ async publishLiveEvent(
 
   const safeSource = sourceFile
     ? {
-        name: sourceFile.name || "Proxyman HAR",
+        name: "Admin HAR import",
         importedAt:
           sourceFile.importedAt ||
           publishedAt

@@ -52,6 +52,9 @@
   let cachedPublishedEvent =
     loadCachedPublishedEvent();
 
+  const eventFingerprintCache =
+    new WeakMap();
+
   /* ==========================================================
      GENERAL HELPERS
      ========================================================== */
@@ -188,7 +191,9 @@
       freedom: []
     },
 
-    importedGachaIds: []
+    importedGachaIds: [],
+
+    eventFingerprint: null
   };
 }
 
@@ -237,7 +242,13 @@
       saved.importedGachaIds
     )
       ? saved.importedGachaIds
-      : []
+      : [],
+
+  eventFingerprint:
+    typeof saved.eventFingerprint ===
+      "string"
+      ? saved.eventFingerprint
+      : null
 };
       
     } catch (error) {
@@ -463,6 +474,108 @@
       getSourceFile()?.importedAt,
       cachedPublishedEvent?.cachedAt
     ]);
+  }
+
+  function hashText(value) {
+    const text = String(value || "");
+    let hash = 2166136261;
+
+    for (
+      let index = 0;
+      index < text.length;
+      index += 1
+    ) {
+      hash ^= text.charCodeAt(index);
+      hash = Math.imul(hash, 16777619);
+    }
+
+    return (hash >>> 0).toString(36);
+  }
+
+  function getEventFingerprint(
+    eventData = getEventData()
+  ) {
+    if (!eventData || typeof eventData !== "object") {
+      return null;
+    }
+
+    if (eventFingerprintCache.has(eventData)) {
+      return eventFingerprintCache.get(eventData);
+    }
+
+    const identity = {
+      event:
+        eventData.event ||
+        eventData.eventName ||
+        eventData.name ||
+        "Current Event",
+      decks:
+        eventData.decks || {},
+      drops:
+        eventData.drops || {}
+    };
+
+    const fingerprint = hashText(
+      JSON.stringify(identity)
+    );
+
+    eventFingerprintCache.set(
+      eventData,
+      fingerprint
+    );
+
+    return fingerprint;
+  }
+
+  function syncPlayerEvent(
+    eventData = getEventData()
+  ) {
+    const fingerprint =
+      getEventFingerprint(eventData);
+
+    if (!fingerprint) {
+      return false;
+    }
+
+    if (!state.eventFingerprint) {
+      state.eventFingerprint = fingerprint;
+      savePlayerState();
+      return false;
+    }
+
+    if (
+      state.eventFingerprint ===
+      fingerprint
+    ) {
+      return false;
+    }
+
+    SUPPORTED_CHESTS.forEach(
+      chestType => {
+        state.observations[chestType] = [];
+      }
+    );
+
+    state.importedGachaIds = [];
+    state.eventFingerprint = fingerprint;
+    savePlayerState();
+
+    window.dispatchEvent(
+      new CustomEvent(
+        "chest-companion-player-event-reset",
+        {
+          detail: {
+            event:
+              eventData.event ||
+              eventData.eventName ||
+              "Current Event",
+            fingerprint
+          }
+        }
+      )
+    );
+
+    return true;
   }
 
   /* ==========================================================
@@ -3149,6 +3262,8 @@ function valuesMatch(
     const eventData =
       getEventData();
 
+    syncPlayerEvent(eventData);
+
     const chests =
       SUPPORTED_CHESTS.map(
         getChestStatus
@@ -3884,6 +3999,8 @@ function importGachaHistory(
       eventData &&
       typeof eventData === "object"
     ) {
+      syncPlayerEvent(eventData);
+
       saveCachedPublishedEvent(
         eventData,
         sourceFile
@@ -3970,6 +4087,8 @@ function importGachaHistory(
       getEventName,
       getImportedAt,
       getSourceFile,
+      getEventFingerprint,
+      syncPlayerEvent,
 
       publishEventData,
       clearPublishedEventData,
