@@ -14,7 +14,7 @@
      APP SETTINGS
   ======================================================= */
 
-  const STORAGE_KEY =
+  const STORAGE_KEY_PREFIX =
     "chest_companion_v2";
 
 
@@ -442,7 +442,7 @@
   ======================================================= */
 
   let appState =
-    loadLocalState();
+    loadLocalState(null);
 
 
   let currentUser =
@@ -676,7 +676,23 @@
      LOCAL STORAGE
   ======================================================= */
 
-  function loadLocalState() {
+  function getPlayerStorageKey(userId) {
+    const cleanUserId =
+      String(userId || "").trim();
+
+    return cleanUserId
+      ? `${STORAGE_KEY_PREFIX}:${cleanUserId}`
+      : null;
+  }
+
+  function loadLocalState(userId = currentUser?.id) {
+
+    const storageKey =
+      getPlayerStorageKey(userId);
+
+    if (!storageKey) {
+      return cloneValue(DEFAULT_STATE);
+    }
 
     try {
 
@@ -684,7 +700,7 @@
         JSON.parse(
 
           localStorage.getItem(
-            STORAGE_KEY
+            storageKey
           ) ||
 
           "{}"
@@ -767,11 +783,20 @@
 
   function saveLocalState() {
 
+    const storageKey =
+      getPlayerStorageKey(
+        currentUser?.id
+      );
+
+    if (!storageKey) {
+      return;
+    }
+
     try {
 
       localStorage.setItem(
 
-        STORAGE_KEY,
+        storageKey,
 
         JSON.stringify(
           appState
@@ -1328,7 +1353,39 @@
 
   async function startApplication() {
 
+    /* Remove the shared storage used by older releases. */
+    try {
+      localStorage.removeItem(
+        STORAGE_KEY_PREFIX
+      );
+    } catch (error) {
+      console.warn(
+        "Chest Companion could not clear legacy shared data.",
+        error
+      );
+    }
+
     bindEvents();
+
+    window.chestSupabase?.auth
+      ?.onAuthStateChange?.(
+        (event, session) => {
+          const nextUserId =
+            session?.user?.id || null;
+          const currentUserId =
+            currentUser?.id || null;
+
+          if (
+            (
+              event === "SIGNED_IN" ||
+              event === "SIGNED_OUT"
+            ) &&
+            nextUserId !== currentUserId
+          ) {
+            window.location.reload();
+          }
+        }
+      );
 
     loadProfileIntoScreen();
 
@@ -1391,6 +1448,15 @@
       currentUser =
         player?.user ||
         null;
+
+      appState =
+        loadLocalState(
+          currentUser?.id
+        );
+
+      currentChest =
+        appState.activeSession?.chest ||
+        "gold";
 
 
       if (
@@ -3470,9 +3536,16 @@ function getArmoryPage(position, positionsPerPage = 20) {
 
     }
 
-    localStorage.removeItem(
-      STORAGE_KEY
-    );
+    const storageKey =
+      getPlayerStorageKey(
+        currentUser?.id
+      );
+
+    if (storageKey) {
+      localStorage.removeItem(
+        storageKey
+      );
+    }
 
     location.reload();
 

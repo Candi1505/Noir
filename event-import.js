@@ -9,8 +9,7 @@
  * - Parse the War Dragons about_v2 response
  * - Detect Gold, Platinum, Draconic and Freedom decks
  * - Parse use_gacha requests when the file is a HAR capture
- * - Store event information and chest-opening history
- * - Restore imported information after the app reloads
+ * - Keep imported capture information in memory only
  * - Notify the rest of Noir when new data becomes available
  */
 
@@ -547,51 +546,17 @@ document.addEventListener("DOMContentLoaded", () => {
     gachaData,
     sourceFile
   ) {
+    /* Raw administrator imports are never persisted. */
     try {
-      localStorage.setItem(
-        LIVE_EVENT_STORAGE_KEY,
-        JSON.stringify({
-          data: parsed,
-          sourceFile
-        })
+      localStorage.removeItem(
+        LIVE_EVENT_STORAGE_KEY
       );
-    } catch (error) {
-      console.warn(
-        "[Chest Companion] Could not save live event data.",
-        error
-      );
-    }
-
-    if (gachaData) {
-      try {
-        localStorage.setItem(
-          LIVE_GACHA_STORAGE_KEY,
-          JSON.stringify({
-            data: gachaData,
-            sourceFile
-          })
-        );
-      } catch (error) {
-        console.warn(
-          "[Chest Companion] Could not save HAR gacha history.",
-          error
-        );
-      }
-
-      return;
-    }
-
-    /*
-     * Remove history from an older import so it cannot
-     * become mixed with the newly imported event.
-     */
-    try {
       localStorage.removeItem(
         LIVE_GACHA_STORAGE_KEY
       );
     } catch (error) {
       console.warn(
-        "[Chest Companion] Could not clear old HAR gacha history.",
+        "[Chest Companion] Could not clear legacy import data.",
         error
       );
     }
@@ -854,122 +819,22 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function restoreSavedLiveEvent() {
+    /* Restore only sanitised data from Supabase. */
     try {
-      const savedEvent =
-        JSON.parse(
-          localStorage.getItem(
-            LIVE_EVENT_STORAGE_KEY
-          ) || "null"
-        );
-
-      if (
-        !savedEvent?.data ||
-        !savedEvent.data.chests
-      ) {
-        return false;
-      }
-
-      let savedGacha = null;
-
-      try {
-        const storedGacha =
-          JSON.parse(
-            localStorage.getItem(
-              LIVE_GACHA_STORAGE_KEY
-            ) || "null"
-          );
-
-        savedGacha =
-          storedGacha?.data || null;
-      } catch (error) {
-        console.warn(
-          "[Chest Companion] Could not restore saved gacha history.",
-          error
-        );
-      }
-
-      window.currentEventData =
-        savedEvent.data;
-
-      window.currentGachaData =
-        savedGacha;
-
-      window.currentEventSourceFile =
-        savedEvent.sourceFile || null;
-
-      const sourceName =
-        savedEvent.sourceFile?.name ||
-        "saved event file";
-
-      setBadge(
-        savedEvent.data.ready
-          ? "Restored"
-          : "Incomplete",
-        savedEvent.data.ready
-          ? "ready"
-          : "failed"
+      localStorage.removeItem(
+        LIVE_EVENT_STORAGE_KEY
       );
-
-      const openingCount =
-        getGachaOpeningCount(
-          savedGacha
-        );
-
-      const gachaStatus =
-        savedGacha
-          ? ` ${openingCount} saved chest-opening request${
-              openingCount === 1
-                ? ""
-                : "s"
-            } restored.`
-          : "";
-
-      statusText.textContent =
-        `${savedEvent.data.readyChestCount || 0} chest deck(s) restored from ${sourceName}.${gachaStatus}`;
-
-      renderResults(
-        savedEvent.data,
-        savedGacha
+      localStorage.removeItem(
+        LIVE_GACHA_STORAGE_KEY
       );
-
-      updateLegacyPredictorBadges(
-        savedEvent.data
-      );
-
-      dispatchImportedEvent({
-        parsed:
-          savedEvent.data,
-
-        gachaData:
-          savedGacha,
-
-        sourceFile:
-          savedEvent.sourceFile ||
-          null,
-
-        restored: true
-      });
-
-      console.info(
-        "[Chest Companion] Saved live event and gacha history restored.",
-        {
-          eventData:
-            savedEvent.data,
-
-          gachaData:
-            savedGacha
-        }
-      );
-
-      return true;
     } catch (error) {
       console.warn(
-        "[Chest Companion] Could not restore saved live event.",
+        "[Chest Companion] Could not clear legacy import data.",
         error
       );
-
-      return false;
     }
+
+    return false;
   }
 
   restoreSavedLiveEvent();

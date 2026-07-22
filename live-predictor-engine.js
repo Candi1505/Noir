@@ -19,7 +19,7 @@
 (function initialiseLivePredictorEngine(window) {
   "use strict";
 
-  const PLAYER_STORAGE_KEY =
+  const PLAYER_STORAGE_KEY_PREFIX =
     "chestCompanionLivePredictor";
 
   const EVENT_CACHE_KEY =
@@ -56,8 +56,10 @@ const CHEST_DIRECT_BONUS_POOL_KEYS = {
   freedom: "mythic_freedom_items"
 };
 
+  let currentPlayerId = null;
+
   let state =
-    loadPlayerState();
+    createDefaultPlayerState();
 
   let cachedPublishedEvent =
     loadCachedPublishedEvent();
@@ -253,15 +255,34 @@ const CHEST_DIRECT_BONUS_POOL_KEYS = {
   };
 }
 
-  function loadPlayerState() {
+  function getPlayerStorageKey(
+    userId = currentPlayerId
+  ) {
+    const cleanUserId =
+      normaliseText(userId);
+
+    return cleanUserId
+      ? `${PLAYER_STORAGE_KEY_PREFIX}:${cleanUserId}`
+      : null;
+  }
+
+  function loadPlayerState(
+    userId = currentPlayerId
+  ) {
     const defaults =
       createDefaultPlayerState();
+    const storageKey =
+      getPlayerStorageKey(userId);
+
+    if (!storageKey) {
+      return defaults;
+    }
 
     try {
       const saved =
         JSON.parse(
           localStorage.getItem(
-            PLAYER_STORAGE_KEY
+            storageKey
           ) || "{}"
         );
 
@@ -324,9 +345,16 @@ const CHEST_DIRECT_BONUS_POOL_KEYS = {
   }
 
   function savePlayerState() {
+    const storageKey =
+      getPlayerStorageKey();
+
+    if (!storageKey) {
+      return;
+    }
+
     try {
       localStorage.setItem(
-        PLAYER_STORAGE_KEY,
+        storageKey,
         JSON.stringify(state)
       );
     } catch (error) {
@@ -335,6 +363,74 @@ const CHEST_DIRECT_BONUS_POOL_KEYS = {
         error
       );
     }
+  }
+
+  function switchPlayerIdentity(userId) {
+    const nextPlayerId =
+      normaliseText(userId) || null;
+
+    if (nextPlayerId === currentPlayerId) {
+      return false;
+    }
+
+    currentPlayerId = nextPlayerId;
+    state = loadPlayerState(
+      currentPlayerId
+    );
+
+    window.dispatchEvent(
+      new CustomEvent(
+        "chest-companion-live-predictor-updated",
+        {
+          detail: {
+            reason: "player-changed",
+            authenticated:
+              Boolean(currentPlayerId)
+          }
+        }
+      )
+    );
+
+    return true;
+  }
+
+  async function initialisePlayerIdentity() {
+    try {
+      localStorage.removeItem(
+        PLAYER_STORAGE_KEY_PREFIX
+      );
+    } catch (error) {
+      console.warn(
+        "[Chest Companion] Could not clear legacy shared predictor data.",
+        error
+      );
+    }
+
+    try {
+      const { data } =
+        await window.chestSupabase?.auth
+          ?.getSession?.() ||
+        { data: null };
+
+      switchPlayerIdentity(
+        data?.session?.user?.id || null
+      );
+    } catch (error) {
+      console.warn(
+        "[Chest Companion] Could not initialise player storage.",
+        error
+      );
+      switchPlayerIdentity(null);
+    }
+
+    window.chestSupabase?.auth
+      ?.onAuthStateChange?.(
+        (_event, session) => {
+          switchPlayerIdentity(
+            session?.user?.id || null
+          );
+        }
+      );
   }
 
   /* ==========================================================
@@ -4895,7 +4991,10 @@ function importGachaHistory(
 
     refresh();
   }
-);
+  );
+
+  initialisePlayerIdentity();
+
   /* ==========================================================
      PUBLIC API
      ========================================================== */
@@ -4926,6 +5025,7 @@ function importGachaHistory(
       setActiveChest,
       getActiveChest,
       getChestLabel,
+      switchPlayerIdentity,
 
       getChestData,
       getDeck,

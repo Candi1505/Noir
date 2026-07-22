@@ -223,8 +223,8 @@ window.ChestDatabase = {
   /*
     Gets the current Supabase session.
 
-    If the player has never opened Chest Companion before,
-    an anonymous account is automatically created.
+    Chest Companion never creates anonymous accounts. A player
+    must explicitly sign in or create an email-confirmed account.
   */
 
   async getOrCreateSession() {
@@ -263,31 +263,7 @@ window.ChestDatabase = {
     }
 
 
-    const {
-      data: anonymousData,
-      error: anonymousError
-    } =
-      await supabaseClient.auth
-        .signInAnonymously();
-
-
-    if (anonymousError) {
-
-      throw anonymousError;
-
-    }
-
-
-    if (!anonymousData.session) {
-
-      throw new Error(
-        "Anonymous sign-in did not create a session."
-      );
-
-    }
-
-
-    return anonymousData.session;
+    return null;
 
   },
 
@@ -405,14 +381,16 @@ window.ChestDatabase = {
 
 
     const user =
-      session.user;
+      session?.user || null;
 
 
     if (!user) {
 
-      throw new Error(
-        "No authenticated player was found."
-      );
+      return {
+        session: null,
+        user: null,
+        profile: null
+      };
 
     }
 
