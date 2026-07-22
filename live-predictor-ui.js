@@ -990,7 +990,7 @@
         color: #d1d1d1;
 
         font: inherit;
-        font-size: 14px;
+        font-size: 16px;
 
         outline: none;
       }
@@ -3198,10 +3198,23 @@
             return true;
           }
 
+          const aliases =
+            reward.code === "breedingToken"
+              ? [
+                  "egg",
+                  "eggs",
+                  "egg token",
+                  "egg tokens",
+                  "breeding token",
+                  "breeding tokens"
+                ]
+              : [];
+
           const searchableText = [
             reward.name,
             reward.code,
-            reward.amount
+            reward.amount,
+            ...aliases
           ]
             .filter(
               value =>
@@ -3957,6 +3970,24 @@
         `${formatNumber(
           playerPosition
         )}. Upcoming rewards can now be predicted.`;
+
+      return;
+    }
+
+    if (matchCount === 0) {
+      title.textContent =
+        "Sequence does not match";
+
+      confidenceBadge.textContent =
+        "Check last reward";
+
+      confidenceBadge.className =
+        "lp-confidence lp-confidence-low";
+
+      note.textContent =
+        "No position matches the recorded sequence. " +
+        "Check the selected chest, reward and amount, " +
+        "then undo the last entry and try again.";
 
       return;
     }

@@ -257,6 +257,38 @@
     return payload;
   }
 
+  function inferEventName(payload) {
+    if (!payload || typeof payload !== "object") {
+      return "";
+    }
+
+    const eventKey =
+      Object.keys(payload).find(key => {
+        const params =
+          payload[key]?.gacha?.params;
+
+        return Boolean(
+          params?.deck_indices &&
+          params?.decks
+        );
+      });
+
+    if (!eventKey) {
+      return "";
+    }
+
+    return eventKey
+      .replace(/\d+$/g, "")
+      .replace(/[_-]+/g, " ")
+      .replace(/([a-z])([A-Z])/g, "$1 $2")
+      .replace(/\s+/g, " ")
+      .trim()
+      .replace(
+        /\b\w/g,
+        character => character.toUpperCase()
+      );
+  }
+
   function extractAboutV2FromHar(har) {
     const entries = har?.log?.entries;
 
@@ -351,6 +383,17 @@
         rewardData?.drops
       );
 
+    const eventName =
+      inferEventName(eventPayload);
+
+    if (
+      eventName &&
+      !eventPayload.event_name
+    ) {
+      eventPayload.event_name =
+        eventName;
+    }
+
     return {
       kind: "har",
       eventPayload,
@@ -367,7 +410,8 @@
             ? Object.keys(
                 rewardData.drops
               ).length
-            : 0
+            : 0,
+        eventName
       }
     };
   }
@@ -423,6 +467,7 @@
       parseImportText,
       extractAboutV2FromHar,
       extractRewardDropsFromHar,
+      inferEventName,
       install: installParserWrapper
     });
 
