@@ -532,7 +532,7 @@ async publishLiveEvent(
     typeof eventData.chests !== "object"
   ) {
     throw new Error(
-      "The imported HAR did not contain usable chest decks."
+      "The uploaded event data did not contain usable chest decks."
     );
   }
 
@@ -541,15 +541,6 @@ async publishLiveEvent(
 
   const version =
     Math.floor(Date.now() / 1000);
-
-  const safeSource = sourceFile
-    ? {
-        name: "Admin HAR import",
-        importedAt:
-          sourceFile.importedAt ||
-          publishedAt
-      }
-    : null;
 
   const sanitisedEvent = {
     schema: "noir-live-event-v1",
@@ -567,8 +558,7 @@ async publishLiveEvent(
     deckIndices:
       eventData.deckIndices || {},
     spinTypes:
-      eventData.spinTypes || [],
-    sourceFile: safeSource
+      eventData.spinTypes || []
   };
 
   const chestTypes = [

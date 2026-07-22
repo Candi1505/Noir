@@ -58,30 +58,6 @@
       : "—";
   }
 
-  function getSourceName(sourceFile) {
-    if (!sourceFile) {
-      return "";
-    }
-
-    if (
-      typeof sourceFile === "string"
-    ) {
-      return sourceFile;
-    }
-
-    if (
-      typeof sourceFile === "object"
-    ) {
-      return (
-        sourceFile.name ||
-        sourceFile.fileName ||
-        "Imported about_v2 file"
-      );
-    }
-
-    return "";
-  }
-
   function closeLegacyPredictor() {
     const legacyOverlay =
       document.getElementById(
@@ -2001,7 +1977,7 @@
           <div class="lp-event-header">
             <div class="lp-event-copy">
               <p class="lp-eyebrow">
-                IMPORTED EVENT
+                LIVE EVENT
               </p>
 
               <div
@@ -2027,10 +2003,6 @@
             </div>
           </div>
 
-          <div
-            id="lpSource"
-            class="lp-source"
-          ></div>
         </section>
 
         <section class="lp-card">
@@ -4433,18 +4405,6 @@
       status.ready
         ? "lp-status lp-status-ready"
         : "lp-status lp-status-not-ready";
-
-    const sourceName =
-      getSourceName(
-        status.sourceFile
-      );
-
-    document.getElementById(
-      "lpSource"
-    ).textContent =
-      sourceName
-        ? `Source: ${sourceName}`
-        : "";
 
          renderChestCards(
          status

@@ -200,7 +200,7 @@
 
     if (status) {
       status.textContent =
-        "HAR parsed. Publishing sanitised event data to players...";
+        "Event data ready. Publishing to players...";
     }
 
     try {

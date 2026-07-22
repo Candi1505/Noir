@@ -144,13 +144,18 @@
     const eventData =
       JSON.parse(JSON.stringify(newest));
 
+    // Source/upload metadata is private admin context and is never exposed
+    // to player sessions, including for older published records.
+    delete eventData.sourceFile;
+    delete eventData.fileName;
+    delete eventData.filename;
+
     window.currentEventData = eventData;
     window.currentEventSourceFile =
-      eventData.sourceFile || null;
+      null;
     window.ChestCompanionPublishedEvent = {
       data: eventData,
-      sourceFile:
-        eventData.sourceFile || null,
+      sourceFile: null,
       publishedAt:
         eventData.publishedAt || null
     };
@@ -179,8 +184,7 @@
             parsed: eventData,
             eventData,
             gachaData: null,
-            sourceFile:
-              eventData.sourceFile || null
+            sourceFile: null
           }
         }
       )
