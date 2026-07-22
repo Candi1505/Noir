@@ -230,6 +230,58 @@
     return candidates[0] || null;
   }
 
+  function classifyArmoryEventKey(eventKey) {
+    const key = String(eventKey || "").toLowerCase();
+    if (/assault|invasion/.test(key)) return "assault";
+    if (/breeding|breed|spend[_-]?breeding[_-]?tokens/.test(key)) return "breeding";
+    return "";
+  }
+
+  function extractArmoryDropsFromHar(har) {
+    const entries = har?.log?.entries;
+    const result = {};
+    if (!Array.isArray(entries)) return result;
+
+    entries.forEach(entry => {
+      const url = String(entry?.request?.url || "");
+      if (!EVENT_DATA_PATTERN.test(url)) return;
+      const responseText = getResponseText(entry);
+      if (!responseText) return;
+      try {
+        const payload = JSON.parse(responseText);
+        const containers = [
+          payload?.params_and_data?.gacha,
+          payload?.gacha,
+          payload
+        ];
+        containers.forEach(container => {
+          if (!container || typeof container !== "object") return;
+          Object.entries(container).forEach(([eventKey, record]) => {
+            const armoryType = classifyArmoryEventKey(eventKey);
+            const drops = record?.drops || record?.gacha?.params?.drops;
+            if (armoryType && drops && typeof drops === "object") {
+              result[eventKey] = structuredClone(drops);
+            }
+          });
+        });
+      } catch (error) {
+        console.warn("[Chest Companion] Ignored unreadable Double Armory reward data.", error);
+      }
+    });
+
+    return result;
+  }
+
+  function attachArmoryDrops(eventPayload, dropsByEvent) {
+    const payload = structuredClone(eventPayload);
+    Object.entries(payload).forEach(([eventKey, record]) => {
+      const params = record?.gacha?.params;
+      const drops = dropsByEvent?.[eventKey];
+      if (params && drops) params.drops = structuredClone(drops);
+    });
+    return payload;
+  }
+
   function attachRewardDrops(
     eventPayload,
     rewardDrops
@@ -421,14 +473,16 @@
         eventKey
       );
 
-    const eventPayload =
-      attachRewardDrops(
-        extracted.payload,
-        rewardData?.drops
-      );
+    const armoryDrops = extractArmoryDropsFromHar(parsed);
+    const eventPayload = attachArmoryDrops(
+      attachRewardDrops(extracted.payload, rewardData?.drops),
+      armoryDrops
+    );
 
     const eventName =
-      inferEventName(eventPayload);
+      Object.keys(armoryDrops).length >= 2
+        ? "Double Armory"
+        : inferEventName(eventPayload);
 
     if (
       eventName &&
@@ -456,7 +510,9 @@
               ).length
             : 0,
         eventName,
-        eventKey
+        eventKey,
+        doubleArmoryDetected:
+          Object.keys(armoryDrops).length >= 2
       }
     };
   }
@@ -514,6 +570,8 @@
       extractRewardDropsFromHar,
       inferEventName,
       findEventKey,
+      classifyArmoryEventKey,
+      extractArmoryDropsFromHar,
       install: installParserWrapper
     });
 
