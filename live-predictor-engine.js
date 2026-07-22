@@ -19,7 +19,7 @@
 (function initialiseLivePredictorEngine(window) {
   "use strict";
 
-  const PLAYER_STORAGE_KEY_PREFIX =
+  const PLAYER_STORAGE_KEY =
     "chestCompanionLivePredictor";
 
   const EVENT_CACHE_KEY =
@@ -39,27 +39,15 @@
     freedom: "Freedom"
   };
   
-const CHEST_DECK_KEYS = {
+  const CHEST_DECK_KEYS = {
   gold: "gold_chest",
   platinum: "platinum_chest",
   draconic: "dragfrag_chest_tier3",
   freedom: "freedom_chest"
 };
 
-const CHEST_BONUS_DECK_KEYS = {
-  platinum: "platinum_chest_bonus",
-  draconic: "dragfrag_chest_tier3_bonus"
-};
-
-const CHEST_DIRECT_BONUS_POOL_KEYS = {
-  gold: "legendary_items",
-  freedom: "mythic_freedom_items"
-};
-
-  let currentPlayerId = null;
-
   let state =
-    createDefaultPlayerState();
+    loadPlayerState();
 
   let cachedPublishedEvent =
     loadCachedPublishedEvent();
@@ -144,30 +132,17 @@ const CHEST_DIRECT_BONUS_POOL_KEYS = {
     bloodstone: "Bloodstone",
     breedingToken: "Breeding Tokens",
     cosmicCharge: "Cosmic Charges",
-    energyPack: "Energy Packs",
     electrumBar: "Electrum Bars",
     elementalEmber: "Elemental Embers",
     fireShard: "Fire Shards",
-    fullHeal: "Healing Potions (Full Heals)",
+    fullHeal: "Full Heals",
     iceShard: "Ice Shards",
     mysticFragment: "Mystic Fragments",
     urbanflareSigil: "Urbanflare Sigils",
-    increaseAttack1: "Attack Boosts",
-    increaseHP1: "HP Boosts",
-    innerFire01: "Inner Fires",
-    repairConsumable: "Defense Hammers",
     xpMultiplierSpellConsumable01: "Dragon XP Boosts",
-    xpMultiplierSpellConsumable02: "Dragon XP Boosts",
-    cmCrystaldarkGemstone: "Dark Gemstones",
-    cmCrystalearthGemstone: "Earth Gemstones",
-    cmCrystalfireGemstone: "Fire Gemstones",
-    cmCrystaliceGemstone: "Ice Gemstones",
-    cmCrystalwindGemstone: "Wind Gemstones",
-    expediteConsumable1: "15-Minute Speedups",
-    expediteConsumable1a: "30-Minute Speedups",
-    expediteConsumable2: "1-Hour Speedups",
-    expediteConsumable3: "3-Hour Speedups",
-    expediteConsumable4: "12-Hour Speedups",
+    expediteConsumable2: "3-Hour Speedups",
+    expediteConsumable3: "12-Hour Speedups",
+    expediteConsumable4: "24-Hour Speedups",
     foodConsumable2: "Food Packs",
     chest0: "Bronze Chests",
     chest1: "Silver Chests",
@@ -201,37 +176,6 @@ const CHEST_DIRECT_BONUS_POOL_KEYS = {
       );
   }
 
-  function getRewardDisplayName(
-    reward,
-    fallbackIndex = 0
-  ) {
-    const currentName =
-      normaliseText(
-        reward?.name ||
-        reward?.label
-      );
-    const code =
-      normaliseText(
-        reward?.code ||
-        reward?.id
-      );
-
-    if (
-      currentName &&
-      !/^Reward\s+\d+$/i.test(currentName) &&
-      currentName.toLowerCase() !==
-        "unresolved reward"
-    ) {
-      return currentName;
-    }
-
-    return (
-      humaniseRewardIdentifier(code) ||
-      currentName ||
-      `Reward ${fallbackIndex + 1}`
-    );
-  }
-
   /* ==========================================================
      PLAYER STATE
      ========================================================== */
@@ -251,38 +195,52 @@ const CHEST_DIRECT_BONUS_POOL_KEYS = {
 
     eventFingerprint: null,
 
-    eventName: null
+    eventStates: {}
   };
 }
 
-  function getPlayerStorageKey(
-    userId = currentPlayerId
+  function isManualPlayerObservation(
+    observation
   ) {
-    const cleanUserId =
-      normaliseText(userId);
-
-    return cleanUserId
-      ? `${PLAYER_STORAGE_KEY_PREFIX}:${cleanUserId}`
-      : null;
+    return !(
+      observation?.importedFromHar === true ||
+      normaliseText(
+        observation?.source
+      ).toLowerCase() === "har"
+    );
   }
 
-  function loadPlayerState(
-    userId = currentPlayerId
+  function cleanSavedObservations(
+    observations
   ) {
+    const cleaned = {};
+
+    SUPPORTED_CHESTS.forEach(
+      chestType => {
+        cleaned[chestType] =
+          Array.isArray(
+            observations?.[chestType]
+          )
+            ? observations[chestType]
+                .filter(
+                  isManualPlayerObservation
+                )
+            : [];
+      }
+    );
+
+    return cleaned;
+  }
+
+  function loadPlayerState() {
     const defaults =
       createDefaultPlayerState();
-    const storageKey =
-      getPlayerStorageKey(userId);
-
-    if (!storageKey) {
-      return defaults;
-    }
 
     try {
       const saved =
         JSON.parse(
           localStorage.getItem(
-            storageKey
+            PLAYER_STORAGE_KEY
           ) || "{}"
         );
 
@@ -293,22 +251,10 @@ const CHEST_DIRECT_BONUS_POOL_KEYS = {
           ? saved.activeChest
           : defaults.activeChest;
 
-      const observations = {};
-
-      SUPPORTED_CHESTS.forEach(
-        chestType => {
-          observations[chestType] =
-            Array.isArray(
-              saved.observations?.[
-                chestType
-              ]
-            )
-              ? saved.observations[
-                  chestType
-                ]
-              : [];
-        }
-      );
+      const observations =
+        cleanSavedObservations(
+          saved.observations
+        );
 
       return {
   activeChest,
@@ -327,11 +273,10 @@ const CHEST_DIRECT_BONUS_POOL_KEYS = {
       ? saved.eventFingerprint
       : null,
 
-  eventName:
-    typeof saved.eventName ===
-      "string"
-      ? saved.eventName
-      : null
+  eventStates:
+    isObject(saved.eventStates)
+      ? saved.eventStates
+      : {}
 };
       
     } catch (error) {
@@ -345,16 +290,9 @@ const CHEST_DIRECT_BONUS_POOL_KEYS = {
   }
 
   function savePlayerState() {
-    const storageKey =
-      getPlayerStorageKey();
-
-    if (!storageKey) {
-      return;
-    }
-
     try {
       localStorage.setItem(
-        storageKey,
+        PLAYER_STORAGE_KEY,
         JSON.stringify(state)
       );
     } catch (error) {
@@ -363,74 +301,6 @@ const CHEST_DIRECT_BONUS_POOL_KEYS = {
         error
       );
     }
-  }
-
-  function switchPlayerIdentity(userId) {
-    const nextPlayerId =
-      normaliseText(userId) || null;
-
-    if (nextPlayerId === currentPlayerId) {
-      return false;
-    }
-
-    currentPlayerId = nextPlayerId;
-    state = loadPlayerState(
-      currentPlayerId
-    );
-
-    window.dispatchEvent(
-      new CustomEvent(
-        "chest-companion-live-predictor-updated",
-        {
-          detail: {
-            reason: "player-changed",
-            authenticated:
-              Boolean(currentPlayerId)
-          }
-        }
-      )
-    );
-
-    return true;
-  }
-
-  async function initialisePlayerIdentity() {
-    try {
-      localStorage.removeItem(
-        PLAYER_STORAGE_KEY_PREFIX
-      );
-    } catch (error) {
-      console.warn(
-        "[Chest Companion] Could not clear legacy shared predictor data.",
-        error
-      );
-    }
-
-    try {
-      const { data } =
-        await window.chestSupabase?.auth
-          ?.getSession?.() ||
-        { data: null };
-
-      switchPlayerIdentity(
-        data?.session?.user?.id || null
-      );
-    } catch (error) {
-      console.warn(
-        "[Chest Companion] Could not initialise player storage.",
-        error
-      );
-      switchPlayerIdentity(null);
-    }
-
-    window.chestSupabase?.auth
-      ?.onAuthStateChange?.(
-        (_event, session) => {
-          switchPlayerIdentity(
-            session?.user?.id || null
-          );
-        }
-      );
   }
 
   /* ==========================================================
@@ -691,63 +561,100 @@ const CHEST_DIRECT_BONUS_POOL_KEYS = {
     const fingerprint =
       getEventFingerprint(eventData);
 
-    const eventName =
-      normaliseText(
-        eventData?.event ||
-        eventData?.eventName ||
-        eventData?.name ||
-        "Current Event"
-      );
-
     if (!fingerprint) {
       return false;
     }
 
+    if (!isObject(state.eventStates)) {
+      state.eventStates = {};
+    }
+
     if (!state.eventFingerprint) {
+      const hasLegacyProgress =
+        SUPPORTED_CHESTS.some(
+          chestType =>
+            Array.isArray(
+              state.observations?.[chestType]
+            ) &&
+            state.observations[chestType].length
+        );
+
+      /*
+       * Progress saved before event fingerprints existed cannot
+       * safely be assigned to the newly loaded event. Preserve it
+       * as a legacy snapshot, then begin the live event cleanly.
+       */
+      if (hasLegacyProgress) {
+        state.eventStates.legacy = {
+          observations:
+            cloneValue(state.observations),
+          importedGachaIds:
+            cloneValue(
+              state.importedGachaIds || []
+            )
+        };
+
+        SUPPORTED_CHESTS.forEach(
+          chestType => {
+            state.observations[chestType] = [];
+          }
+        );
+
+        state.importedGachaIds = [];
+      }
+
       state.eventFingerprint = fingerprint;
-      state.eventName = eventName;
       savePlayerState();
-      return false;
+      return hasLegacyProgress;
     }
 
     if (
       state.eventFingerprint ===
       fingerprint
     ) {
-      if (state.eventName !== eventName) {
-        state.eventName = eventName;
-        savePlayerState();
-      }
-
       return false;
     }
 
-    /*
-     * A corrected/re-published copy of the same event must not
-     * erase a player's observations. Older saved state did not
-     * include eventName, so it is migrated without data loss.
-     */
-    if (
-      !state.eventName ||
-      normaliseText(state.eventName)
-        .toLowerCase() ===
-      eventName.toLowerCase()
-    ) {
-      state.eventFingerprint = fingerprint;
-      state.eventName = eventName;
-      savePlayerState();
-      return false;
-    }
+    state.eventStates[state.eventFingerprint] = {
+      observations:
+        cloneValue(state.observations),
+      importedGachaIds:
+        cloneValue(
+          state.importedGachaIds || []
+        )
+    };
+
+    const savedEventState =
+      state.eventStates[fingerprint];
 
     SUPPORTED_CHESTS.forEach(
       chestType => {
-        state.observations[chestType] = [];
+        state.observations[chestType] =
+          Array.isArray(
+            savedEventState
+              ?.observations
+              ?.[chestType]
+          )
+            ? cloneValue(
+                savedEventState.observations[
+                  chestType
+                ].filter(
+                  isManualPlayerObservation
+                )
+              )
+            : [];
       }
     );
 
-    state.importedGachaIds = [];
+    state.importedGachaIds =
+      Array.isArray(
+        savedEventState?.importedGachaIds
+      )
+        ? cloneValue(
+            savedEventState.importedGachaIds
+          )
+        : [];
     state.eventFingerprint = fingerprint;
-    state.eventName = eventName;
     savePlayerState();
 
     window.dispatchEvent(
@@ -2228,11 +2135,7 @@ function resolveDeckReward(
     const rewards =
       new Map();
 
-    function addReward(entry) {
-      if (!entry) {
-        return;
-      }
-
+    deck.forEach(entry => {
       const catalogueKey = [
         entry.id,
         entry.code,
@@ -2291,43 +2194,6 @@ function resolveDeckReward(
           }
         );
       }
-    }
-
-    deck.forEach(addReward);
-
-    // The main chest deck contains rarity/pool references rather than every
-    // concrete reward. A player's pool cursors are intentionally independent
-    // from the HAR uploader's cursors, so the recorder must offer every reward
-    // that can occur in any referenced pool.
-    const poolKeys = new Set();
-    const mainDeckKey =
-      getChestDeckKey(normalised);
-    const bonusDeckKey =
-      CHEST_BONUS_DECK_KEYS[normalised] || "";
-
-    [mainDeckKey, bonusDeckKey]
-      .filter(Boolean)
-      .forEach(deckKey => {
-        getNamedDeck(deckKey).forEach(deckValue => {
-          const poolKey =
-            getNestedPoolKey(deckKey, deckValue);
-
-          if (poolKey) {
-            poolKeys.add(poolKey);
-          }
-        });
-      });
-
-    const directBonusPoolKey =
-      CHEST_DIRECT_BONUS_POOL_KEYS[normalised] || "";
-
-    if (directBonusPoolKey) {
-      poolKeys.add(directBonusPoolKey);
-    }
-
-    poolKeys.forEach(poolKey => {
-      getResolvedPoolDeck(poolKey, normalised)
-        .forEach(addReward);
     });
 
     return Array.from(
@@ -2556,8 +2422,7 @@ function valuesMatch(
   function createObservation(
     reward,
     chestType,
-    quantity = 1,
-    isBonus = false
+    quantity = 1
   ) {
     const normalisedChest =
       normaliseChestType(
@@ -2601,12 +2466,6 @@ function valuesMatch(
 
       chestsOpened:
         quantity,
-
-      isBonus:
-        Boolean(isBonus),
-
-      bonus:
-        Boolean(isBonus),
 
       value:
         cloneValue(
@@ -2694,12 +2553,6 @@ function valuesMatch(
         )
       );
 
-    const isBonus = Boolean(
-      resolvedPayload.isBonus ??
-      resolvedPayload.bonus ??
-      resolvedPayload.bonusClaim
-    );
-
     const added = [];
 
     for (
@@ -2711,8 +2564,7 @@ function valuesMatch(
         createObservation(
           reward,
           normalisedChest,
-          1,
-          isBonus
+          1
         );
 
       state.observations[
@@ -2934,431 +2786,10 @@ function valuesMatch(
      POSITION SOLVER
      ========================================================== */
 
-  function getNestedPoolKey(
-    deckKey,
-    deckValue
-  ) {
-    const definition =
-      resolveDropDefinition(
-        deckKey,
-        deckValue
-      );
-
-    if (!definition) {
-      return "";
-    }
-
-    const possibleKey =
-      normaliseText(
-        firstDefined([
-          definition.deck,
-          definition.deckKey,
-          definition.deck_key,
-          definition.pool,
-          definition.poolKey,
-          definition.pool_key,
-          definition.drop,
-          definition.dropKey,
-          definition.drop_key,
-          definition.rewardPool,
-          definition.reward_pool,
-          definition.key,
-          definition.id,
-          definition.value
-        ], "")
-      );
-
-    return getNamedDeck(possibleKey).length
-      ? possibleKey
-      : "";
-  }
-
-  function getResolvedPoolDeck(
-    poolKey,
-    chestType
-  ) {
-    return getNamedDeck(poolKey)
-      .map(
-        (deckValue, index) => {
-          const definition =
-            resolveDropDefinition(
-              poolKey,
-              deckValue
-            );
-
-          if (!definition) {
-            return null;
-          }
-
-          return normaliseDeckEntry(
-            {
-              ...cloneValue(definition),
-              matchValue: {
-                name:
-                  getRewardName(definition),
-                code:
-                  getRewardCode(definition),
-                amount:
-                  getRewardAmount(definition)
-              },
-              deckValue,
-              poolKey,
-              poolIndex: index
-            },
-            index,
-            chestType
-          );
-        }
-      )
-      .filter(Boolean);
-  }
-
-  function findCyclicRewardStarts(
-    deck,
-    observations
-  ) {
-    if (!deck.length || !observations.length) {
-      return [];
-    }
-
-    const starts = [];
-
-    for (
-      let start = 0;
-      start < deck.length;
-      start += 1
-    ) {
-      const matched =
-        observations.every(
-          (observation, offset) =>
-            valuesMatch(
-              deck[
-                (start + offset) %
-                deck.length
-              ].matchValue,
-              observation.matchValue ??
-              observation.value
-            )
-        );
-
-      if (matched) {
-        starts.push(start);
-      }
-    }
-
-    return starts;
-  }
-
-  function solveNestedPosition(
-    chestType = state.activeChest
-  ) {
-    const normalised =
-      normaliseChestType(chestType);
-    const mainDeckKey =
-      getChestDeckKey(normalised);
-    const mainDeck =
-      getNamedDeck(mainDeckKey);
-    const history =
-      getObservations(normalised);
-    const regularHistory =
-      history.filter(
-        observation =>
-          !observation?.isBonus &&
-          !observation?.bonus
-      );
-
-    if (!mainDeck.length || !regularHistory.length) {
-      return null;
-    }
-
-    const samplePoolKey =
-      mainDeck
-        .map(
-          value =>
-            getNestedPoolKey(
-              mainDeckKey,
-              value
-            )
-        )
-        .find(Boolean);
-
-    if (!samplePoolKey) {
-      return null;
-    }
-
-    const bonusDeckKey =
-      CHEST_BONUS_DECK_KEYS[
-        normalised
-      ] || "";
-    const bonusDeck =
-      getNamedDeck(bonusDeckKey);
-    const directBonusPoolKey =
-      CHEST_DIRECT_BONUS_POOL_KEYS[
-        normalised
-      ] || "";
-    const hasBonusHistory =
-      history.some(
-        observation =>
-          observation?.isBonus ||
-          observation?.bonus
-      );
-    const bonusStarts =
-      hasBonusHistory && bonusDeck.length
-        ? bonusDeck.map((_, index) => index)
-        : [null];
-    const poolDeckCache =
-      new Map();
-    const matchCache =
-      new Map();
-    const candidates = [];
-
-    function getPoolDeck(poolKey) {
-      if (!poolDeckCache.has(poolKey)) {
-        poolDeckCache.set(
-          poolKey,
-          getResolvedPoolDeck(
-            poolKey,
-            normalised
-          )
-        );
-      }
-
-      return poolDeckCache.get(poolKey);
-    }
-
-    for (
-      let regularStart = 0;
-      regularStart < mainDeck.length;
-      regularStart += 1
-    ) {
-      for (const bonusStart of bonusStarts) {
-        let regularOffset = 0;
-        let bonusOffset = 0;
-        let assignmentValid = true;
-        const poolObservations = {};
-
-        for (const observation of history) {
-          const isBonus = Boolean(
-            observation?.isBonus ||
-            observation?.bonus
-          );
-
-          if (
-            isBonus &&
-            !bonusDeck.length
-          ) {
-            if (directBonusPoolKey) {
-              if (
-                !poolObservations[
-                  directBonusPoolKey
-                ]
-              ) {
-                poolObservations[
-                  directBonusPoolKey
-                ] = [];
-              }
-
-              poolObservations[
-                directBonusPoolKey
-              ].push(observation);
-            }
-
-            continue;
-          }
-
-          const activeDeckKey =
-            isBonus
-              ? bonusDeckKey
-              : mainDeckKey;
-          const activeDeck =
-            isBonus
-              ? bonusDeck
-              : mainDeck;
-          const activeStart =
-            isBonus
-              ? bonusStart
-              : regularStart;
-          const offset =
-            isBonus
-              ? bonusOffset++
-              : regularOffset++;
-          const deckValue =
-            activeDeck[
-              (activeStart + offset) %
-              activeDeck.length
-            ];
-          const poolKey =
-            getNestedPoolKey(
-              activeDeckKey,
-              deckValue
-            );
-
-          if (!poolKey) {
-            assignmentValid = false;
-            break;
-          }
-
-          if (!poolObservations[poolKey]) {
-            poolObservations[poolKey] = [];
-          }
-
-          poolObservations[poolKey].push(
-            observation
-          );
-        }
-
-        if (!assignmentValid) {
-          continue;
-        }
-
-        const poolStarts = {};
-
-        for (
-          const [poolKey, observations]
-          of Object.entries(poolObservations)
-        ) {
-          const observationKey =
-            observations
-              .map(
-                observation =>
-                  createRewardMatchKey(
-                    observation.matchValue ??
-                    observation.value
-                  )
-              )
-              .join("|");
-          const cacheKey =
-            `${poolKey}::${observationKey}`;
-
-          if (!matchCache.has(cacheKey)) {
-            matchCache.set(
-              cacheKey,
-              findCyclicRewardStarts(
-                getPoolDeck(poolKey),
-                observations
-              )
-            );
-          }
-
-          const starts =
-            matchCache.get(cacheKey);
-
-          if (!starts.length) {
-            assignmentValid = false;
-            break;
-          }
-
-          poolStarts[poolKey] = starts;
-        }
-
-        if (assignmentValid) {
-          candidates.push({
-            regularStart,
-            bonusStart,
-            regularCount:
-              regularHistory.length,
-            bonusCount:
-              history.length -
-              regularHistory.length,
-            poolStarts,
-            poolCounts:
-              Object.fromEntries(
-                Object.entries(
-                  poolObservations
-                ).map(
-                  ([poolKey, observations]) =>
-                    [poolKey, observations.length]
-                )
-              )
-          });
-        }
-      }
-    }
-
-    const uniqueRegularStarts =
-      Array.from(
-        new Set(
-          candidates.map(
-            candidate =>
-              candidate.regularStart
-          )
-        )
-      );
-    const solvedCandidate =
-      uniqueRegularStarts.length === 1 &&
-      candidates.length
-        ? candidates[0]
-        : null;
-    let solvedState = null;
-
-    if (solvedCandidate) {
-      const poolCursors = {};
-      const poolCursorOptions = {};
-
-      candidates.forEach(candidate => {
-        Object.entries(candidate.poolStarts)
-          .forEach(([poolKey, starts]) => {
-          const poolLength =
-            getPoolDeck(poolKey).length;
-
-          if (!poolCursorOptions[poolKey]) {
-            poolCursorOptions[poolKey] = [];
-          }
-
-          starts.forEach(start => {
-            const cursor =
-              (
-                start +
-                candidate.poolCounts[poolKey]
-              ) % poolLength;
-
-            if (!poolCursorOptions[poolKey].includes(cursor)) {
-              poolCursorOptions[poolKey].push(cursor);
-            }
-          });
-        });
-      });
-
-      Object.entries(poolCursorOptions)
-        .forEach(([poolKey, cursors]) => {
-          if (cursors.length === 1) {
-            poolCursors[poolKey] = cursors[0];
-          }
-        });
-
-      solvedState = {
-        ...solvedCandidate,
-        regularStart: uniqueRegularStarts[0],
-        mainDeckKey,
-        bonusDeckKey,
-        poolCursors,
-        poolCursorOptions
-      };
-    }
-
-    return {
-      candidates,
-      candidateCount:
-        candidates.length,
-      regularStarts:
-        uniqueRegularStarts,
-      solved:
-        Boolean(solvedState),
-      solvedState
-    };
-  }
-
   function findCandidateStarts(
     chestType =
       state.activeChest
   ) {
-    const nestedSolution =
-      solveNestedPosition(chestType);
-
-    if (nestedSolution) {
-      return nestedSolution.regularStarts;
-    }
-
     const deck =
       getNormalisedDeck(
         chestType
@@ -3367,10 +2798,6 @@ function valuesMatch(
     const observations =
       getObservations(
         chestType
-      ).filter(
-        observation =>
-          !observation?.isBonus &&
-          !observation?.bonus
       );
 
     if (
@@ -3489,15 +2916,6 @@ function valuesMatch(
     const observations =
       getObservations(
         normalised
-      ).filter(
-        observation =>
-          !observation?.isBonus &&
-          !observation?.bonus
-      );
-
-    const nestedSolution =
-      solveNestedPosition(
-        normalised
       );
 
     if (!deck.length) {
@@ -3586,23 +3004,11 @@ function valuesMatch(
       );
 
     const solved =
-      nestedSolution
-        ? nestedSolution.solved
-        : candidateStarts.length === 1;
+      candidateStarts.length === 1;
 
     const currentIndex =
       solved
-        ? (
-            nestedSolution?.solvedState
-              ? (
-                  nestedSolution
-                    .solvedState
-                    .regularStart +
-                  observations.length -
-                  1
-                ) % deck.length
-              : currentPositions[0]
-          )
+        ? currentPositions[0]
         : null;
 
     return {
@@ -3617,9 +3023,7 @@ function valuesMatch(
         observations.length,
 
       candidateCount:
-        nestedSolution
-          ? nestedSolution.candidateCount
-          : candidateStarts.length,
+        candidateStarts.length,
 
       candidates:
         candidateStarts,
@@ -3640,12 +3044,6 @@ function valuesMatch(
               currentIndex + 1
             ) %
             deck.length,
-
-      nestedState:
-        cloneValue(
-          nestedSolution?.solvedState ||
-          null
-        ),
 
       confidence:
         calculateConfidence(
@@ -3710,92 +3108,6 @@ function valuesMatch(
 
     const upcoming = [];
 
-    const nestedState =
-      solution.nestedState;
-    const nestedMainDeck =
-      nestedState
-        ? getNamedDeck(
-            nestedState.mainDeckKey
-          )
-        : [];
-    const nestedPoolCursors =
-      nestedState
-        ? {
-            ...nestedState.poolCursors
-          }
-        : {};
-    const nestedPoolCursorOptions =
-      nestedState
-        ? cloneValue(
-            nestedState.poolCursorOptions || {}
-          )
-        : {};
-
-    function takeDeterministicPoolReward(poolKey) {
-      const poolDeck =
-        getResolvedPoolDeck(
-          poolKey,
-          normalised
-        );
-      const knownCursor =
-        nestedPoolCursors[poolKey];
-      const cursorOptions =
-        Array.isArray(
-          nestedPoolCursorOptions[poolKey]
-        )
-          ? nestedPoolCursorOptions[poolKey]
-          : (
-              Number.isInteger(knownCursor)
-                ? [knownCursor]
-                : []
-            );
-
-      if (
-        !poolKey ||
-        !poolDeck.length ||
-        !cursorOptions.length
-      ) {
-        return null;
-      }
-
-      const possibleRewards =
-        cursorOptions.map(
-          cursor => poolDeck[cursor]
-        );
-      const rewardKeys =
-        new Set(
-          possibleRewards.map(
-            possibleReward =>
-              createRewardMatchKey(
-                possibleReward.matchValue
-              )
-          )
-        );
-
-      if (rewardKeys.size !== 1) {
-        return null;
-      }
-
-      nestedPoolCursorOptions[poolKey] =
-        Array.from(
-          new Set(
-            cursorOptions.map(
-              cursor =>
-                (cursor + 1) % poolDeck.length
-            )
-          )
-        );
-
-      if (
-        nestedPoolCursorOptions[poolKey].length === 1
-      ) {
-        nestedPoolCursors[poolKey] =
-          nestedPoolCursorOptions[poolKey][0];
-      }
-
-      return possibleRewards[0];
-    }
-
     const bonusEvery = {
       gold: 30,
       platinum: 30,
@@ -3803,40 +3115,8 @@ function valuesMatch(
       freedom: 15
     }[normalised] || null;
 
-    const recordedHistory =
-      getObservations(normalised);
-    const predictedBonusDeck =
-      nestedState?.bonusDeckKey
-        ? getNamedDeck(
-            nestedState.bonusDeckKey
-          )
-        : [];
-    const directBonusPoolKey =
-      CHEST_DIRECT_BONUS_POOL_KEYS[
-        normalised
-      ] || "";
-    let predictedBonusCount =
-      nestedState?.bonusCount || 0;
-
-    let lastBonusIndex = -1;
-
-    for (
-      let index = recordedHistory.length - 1;
-      index >= 0;
-      index -= 1
-    ) {
-      if (
-        recordedHistory[index]?.isBonus ||
-        recordedHistory[index]?.bonus
-      ) {
-        lastBonusIndex = index;
-        break;
-      }
-    }
-
     let regularSinceBonus = bonusEvery
-      ? recordedHistory
-          .slice(lastBonusIndex + 1)
+      ? getObservations(normalised)
           .filter(
             observation =>
               !observation?.isBonus &&
@@ -3861,53 +3141,15 @@ function valuesMatch(
       offset <= safeCount;
       offset += 1
     ) {
-      let index;
-      let reward;
+      const index =
+        (
+          solution.currentIndex +
+          offset
+        ) %
+        deck.length;
 
-      if (nestedState) {
-        index =
-          (
-            nestedState.regularStart +
-            nestedState.regularCount +
-            offset -
-            1
-          ) % nestedMainDeck.length;
-
-        const deckValue =
-          nestedMainDeck[index];
-        const poolKey =
-          getNestedPoolKey(
-            nestedState.mainDeckKey,
-            deckValue
-          );
-        reward =
-          takeDeterministicPoolReward(
-            poolKey
-          );
-
-        // A unique main position can be known before every nested rarity
-        // cursor is unique. Publish the deterministic prefix shared by all
-        // remaining cursor possibilities, then stop at the first divergence.
-        if (!reward) {
-          break;
-        }
-      } else {
-        index =
-          (
-            solution.currentIndex +
-            offset
-          ) %
-          deck.length;
-
-        reward =
-          deck[index];
-      }
-
-      const displayName =
-        getRewardDisplayName(
-          reward,
-          offset - 1
-        );
+      const reward =
+        deck[index];
 
       upcoming.push({
         number:
@@ -3919,10 +3161,10 @@ function valuesMatch(
           index + 1,
 
         name:
-          displayName,
+          reward.name,
 
         label:
-          displayName,
+          reward.name,
 
         code:
           reward.code,
@@ -3952,9 +3194,9 @@ function valuesMatch(
 
         displayValue:
           reward.amount === null
-            ? displayName
+            ? reward.name
             : (
-                `${displayName} — ` +
+                `${reward.name} — ` +
                 `${reward.amount}`
               )
       });
@@ -3965,90 +3207,21 @@ function valuesMatch(
         if (regularSinceBonus === bonusEvery) {
           const chestLabel =
             getChestLabel(normalised);
-          let bonusReward = null;
-
-          if (
-            nestedState &&
-            predictedBonusDeck.length &&
-            Number.isInteger(
-              nestedState.bonusStart
-            )
-          ) {
-            const bonusIndex =
-              (
-                nestedState.bonusStart +
-                predictedBonusCount
-              ) % predictedBonusDeck.length;
-            const bonusDeckValue =
-              predictedBonusDeck[bonusIndex];
-            const bonusPoolKey =
-              getNestedPoolKey(
-                nestedState.bonusDeckKey,
-                bonusDeckValue
-              );
-
-            bonusReward =
-              takeDeterministicPoolReward(
-                bonusPoolKey
-              );
-          } else if (
-            nestedState &&
-            directBonusPoolKey
-          ) {
-            bonusReward =
-              takeDeterministicPoolReward(
-                directBonusPoolKey
-              );
-          }
-
-          const bonusDisplayName =
-            bonusReward
-              ? getRewardDisplayName(
-                  bonusReward,
-                  upcoming.length
-                )
-              : `${chestLabel} Bonus Chest`;
 
           upcoming.push({
             number: upcoming.length + 1,
             index: null,
             position: null,
-            name:
-              bonusReward
-                ? `${bonusDisplayName} (Bonus Chest)`
-                : bonusDisplayName,
-            label:
-              bonusReward
-                ? `${bonusDisplayName} (Bonus Chest)`
-                : bonusDisplayName,
-            code:
-              bonusReward?.code ||
-              `${normalised}_bonus`,
-            amount:
-              bonusReward?.amount ?? null,
-            value:
-              cloneValue(
-                bonusReward?.matchValue || null
-              ),
-            matchValue:
-              cloneValue(
-                bonusReward?.matchValue || null
-              ),
+            name: `${chestLabel} Bonus Chest`,
+            label: `${chestLabel} Bonus Chest`,
+            code: `${normalised}_bonus`,
+            amount: null,
             isBonus: true,
-            bonusPredicted:
-              Boolean(bonusReward),
             bonusEvery,
             bonusAfterRegularChest: offset,
-            displayValue:
-              bonusReward
-                ? (
-                    `${bonusDisplayName} — ` +
-                    `${bonusReward.amount}`
-                  )
-                : bonusDisplayName
+            displayValue: `${chestLabel} Bonus Chest`
           });
 
-          predictedBonusCount += 1;
           regularSinceBonus = 0;
         }
       }
@@ -4898,6 +4071,36 @@ function importGachaHistory(
   return summary;
 }
 
+/*
+ * HAR opening requests belong to the administrator who captured
+ * the event. They are useful import diagnostics, but must never be
+ * copied into another player's manually recorded solver history.
+ */
+function inspectGachaHistory(
+  gachaData
+) {
+  const openings =
+    getGachaOpenings(gachaData);
+
+  return {
+    detected: openings.length,
+    imported: 0,
+    duplicates: 0,
+    bonuses:
+      openings.filter(
+        isBonusGachaOpening
+      ).length,
+    unsupported:
+      openings.filter(
+        opening =>
+          !normaliseGachaChestType(opening)
+      ).length,
+    unreadable: 0,
+    ignoredForPlayerHistory:
+      openings.length
+  };
+}
+
   /* ==========================================================
      EVENT LISTENERS
      ========================================================== */
@@ -4932,9 +4135,8 @@ function importGachaHistory(
     }
 
     const gachaSummary =
-      importGachaHistory(
-        gachaData,
-        sourceFile
+      inspectGachaHistory(
+        gachaData
       );
 
     window.dispatchEvent(
@@ -4972,9 +4174,8 @@ function importGachaHistory(
       null;
 
     const gachaSummary =
-      importGachaHistory(
-        gachaData,
-        sourceFile
+      inspectGachaHistory(
+        gachaData
       );
 
     window.dispatchEvent(
@@ -4991,10 +4192,7 @@ function importGachaHistory(
 
     refresh();
   }
-  );
-
-  initialisePlayerIdentity();
-
+);
   /* ==========================================================
      PUBLIC API
      ========================================================== */
@@ -5025,7 +4223,6 @@ function importGachaHistory(
       setActiveChest,
       getActiveChest,
       getChestLabel,
-      switchPlayerIdentity,
 
       getChestData,
       getDeck,
@@ -5046,6 +4243,7 @@ function importGachaHistory(
 
       getGachaOpenings,
       importGachaHistory,
+      inspectGachaHistory,
 
       recordReward,
       recordObservation,
