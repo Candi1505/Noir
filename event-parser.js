@@ -141,6 +141,122 @@ class EventParser {
     return params;
   }
 
+  getGachaEventRecords() {
+    if (!this.data || typeof this.data !== "object") return [];
+    return Object.entries(this.data)
+      .map(([eventKey, record]) => ({
+        eventKey,
+        params: record?.gacha?.params || null
+      }))
+      .filter(entry =>
+        entry.params?.deck_indices &&
+        entry.params?.decks &&
+        typeof entry.params.decks === "object"
+      );
+  }
+
+  classifyArmoryEvent(eventKey) {
+    const key = String(eventKey || "").toLowerCase();
+    if (/assault|invasion/.test(key)) return "assault";
+    if (/breeding|breed|spend[_-]?breeding[_-]?tokens/.test(key)) return "breeding";
+    return "";
+  }
+
+  getDoubleArmoryData() {
+    const chestDefinitions = {
+      gold: {
+        label: "Gold",
+        mainKey: "gold_chest",
+        bonusEvery: 30,
+        keyPatterns: [/^gold_chest(?:_bonus)?$/, /^(?:epic|legendary|mythic)_items$/]
+      },
+      platinum: {
+        label: "Platinum",
+        mainKey: "platinum_chest",
+        bonusEvery: 30,
+        keyPatterns: [/^platinum_chest(?:_bonus)?$/, /^(?:epic|legendary|mythic)_plat_items$/]
+      },
+      draconic: {
+        label: "Draconic",
+        mainKey: "dragfrag_chest_tier3",
+        bonusEvery: 30,
+        keyPatterns: [/^dragfrag_chest_tier3(?:_bonus)?$/, /^(?:Epic|Legendary|Mythic)_DragFrag_Tier3_Resources$/i]
+      },
+      freedom: {
+        label: "Freedom",
+        mainKey: "freedom_chest",
+        bonusEvery: 15,
+        keyPatterns: [/^freedom_chest(?:_bonus)?$/, /^(?:epic|legendary|mythic)_freedom_items$/]
+      }
+    };
+    const sides = {};
+    this.getGachaEventRecords().forEach(({ eventKey, params }) => {
+      const type = this.classifyArmoryEvent(eventKey);
+      if (!type || sides[type]) return;
+      const selectedDecks = {};
+      const selectedDrops = {};
+      const selectedIndices = {};
+      const chests = {};
+
+      Object.entries(chestDefinitions).forEach(([chestType, definition]) => {
+        const keys = Object.keys(params.decks || {}).filter(key =>
+          definition.keyPatterns.some(pattern => pattern.test(key))
+        );
+        const mainDeck = params.decks?.[definition.mainKey];
+        if (!Array.isArray(mainDeck)) return;
+
+        keys.forEach(key => {
+          if (Array.isArray(params.decks?.[key])) {
+            selectedDecks[key] = structuredClone(params.decks[key]);
+          }
+          if (Array.isArray(params.drops?.[key])) {
+            selectedDrops[key] = structuredClone(params.drops[key]);
+          }
+          if (params.deck_indices?.[key] !== undefined) {
+            selectedIndices[key] = params.deck_indices[key];
+          }
+        });
+
+        const poolKeys = keys.filter(key => key !== definition.mainKey);
+        const resolvablePools = poolKeys.filter(key =>
+          Array.isArray(params.drops?.[key])
+        );
+        chests[chestType] = {
+          type: chestType,
+          label: definition.label,
+          mainKey: definition.mainKey,
+          bonusEvery: definition.bonusEvery,
+          ready: mainDeck.length > 0 && resolvablePools.length > 0,
+          availableKeys: keys
+        };
+      });
+
+      sides[type] = {
+        type,
+        label: type === "assault" ? "Assault Armory" : "Breeding Armory",
+        eventKey,
+        ready: Object.values(chests).some(chest => chest.ready),
+        chests,
+        deckIndices: selectedIndices,
+        decks: selectedDecks,
+        drops: selectedDrops
+      };
+    });
+
+    const availableChestTypes = Object.keys(chestDefinitions).filter(chestType =>
+      sides.assault?.chests?.[chestType]?.ready &&
+      sides.breeding?.chests?.[chestType]?.ready
+    );
+    const ready = availableChestTypes.length > 0;
+    return {
+      detected: Boolean(sides.assault && sides.breeding),
+      ready,
+      availableChestTypes,
+      sides,
+      detection: "dynamic-event-patterns"
+    };
+  }
+
   /**
    * Searches common locations for the event name.
    */
@@ -497,6 +613,8 @@ const deckIndices =
       availableSpinTypeCount:
         this.getSpinTypes().length
     };
+
+    result.doubleArmory = this.getDoubleArmoryData();
 
     result.readyChestCount =
       Object.values(result.chests)
