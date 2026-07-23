@@ -536,6 +536,10 @@ async savePredictor({
     );
   }
 
+  const safeVersion =
+    version ||
+    Math.floor(Date.now() / 1000);
+
   const {
     data,
     error
@@ -546,20 +550,84 @@ async savePredictor({
         p_chest_type:
           normalisedChestType,
         p_version:
-        version ||
-          Math.floor(Date.now() / 1000),
+          safeVersion,
         p_predictor_data:
           predictorData
       }
     );
 
-  if (error) {
+  if (!error) {
+    return Array.isArray(data)
+      ? data[0]
+      : data;
+  }
+
+  /*
+   * Older Noir projects were deployed before the atomic
+   * publish_noir_predictor RPC was added. Keep cloud publishing
+   * functional by falling back to the same RLS-protected table
+   * operations. Supabase still verifies administrator access
+   * through the predictors policies.
+   */
+  const rpcUnavailable =
+    error.code === "PGRST202" ||
+    /publish_noir_predictor|schema cache|function/i
+      .test(String(error.message || ""));
+
+  if (!rpcUnavailable) {
     throw error;
   }
 
-  return Array.isArray(data)
-    ? data[0]
-    : data;
+  const access =
+    await this.getCurrentAccess();
+
+  if (!access.isAdmin || !access.user) {
+    throw new Error(
+      "Administrator access is required to publish predictor data."
+    );
+  }
+
+  const {
+    error: deactivateError
+  } = await supabaseClient
+    .from("predictors")
+    .update({ active: false })
+    .eq(
+      "chest_type",
+      normalisedChestType
+    )
+    .eq("active", true);
+
+  if (deactivateError) {
+    throw deactivateError;
+  }
+
+  const {
+    data: inserted,
+    error: insertError
+  } = await supabaseClient
+    .from("predictors")
+    .insert({
+      chest_type:
+        normalisedChestType,
+      version:
+        safeVersion,
+      predictor_data:
+        predictorData,
+      uploaded_by:
+        access.user.id,
+      uploaded_at:
+        new Date().toISOString(),
+      active: true
+    })
+    .select()
+    .single();
+
+  if (insertError) {
+    throw insertError;
+  }
+
+  return inserted;
 },
 
 async getActivePredictors() {
