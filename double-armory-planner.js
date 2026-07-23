@@ -232,8 +232,9 @@
       .da-tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:16px 0}.da-tab{padding:12px 6px;border:1px solid #3a352b;border-radius:13px;background:#111;color:#aaa;font:inherit;font-weight:900}.da-tab[aria-selected="true"]{background:linear-gradient(145deg,#4b3c1d,#20190d);color:#e2c66e;border-color:#c19a4a;box-shadow:0 0 18px rgba(193,154,74,.18)}
       .da-recommend{color:#e2c66e;font-size:22px;font-weight:900}
       .da-note{margin-top:8px;color:#999;line-height:1.5}
+      .da-key{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}.da-key-item{display:inline-flex;align-items:center;gap:7px;padding:6px 10px;border:1px solid #39342d;border-radius:999px;background:#0b0b0b;color:#c8c4bb;font-size:12px;font-weight:800}.da-key-swatch{width:10px;height:10px;border-radius:50%;box-shadow:0 0 8px currentColor}.da-key-epic{color:#9b82b6;background:#79658f}.da-key-legendary{color:#d5b568;background:#c19a4a}.da-key-mythic{color:#afc9d5;background:#8aa7b5}
       .da-table{display:grid;grid-template-columns:52px minmax(0,1fr) minmax(0,1fr);border:1px solid #3d372c;border-radius:18px;overflow:hidden;box-shadow:0 16px 40px rgba(0,0,0,.35)}
-      .da-head{position:sticky;top:87px;z-index:2;background:#171717!important;color:#e8e5de!important;font-weight:900;text-align:center}
+      .da-head{position:static;background:#171717!important;color:#e8e5de!important;font-weight:900;text-align:center}
       .da-head-assault{background:linear-gradient(145deg,#8f3645,#421820)!important}.da-head-breeding{background:linear-gradient(145deg,#257a68,#123f36)!important}
       .da-cell{min-width:0;padding:13px 10px;border-right:1px solid #302d28;border-bottom:1px solid #302d28;background:#0c0c0c}
       .da-cell:nth-child(3n){border-right:0}.da-number{text-align:center;color:#d6bd72;font-weight:900}
@@ -291,6 +292,11 @@
         <section class="da-summary">
           <div class="da-recommend">${escapeHTML(recommendation(assault, breeding))}</div>
           <div class="da-note">Comparing ${escapeHTML(chest?.label || selectedChestType)} rewards. Assault and Breeding are detected automatically even when their event numbers change. The green line marks each ${chest?.bonusEvery || 30}-chest bonus point.</div>
+          <div class="da-key" aria-label="Reward rarity colour key">
+            <span class="da-key-item"><i class="da-key-swatch da-key-epic"></i>Violet — Epic</span>
+            <span class="da-key-item"><i class="da-key-swatch da-key-legendary"></i>Gold — Legendary</span>
+            <span class="da-key-item"><i class="da-key-swatch da-key-mythic"></i>Platinum — Mythic</span>
+          </div>
         </section>
         <div class="da-table">
           <div class="da-cell da-head">#</div><div class="da-cell da-head da-head-assault">◆ Assault</div><div class="da-cell da-head da-head-breeding">✦ Breeding</div>
