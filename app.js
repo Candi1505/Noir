@@ -1952,7 +1952,7 @@
           "activeSessionText"
         ),
 
-        "Start Gold or Platinum tracking to build a visible sequence."
+        "Start Gold, Platinum, Draconic or Freedom tracking to build a visible sequence."
 
       );
 
