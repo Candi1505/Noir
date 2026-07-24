@@ -121,10 +121,10 @@
       if (eyebrow) eyebrow.textContent =
         "CHEST COMPANION";
       if (title) title.textContent =
-        "Member Sign In";
+        "Guest Access";
       if (description) description.textContent =
-        "Sign in to access live chest predictions.";
-      if (badge) badge.textContent = "Secure";
+        "Live predictions are available without an account. Choose a chest from Home to begin. Sign in below only if you want an account or administrator access.";
+      if (badge) badge.textContent = "Ready";
     }
 
     if (importButton) {
