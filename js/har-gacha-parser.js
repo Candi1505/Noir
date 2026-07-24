@@ -84,7 +84,7 @@
     rubies: "Rubies",
     sigil: "Sigils",
     eggToken: "Egg Tokens",
-    breedingToken: "Breeding Tokens",
+    breedingToken: "Egg Tokens",
 
     expediteConsumable1: "15 Minute Speedup",
     expediteConsumable2: "1 Hour Speedup",
