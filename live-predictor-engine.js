@@ -2512,6 +2512,11 @@ function getNormalisedDeck(
         reward.bonus =
           true;
 
+        reward.resolutionPath =
+          cloneValue(
+            resolved.path
+          );
+
         return reward;
       }
     );
@@ -2909,6 +2914,89 @@ function valuesMatch(
       candidates[0] +
       observations.length
     ) % bonusDeck.length;
+  }
+
+  function getNestedResolutionKeys(
+    reward,
+    excludedKeys = []
+  ) {
+    const excluded =
+      new Set(
+        excludedKeys.filter(Boolean)
+      );
+
+    return new Set(
+      (
+        Array.isArray(
+          reward?.resolutionPath
+        )
+          ? reward.resolutionPath
+          : []
+      )
+        .map(
+          step =>
+            normaliseText(
+              step?.deckKey
+            )
+        )
+        .filter(
+          deckKey =>
+            deckKey &&
+            !excluded.has(
+              deckKey
+            )
+        )
+    );
+  }
+
+  function countSharedPoolAdvances(
+    regularRewards,
+    bonusReward,
+    chestType
+  ) {
+    const sharedKeys =
+      getNestedResolutionKeys(
+        bonusReward,
+        [
+          getBonusDeckKey(
+            chestType
+          ),
+          getChestDeckKey(
+            chestType
+          )
+        ]
+      );
+
+    if (!sharedKeys.size) {
+      return 0;
+    }
+
+    return 1 + regularRewards.reduce(
+      (total, reward) => {
+        const regularKeys =
+          getNestedResolutionKeys(
+            reward,
+            [
+              getChestDeckKey(
+                chestType
+              )
+            ]
+          );
+
+        return (
+          total +
+          Array.from(
+            sharedKeys
+          ).filter(
+            deckKey =>
+              regularKeys.has(
+                deckKey
+              )
+          ).length
+        );
+      },
+      0
+    );
   }
 
   function createObservation(
@@ -3680,6 +3768,8 @@ function valuesMatch(
         normalised
       );
 
+    const predictedRegularRewards = [];
+
     for (
       let offset = 1;
       offset <= safeCount;
@@ -3694,6 +3784,10 @@ function valuesMatch(
 
       const reward =
         deck[index];
+
+      predictedRegularRewards.push(
+        reward
+      );
 
       upcoming.push({
         number:
@@ -3754,10 +3848,28 @@ function valuesMatch(
 
           const bonusReward =
             bonusDeck.length
-              ? bonusDeck[
-                  bonusOffset %
-                  bonusDeck.length
-                ]
+              ? (() => {
+                  const startingReward =
+                    bonusDeck[
+                      bonusOffset %
+                      bonusDeck.length
+                    ];
+
+                  const sharedAdvance =
+                    countSharedPoolAdvances(
+                      predictedRegularRewards,
+                      startingReward,
+                      normalised
+                    );
+
+                  return bonusDeck[
+                    (
+                      bonusOffset +
+                      sharedAdvance
+                    ) %
+                    bonusDeck.length
+                  ];
+                })()
               : null;
 
           upcoming.push({
