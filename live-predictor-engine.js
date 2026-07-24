@@ -241,6 +241,13 @@
       freedom: []
     },
 
+    bonusProgress: {
+      gold: null,
+      platinum: null,
+      draconic: null,
+      freedom: null
+    },
+
     importedGachaIds: [],
 
     eventFingerprint: null,
@@ -309,6 +316,30 @@
       return {
   activeChest,
   observations,
+
+  bonusProgress:
+    SUPPORTED_CHESTS.reduce(
+      (progress, chestType) => {
+        const value =
+          toFiniteNumber(
+            saved.bonusProgress?.[
+              chestType
+            ],
+            null
+          );
+
+        progress[chestType] =
+          value === null
+            ? null
+            : Math.max(
+                0,
+                Math.floor(value)
+              );
+
+        return progress;
+      },
+      {}
+    ),
 
   importedGachaIds:
     Array.isArray(
@@ -638,6 +669,10 @@
         state.eventStates.legacy = {
           observations:
             cloneValue(state.observations),
+          bonusProgress:
+            cloneValue(
+              state.bonusProgress
+            ),
           importedGachaIds:
             cloneValue(
               state.importedGachaIds || []
@@ -647,6 +682,8 @@
         SUPPORTED_CHESTS.forEach(
           chestType => {
             state.observations[chestType] = [];
+            state.bonusProgress[chestType] =
+              null;
           }
         );
 
@@ -668,6 +705,10 @@
     state.eventStates[state.eventFingerprint] = {
       observations:
         cloneValue(state.observations),
+      bonusProgress:
+        cloneValue(
+          state.bonusProgress
+        ),
       importedGachaIds:
         cloneValue(
           state.importedGachaIds || []
@@ -693,6 +734,14 @@
                 )
               )
             : [];
+
+        state.bonusProgress[chestType] =
+          toFiniteNumber(
+            savedEventState
+              ?.bonusProgress
+              ?.[chestType],
+            null
+          );
       }
     );
 
@@ -891,6 +940,86 @@
     );
 
     return normalised;
+  }
+
+  function getBonusFrequency(
+    chestType =
+      state.activeChest
+  ) {
+    return (
+      BONUS_FREQUENCIES[
+        normaliseChestType(
+          chestType
+        )
+      ] || null
+    );
+  }
+
+  function getBonusProgress(
+    chestType =
+      state.activeChest
+  ) {
+    const normalised =
+      normaliseChestType(
+        chestType
+      );
+
+    return toFiniteNumber(
+      state.bonusProgress?.[
+        normalised
+      ],
+      null
+    );
+  }
+
+  function setBonusProgress(
+    chestType,
+    progress
+  ) {
+    const normalised =
+      normaliseChestType(
+        chestType
+      );
+
+    const bonusEvery =
+      getBonusFrequency(
+        normalised
+      );
+
+    const numericProgress =
+      toFiniteNumber(
+        progress,
+        null
+      );
+
+    if (
+      numericProgress === null ||
+      !bonusEvery
+    ) {
+      state.bonusProgress[
+        normalised
+      ] = null;
+    } else {
+      state.bonusProgress[
+        normalised
+      ] =
+        Math.max(
+          0,
+          Math.min(
+            bonusEvery - 1,
+            Math.floor(
+              numericProgress
+            )
+          )
+        );
+    }
+
+    savePlayerState();
+    refresh();
+
+    return getBonusProgress(
+      normalised
+    );
   }
 
   function getActiveChest() {
@@ -3153,6 +3282,11 @@ function valuesMatch(
       index < quantity;
       index += 1
     ) {
+      const bonusProgressBefore =
+        getBonusProgress(
+          normalisedChest
+        );
+
       const observation =
         createObservation(
           reward,
@@ -3161,11 +3295,31 @@ function valuesMatch(
           isBonus
         );
 
+      observation.bonusProgressBefore =
+        bonusProgressBefore;
+
       state.observations[
         normalisedChest
       ].push(
         observation
       );
+
+      if (
+        bonusProgressBefore !== null
+      ) {
+        state.bonusProgress[
+          normalisedChest
+        ] =
+          isBonus
+            ? 0
+            : (
+                bonusProgressBefore +
+                1
+              ) %
+              getBonusFrequency(
+                normalisedChest
+              );
+      }
 
       added.push(
         cloneValue(
@@ -3238,6 +3392,17 @@ function valuesMatch(
       state.observations[
         normalised
       ].pop() || null;
+
+    if (
+      removed &&
+      removed.bonusProgressBefore !==
+        undefined
+    ) {
+      state.bonusProgress[
+        normalised
+      ] =
+        removed.bonusProgressBefore;
+    }
 
     savePlayerState();
     refresh();
@@ -3616,6 +3781,21 @@ function valuesMatch(
       observationCount:
         observations.length,
 
+      bonusEvery:
+        getBonusFrequency(
+          normalised
+        ),
+
+      bonusProgress:
+        getBonusProgress(
+          normalised
+        ),
+
+      bonusProgressKnown:
+        getBonusProgress(
+          normalised
+        ) !== null,
+
       candidateCount:
         candidateStarts.length,
 
@@ -3707,55 +3887,15 @@ function valuesMatch(
         normalised
       ] || null;
 
-    const chestData =
-      getChestData(
+    const savedBonusProgress =
+      getBonusProgress(
         normalised
-      );
-
-    const explicitProgress =
-      toFiniteNumber(
-        firstDefined([
-          chestData?.openedSinceBonus,
-          chestData?.regularSinceBonus,
-          chestData?.bonusProgress
-        ]),
-        null
-      );
-
-    const importedProgress =
-      explicitProgress === null
-        ? (
-            getNamedDeckIndex(
-              getChestDeckKey(
-                normalised
-              )
-            ) + 1
-          )
-        : explicitProgress;
-
-    const regularObservationCount =
-      getRegularObservations(
-        normalised
-      ).reduce(
-        (total, observation) =>
-          total + Math.max(
-            1,
-            toFiniteNumber(
-              observation?.chestCount ??
-              observation?.chestsOpened,
-              1
-            ) || 1
-          ),
-        0
       );
 
     let regularSinceBonus =
-      bonusEvery
-        ? (
-            importedProgress +
-            regularObservationCount
-          ) % bonusEvery
-        : 0;
+      savedBonusProgress === null
+        ? null
+        : savedBonusProgress;
 
     const bonusDeck =
       getNormalisedBonusDeck(
@@ -3839,7 +3979,10 @@ function valuesMatch(
               )
       });
 
-      if (bonusEvery) {
+      if (
+        bonusEvery &&
+        regularSinceBonus !== null
+      ) {
         regularSinceBonus += 1;
 
         if (regularSinceBonus === bonusEvery) {
@@ -4928,6 +5071,9 @@ function inspectGachaHistory(
       setActiveChest,
       getActiveChest,
       getChestLabel,
+      getBonusFrequency,
+      getBonusProgress,
+      setBonusProgress,
 
       getChestData,
       getDeck,
