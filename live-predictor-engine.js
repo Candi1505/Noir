@@ -2849,6 +2849,68 @@ function valuesMatch(
     );
   }
 
+  function getNextBonusDeckOffset(
+    bonusDeck,
+    chestType =
+      state.activeChest
+  ) {
+    if (!bonusDeck.length) {
+      return 0;
+    }
+
+    const observations =
+      getBonusObservations(
+        chestType
+      );
+
+    if (!observations.length) {
+      return 0;
+    }
+
+    const candidates = [];
+
+    for (
+      let start = 0;
+      start < bonusDeck.length;
+      start += 1
+    ) {
+      const matches =
+        observations.every(
+          (observation, offset) => {
+            const reward =
+              bonusDeck[
+                (
+                  start +
+                  offset
+                ) %
+                bonusDeck.length
+              ];
+
+            return valuesMatch(
+              reward?.matchValue,
+              observation?.matchValue ??
+                observation?.value
+            );
+          }
+        );
+
+      if (matches) {
+        candidates.push(
+          start
+        );
+      }
+    }
+
+    if (!candidates.length) {
+      return 0;
+    }
+
+    return (
+      candidates[0] +
+      observations.length
+    ) % bonusDeck.length;
+  }
+
   function createObservation(
     reward,
     chestType,
@@ -3613,9 +3675,10 @@ function valuesMatch(
       );
 
     let bonusOffset =
-      getBonusObservations(
+      getNextBonusDeckOffset(
+        bonusDeck,
         normalised
-      ).length;
+      );
 
     for (
       let offset = 1;
