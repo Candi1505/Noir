@@ -2478,16 +2478,6 @@
                     )}
                   </strong>
                 </div>
-
-                <div class="lp-mini-stat">
-                  <span>Found index</span>
-
-                  <strong>
-                    ${formatNumber(
-                      chest.foundIndex
-                    )}
-                  </strong>
-                </div>
               </div>
             </button>
           `;
