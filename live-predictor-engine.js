@@ -177,6 +177,7 @@
     E24Q1FestiveWarriorDragonEvolutionFragment: "Nocturnus Shards",
     E24Q2FestiveHunterDragonEvolutionFragment: "Photonix Shards",
     E24Q3FestiveInvokerDragonEvolutionFragment: "Orion Shards",
+    E24Q3InvokerDragonEvolutionFragment: "Orion Shards",
     E24Q4FestiveHunterDragonEvolutionFragment: "Razor Shards",
     E25Q1FestiveSorcererDragonEvolutionFragment: "Volcaryx Shards",
     E25Q2FestiveWarriorDragonEvolutionFragment: "Riphorn Shards",
