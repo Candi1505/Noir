@@ -50,7 +50,11 @@
     chest2: "Gold Chests",
     chest11: "Platinum Chests",
     chest27: "Draconic Chests",
-    chest33: "Freedom Chests"
+    chest33: "Freedom Chests",
+    E25Q1FestiveSorcererDragonEvolutionFragment: "Volcaryx Shards",
+    E25Q2FestiveWarriorDragonEvolutionFragment: "Riphorn Shards",
+    E25Q3FestiveWarriorDragonEvolutionFragment: "Eldrath Shards",
+    E25Q4FestiveHunterDragonEvolutionFragment: "Drekgor Shards"
   };
 
   function livePredictorOverlay() {
