@@ -143,9 +143,9 @@
 
   const REWARD_DISPLAY_NAMES = {
     blackPearl: "Black Pearls",
-    bloodstone: "Bloodstone",
-    breedingToken: "Breeding Tokens",
-    cosmicCharge: "Cosmic Charges",
+    bloodstone: "Bloodstones",
+    breedingToken: "Egg Tokens",
+    cosmicCharge: "Cosmic Charge",
     electrumBar: "Electrum Bars",
     elementalEmber: "Elemental Embers",
     fireShard: "Fire Shards",
@@ -4217,6 +4217,21 @@ function valuesMatch(
         getChestLabel(
           normalised
         ),
+
+      bonusEvery:
+        getBonusFrequency(
+          normalised
+        ),
+
+      bonusProgress:
+        getBonusProgress(
+          normalised
+        ),
+
+      bonusDeckLength:
+        getNormalisedBonusDeck(
+          normalised
+        ).length,
 
       loaded:
         hasChestDeck(
