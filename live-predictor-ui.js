@@ -2190,6 +2190,29 @@
               </div>
             </div>
 
+            <div class="lp-field">
+              <label for="lpBonusProgress">
+                Bonus progress shown in game
+              </label>
+
+              <input
+                id="lpBonusProgress"
+                class="lp-input"
+                type="number"
+                inputmode="numeric"
+                min="0"
+                step="1"
+                placeholder="Example: 20"
+              />
+
+              <div
+                id="lpBonusProgressHelp"
+                class="lp-recorder-help"
+              >
+                Enter the number shown on the chest’s bonus bar.
+              </div>
+            </div>
+
             <label class="lp-bonus-toggle" for="lpBonusChest">
               <input
                 id="lpBonusChest"
@@ -3388,6 +3411,16 @@
         "lpRewardQuantity"
       );
 
+    const bonusProgressInput =
+      document.getElementById(
+        "lpBonusProgress"
+      );
+
+    const bonusProgressHelp =
+      document.getElementById(
+        "lpBonusProgressHelp"
+      );
+
     const selectionValue =
       document.getElementById(
         "lpRecorderSelectionValue"
@@ -3461,6 +3494,52 @@
 
     quantityInput.disabled =
       !chestReady;
+
+    if (bonusProgressInput) {
+      const bonusEvery =
+        Number(
+          selectedChest?.bonusEvery
+        ) || 30;
+
+      const progress =
+        selectedChest
+          ?.bonusProgress;
+
+      bonusProgressInput.disabled =
+        !chestReady;
+
+      bonusProgressInput.max =
+        String(
+          bonusEvery - 1
+        );
+
+      if (
+        document.activeElement !==
+          bonusProgressInput
+      ) {
+        bonusProgressInput.value =
+          progress === null ||
+          progress === undefined
+            ? ""
+            : String(progress);
+      }
+
+      bonusProgressInput.placeholder =
+        `0–${bonusEvery - 1}`;
+
+      if (bonusProgressHelp) {
+        bonusProgressHelp.textContent =
+          progress === null ||
+          progress === undefined
+            ? (
+                `Enter the number currently shown on the game’s ` +
+                `${bonusEvery}-chest bonus bar.`
+              )
+            : (
+                `${progress}/${bonusEvery} regular chests toward the next bonus.`
+              );
+      }
+    }
 
     if (searchInput) {
       searchInput.disabled =
@@ -5214,6 +5293,39 @@
     refreshAfterAction();
   }
 
+  function handleBonusProgressChange(
+    input
+  ) {
+    if (
+      typeof Engine
+        .setBonusProgress !==
+      "function"
+    ) {
+      return;
+    }
+
+    const selectedChest =
+      getSelectedChest(
+        Engine.getStatus()
+      );
+
+    if (!selectedChest) {
+      return;
+    }
+
+    const value =
+      input.value.trim() === ""
+        ? null
+        : Number(input.value);
+
+    Engine.setBonusProgress(
+      selectedChest.chestType,
+      value
+    );
+
+    render();
+  }
+
     function attachEvents() {
     const chestGrid =
       document.getElementById(
@@ -5238,6 +5350,11 @@
     const quantityInput =
       document.getElementById(
         "lpRewardQuantity"
+      );
+
+    const bonusProgressInput =
+      document.getElementById(
+        "lpBonusProgress"
       );
 
     const recordButton =
@@ -5344,6 +5461,16 @@
         );
       }
     );
+
+    bonusProgressInput
+      ?.addEventListener(
+        "change",
+        () => {
+          handleBonusProgressChange(
+            bonusProgressInput
+          );
+        }
+      );
 
     recordButton.addEventListener(
       "click",
