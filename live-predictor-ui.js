@@ -3510,7 +3510,7 @@
 
       bonusProgressInput.max =
         String(
-          bonusEvery - 1
+          bonusEvery
         );
 
       if (
@@ -3525,7 +3525,7 @@
       }
 
       bonusProgressInput.placeholder =
-        `0–${bonusEvery - 1}`;
+        `0–${bonusEvery}`;
 
       if (bonusProgressHelp) {
         bonusProgressHelp.textContent =
@@ -3535,9 +3535,13 @@
                 `Enter the number currently shown on the game’s ` +
                 `${bonusEvery}-chest bonus bar.`
               )
-            : (
-                `${progress}/${bonusEvery} regular chests toward the next bonus.`
-              );
+            : progress >= bonusEvery
+              ? (
+                  `${bonusEvery}/${bonusEvery} — bonus chest is due now.`
+                )
+              : (
+                  `${progress}/${bonusEvery} regular chests toward the next bonus.`
+                );
       }
     }
 
