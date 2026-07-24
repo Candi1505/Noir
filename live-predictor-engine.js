@@ -1006,7 +1006,7 @@
         Math.max(
           0,
           Math.min(
-            bonusEvery - 1,
+            bonusEvery,
             Math.floor(
               numericProgress
             )
@@ -3307,17 +3307,19 @@ function valuesMatch(
       if (
         bonusProgressBefore !== null
       ) {
+        const bonusEvery =
+          getBonusFrequency(
+            normalisedChest
+          );
+
         state.bonusProgress[
           normalisedChest
         ] =
           isBonus
             ? 0
-            : (
-                bonusProgressBefore +
-                1
-              ) %
-              getBonusFrequency(
-                normalisedChest
+            : Math.min(
+                bonusEvery,
+                bonusProgressBefore + 1
               );
       }
 
@@ -3910,6 +3912,97 @@ function valuesMatch(
 
     const predictedRegularRewards = [];
 
+    if (
+      bonusEvery &&
+      regularSinceBonus !== null &&
+      regularSinceBonus >= bonusEvery
+    ) {
+      const chestLabel =
+        getChestLabel(normalised);
+
+      const bonusReward =
+        bonusDeck.length
+          ? (() => {
+              const startingReward =
+                bonusDeck[
+                  bonusOffset %
+                  bonusDeck.length
+                ];
+
+              const sharedAdvance =
+                countSharedPoolAdvances(
+                  predictedRegularRewards,
+                  startingReward,
+                  normalised
+                );
+
+              return bonusDeck[
+                (
+                  bonusOffset +
+                  sharedAdvance
+                ) %
+                bonusDeck.length
+              ];
+            })()
+          : null;
+
+      upcoming.push({
+        number: upcoming.length + 1,
+        index:
+          bonusReward?.index ??
+          null,
+        position:
+          bonusReward?.position ??
+          null,
+        name:
+          bonusReward?.name ||
+          `${chestLabel} Bonus Chest`,
+        label:
+          bonusReward?.name ||
+          `${chestLabel} Bonus Chest`,
+        code:
+          bonusReward?.code ||
+          `${normalised}_bonus`,
+        amount:
+          bonusReward?.amount ??
+          null,
+        value:
+          cloneValue(
+            bonusReward?.matchValue
+          ),
+        matchValue:
+          cloneValue(
+            bonusReward?.matchValue
+          ),
+        reward:
+          cloneValue(
+            bonusReward?.raw
+          ),
+        raw:
+          cloneValue(
+            bonusReward?.raw
+          ),
+        isBonus: true,
+        bonus: true,
+        bonusEvery,
+        bonusAfterRegularChest: 0,
+        displayValue:
+          bonusReward
+            ? (
+                bonusReward.amount === null
+                  ? bonusReward.name
+                  : (
+                      `${bonusReward.name} — ` +
+                      `${bonusReward.amount}`
+                    )
+              )
+            : `${chestLabel} Bonus Chest`
+      });
+
+      bonusOffset += 1;
+      regularSinceBonus = 0;
+    }
+
     for (
       let offset = 1;
       offset <= safeCount;
@@ -3985,7 +4078,7 @@ function valuesMatch(
       ) {
         regularSinceBonus += 1;
 
-        if (regularSinceBonus === bonusEvery) {
+        if (regularSinceBonus >= bonusEvery) {
           const chestLabel =
             getChestLabel(normalised);
 
