@@ -72,9 +72,29 @@
   }
 
   function getEventIdentity(eventData) {
+    const deckSignature = Object.keys(eventData?.decks || {})
+      .sort()
+      .map(key => {
+        const deck = eventData.decks[key];
+        if (!Array.isArray(deck)) return "";
+        return [
+          key,
+          deck.length,
+          ...deck.slice(0, 6),
+          ...deck.slice(-6)
+        ].join(":");
+      })
+      .join("|");
+    let hash = 2166136261;
+
+    for (let index = 0; index < deckSignature.length; index += 1) {
+      hash ^= deckSignature.charCodeAt(index);
+      hash = Math.imul(hash, 16777619);
+    }
+
     return [
       getEventName(eventData),
-      eventData?.publishedAt || "",
+      (hash >>> 0).toString(16),
       ...CHEST_ORDER.map(type => {
         const chest = eventData?.chests?.[type] || {};
         return `${type}:${chest.deckLength || chest.length || ""}`;
