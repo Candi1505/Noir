@@ -1568,6 +1568,38 @@
         margin-top: 12px;
       }
 
+      .lp-next-bonus {
+        margin-top: 14px;
+        padding: 16px;
+        border: 1px solid rgba(224, 190, 91, 0.5);
+        border-radius: 16px;
+        background: linear-gradient(145deg, rgba(66, 46, 8, 0.32), rgba(10, 8, 4, 0.96));
+      }
+
+      .lp-next-bonus.hidden { display: none; }
+      .lp-next-bonus span,
+      .lp-next-bonus strong,
+      .lp-next-bonus small { display: block; }
+      .lp-next-bonus span { color: #b79c51; font-size: 10px; font-weight: 900; letter-spacing: .1em; }
+      .lp-next-bonus strong { margin-top: 7px; color: #ead17c; font-size: 17px; }
+      .lp-next-bonus small { margin-top: 5px; color: #9c9588; line-height: 1.45; }
+      .lp-jump-bonus {
+        width: 100%;
+        margin-top: 12px;
+        padding: 11px 14px;
+        border: 1px solid rgba(224, 190, 91, 0.42);
+        border-radius: 12px;
+        background: rgba(224, 190, 91, 0.09);
+        color: #e2c66d;
+        font-weight: 900;
+      }
+      .lp-prediction-card.lp-bonus.lp-bonus-focus {
+        animation: lpBonusFocus 1.25s ease 2;
+      }
+      @keyframes lpBonusFocus {
+        50% { box-shadow: 0 0 0 4px rgba(224, 190, 91, 0.2); }
+      }
+
       .lp-prediction-card {
         position: relative;
 
@@ -2391,6 +2423,11 @@
               </p>
             </div>
           </div>
+
+          <div
+            id="lpNextBonus"
+            class="lp-next-bonus hidden"
+          ></div>
 
           <div
             id="lpPredictionSummary"
@@ -4313,6 +4350,11 @@
         "lpPredictionList"
       );
 
+    const bonusSummary =
+      document.getElementById(
+        "lpNextBonus"
+      );
+
     const warning =
       document.getElementById(
         "lpPredictionWarning"
@@ -4322,6 +4364,7 @@
       !positionElement ||
       !countElement ||
       !container ||
+      !bonusSummary ||
       !warning
     ) {
       return;
@@ -4348,6 +4391,11 @@
       formatNumber(
         predictions.length
       );
+
+    bonusSummary.classList.add(
+      "hidden"
+    );
+    bonusSummary.innerHTML = "";
 
     if (
       !selectedChest ||
@@ -4435,6 +4483,7 @@
                     ? "lp-bonus"
                     : ""
                 }"
+                data-lp-bonus="${prediction.isBonus ? "true" : "false"}"
               >
                 <div class="lp-prediction-position">
                   ${
@@ -4488,8 +4537,59 @@
         )
         .join("");
 
+    const firstBonusIndex =
+      visiblePredictions.findIndex(
+        prediction =>
+          prediction?.isBonus ||
+          prediction?.bonus
+      );
+
+    if (firstBonusIndex >= 0) {
+      const bonus =
+        normalisePrediction(
+          visiblePredictions[firstBonusIndex],
+          firstBonusIndex,
+          playerPosition
+        );
+      const regularBefore =
+        visiblePredictions
+          .slice(0, firstBonusIndex)
+          .filter(
+            prediction =>
+              !prediction?.isBonus &&
+              !prediction?.bonus
+          )
+          .length;
+
+      bonusSummary.classList.remove(
+        "hidden"
+      );
+      bonusSummary.innerHTML = `
+        <span>NEXT BONUS CHEST</span>
+        <strong>
+          ${escapeHTML(bonus.name)}
+          ${bonus.amount === null ? "" : ` — ${formatNumber(bonus.amount)}`}
+        </strong>
+        <small>
+          ${regularBefore === 0
+            ? "Your next reward is the bonus chest."
+            : `After ${regularBefore} more regular chest${regularBefore === 1 ? "" : "s"}.`}
+        </small>
+        <button id="lpJumpBonus" class="lp-jump-bonus" type="button">
+          Jump to bonus
+        </button>
+      `;
+    }
+
     warning.textContent =
-      predictions.length >
+      !selectedChest?.solved &&
+      predictions.length
+        ? (
+            `Showing ${predictions.length} safe prediction${predictions.length === 1 ? "" : "s"}. ` +
+            "The list pauses before an unresolved reward pool. " +
+            "Record the next consecutive reward to extend it."
+          )
+        : predictions.length >
       visiblePredictions.length
         ? (
             `Showing the next ${visiblePredictions.length} ` +
@@ -5495,10 +5595,60 @@
 
     bonusProgressInput
       ?.addEventListener(
+        "input",
+        () => {
+          handleBonusProgressChange(
+            bonusProgressInput
+          );
+        }
+      );
+
+    bonusProgressInput
+      ?.addEventListener(
         "change",
         () => {
           handleBonusProgressChange(
             bonusProgressInput
+          );
+        }
+      );
+
+    document
+      .getElementById(
+        "lpNextBonus"
+      )
+      ?.addEventListener(
+        "click",
+        event => {
+          if (
+            !event.target.closest(
+              "#lpJumpBonus"
+            )
+          ) {
+            return;
+          }
+
+          const bonusCard =
+            document.querySelector(
+              "#lpPredictionList [data-lp-bonus='true']"
+            );
+
+          if (!bonusCard) {
+            return;
+          }
+
+          bonusCard.scrollIntoView({
+            behavior: "smooth",
+            block: "center"
+          });
+          bonusCard.classList.remove(
+            "lp-bonus-focus"
+          );
+          window.setTimeout(
+            () => bonusCard.classList.add(
+              "lp-bonus-focus"
+            ),
+            0
           );
         }
       );
