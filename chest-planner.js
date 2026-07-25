@@ -35,9 +35,10 @@
     },
     {
       key: "shards",
-      label: "Dragon Shards & Fragments",
+      label: "Dragon Shards",
       test: name =>
-        /shard|fragment/i.test(name)
+        /shards$/i.test(name) &&
+        !/^(fire|ice) shards$/i.test(name)
     },
     {
       key: "speedups",
