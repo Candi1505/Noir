@@ -453,6 +453,10 @@
               value="${state.cost}">
           </label>
         </div>
+        <button id="nctCalculateBudget" type="button"
+          class="nct-primary nct-calculate-budget">
+          Calculate My Chest Budget
+        </button>
         <article class="nct-budget-total">
           <span>You can open</span>
           <strong>${formatNumber(openings, 0)} ${meta.label} chest${openings === 1 ? "" : "s"}</strong>
@@ -726,6 +730,19 @@
       state.cost = Math.max(1, Number(event.target.value) || 1);
       render();
     });
+    overlay.querySelector("#nctCalculateBudget")?.addEventListener("click", () => {
+      state.chestType =
+        overlay.querySelector("#nctBudgetChest")?.value || state.chestType;
+      state.currency = Math.max(
+        0,
+        Number(overlay.querySelector("#nctCurrency")?.value) || 0
+      );
+      state.cost = Math.max(
+        1,
+        Number(overlay.querySelector("#nctCost")?.value) || 1
+      );
+      render();
+    });
     overlay.querySelector("#nctShareChest")?.addEventListener("change", event => {
       state.chestType = event.target.value;
       render();
@@ -833,6 +850,7 @@
       .nct-check-card.warning > span, .nct-check-card.warning small { color: #e3be63; }
       .nct-warning-list { margin-top: 18px; padding: 18px; border: 1px solid rgba(226,189,94,.4); border-radius: 18px; color: #dbbf73; }
       .nct-primary { width: 100%; border: 0; border-radius: 18px; padding: 17px; background: #ddbf66; color: #090908; font-size: 17px; font-weight: 900; }
+      .nct-calculate-budget { margin: 0 0 18px; }
       .nct-private-summary { margin-top: 24px; }
       .nct-private-summary strong { display: block; font-size: 20px; }
       .nct-private-summary p { color: #989289; }
