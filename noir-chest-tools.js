@@ -381,11 +381,11 @@
               `).join("")}
             </select>
           </label>
-          <label>Currency available
+          <label>Rubies available
             <input id="nctCurrency" class="nct-input" type="number" min="0"
               value="${state.currency}">
           </label>
-          <label>Current cost per chest
+          <label>Cost per chest (rubies)
             <input id="nctCost" class="nct-input" type="number" min="1"
               value="${state.cost}">
           </label>
