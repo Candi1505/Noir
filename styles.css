@@ -1971,7 +1971,7 @@ span {
 
 
 /* =========================================================
-   CHEST CARDS — ALL BLACK
+   CHEST CARDS — MUTED NOIR COLOURS
 ========================================================= */
 
 .chest-card,
@@ -1979,8 +1979,6 @@ span {
 .platinum-card,
 .draconic-card,
 .freedom-card {
-  border-color: var(--border);
-
   background:
     linear-gradient(
       145deg,
@@ -2006,33 +2004,36 @@ span {
     );
 }
 
-.chest-card:hover,
-.gold-card:hover,
-.platinum-card:hover,
-.draconic-card:hover,
-.freedom-card:hover {
-  border-color: rgba(185, 149, 66, 0.32);
-
-  background:
-    linear-gradient(
-      145deg,
-      #171717,
-      #050505
-    );
-
-  box-shadow:
-    0 16px 38px rgba(0, 0, 0, 0.64),
-    inset 0 1px rgba(185, 149, 66, 0.06);
+.gold-card {
+  border-color: rgba(201, 164, 69, 0.34);
+  background: linear-gradient(145deg, rgba(57, 43, 13, 0.58), #070604 72%);
 }
 
-.chest-symbol,
+.platinum-card {
+  border-color: rgba(130, 157, 184, 0.34);
+  background: linear-gradient(145deg, rgba(30, 45, 60, 0.62), #050607 72%);
+}
+
+.draconic-card {
+  border-color: rgba(190, 112, 52, 0.36);
+  background: linear-gradient(145deg, rgba(64, 31, 14, 0.62), #080503 72%);
+}
+
+.freedom-card {
+  border-color: rgba(151, 103, 176, 0.36);
+  background: linear-gradient(145deg, rgba(48, 25, 58, 0.64), #070407 72%);
+}
+
+.gold-card .chest-symbol { color: #d8b45d; }
+.platinum-card .chest-symbol { color: #91aec4; }
+.draconic-card .chest-symbol { color: #cc8149; }
+.freedom-card .chest-symbol { color: #ae7fc3; }
+
 .gold-card .chest-symbol,
 .platinum-card .chest-symbol,
 .draconic-card .chest-symbol,
 .freedom-card .chest-symbol {
-  color: var(--gold-light);
-
-  filter: grayscale(1) sepia(0.25);
+  filter: saturate(0.72);
 
   text-shadow:
     0 0 16px rgba(185, 149, 66, 0.18);
