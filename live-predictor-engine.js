@@ -980,7 +980,8 @@
 
   function setBonusProgress(
     chestType,
-    progress
+    progress,
+    options = {}
   ) {
     const normalised =
       normaliseChestType(
@@ -1021,7 +1022,10 @@
     }
 
     savePlayerState();
-    refresh();
+
+    if (!options.silent) {
+      refresh();
+    }
 
     return getBonusProgress(
       normalised
@@ -4662,6 +4666,21 @@ function valuesMatch(
 
       observationCount:
         observations.length,
+
+      bonusEvery:
+        getBonusFrequency(
+          normalised
+        ),
+
+      bonusProgress:
+        getBonusProgress(
+          normalised
+        ),
+
+      bonusProgressKnown:
+        getBonusProgress(
+          normalised
+        ) !== null,
 
       solved:
         Boolean(
