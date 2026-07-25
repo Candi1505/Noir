@@ -690,6 +690,14 @@
       return "Not expected";
     }
 
+    if (probability >= 0.5) {
+      return (
+        `About ${Math.round(
+          probability * 10
+        )} in 10 chests`
+      );
+    }
+
     const oneIn =
       Math.max(
         1,
@@ -698,9 +706,7 @@
         )
       );
 
-    return oneIn === 1
-      ? "About every chest"
-      : `About 1 in ${oneIn} chests`;
+    return `About 1 in ${oneIn} chests`;
   }
 
   function getChanceLabel(
