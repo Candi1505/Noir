@@ -69,6 +69,12 @@
   const eventFingerprintCache =
     new WeakMap();
 
+  const independentPoolEntryCache =
+    new Map();
+
+  const independentCandidateCache =
+    new Map();
+
   /* ==========================================================
      GENERAL HELPERS
      ========================================================== */
@@ -3547,10 +3553,368 @@ function valuesMatch(
      POSITION SOLVER
      ========================================================== */
 
+  function getDefinitionNestedDeckKey(
+    definition
+  ) {
+    const candidate =
+      normaliseText(
+        firstDefined([
+          definition?.deck,
+          definition?.deckKey,
+          definition?.deck_key,
+          definition?.pool,
+          definition?.poolKey,
+          definition?.pool_key,
+          definition?.drop,
+          definition?.dropKey,
+          definition?.drop_key,
+          definition?.rewardPool,
+          definition?.reward_pool,
+          definition?.key,
+          definition?.id,
+          definition?.value
+        ], "")
+      );
+
+    return candidate &&
+      getNamedDeck(candidate).length
+        ? candidate
+        : "";
+  }
+
+  function getMainPoolKey(
+    mainDeckKey,
+    rawValue
+  ) {
+    return getDefinitionNestedDeckKey(
+      resolveDropDefinition(
+        mainDeckKey,
+        rawValue
+      )
+    );
+  }
+
+  function getIndependentPoolEntries(
+    poolKey,
+    chestType
+  ) {
+    const cacheKey = [
+      getEventFingerprint() ||
+        "event",
+      chestType,
+      poolKey
+    ].join("::");
+
+    if (
+      independentPoolEntryCache.has(
+        cacheKey
+      )
+    ) {
+      return independentPoolEntryCache.get(
+        cacheKey
+      );
+    }
+
+    const poolDeck =
+      getNamedDeck(poolKey);
+
+    const entries =
+      poolDeck.map(
+      (rawValue, index) => {
+        const resolved =
+          resolveDeckReward(
+            poolKey,
+            rawValue,
+            createDeckCursors()
+          );
+
+        const reward =
+          normaliseDeckEntry(
+            {
+              ...resolved,
+              matchValue: {
+                name: resolved.name,
+                code: resolved.code,
+                amount: resolved.amount
+              },
+              deckValue: rawValue,
+              poolKey,
+              poolIndex: index,
+              resolutionPath:
+                resolved.path
+            },
+            index,
+            chestType
+          );
+
+        reward.index = index;
+        reward.position = index + 1;
+
+        return reward;
+      }
+    );
+
+    independentPoolEntryCache.set(
+      cacheKey,
+      entries
+    );
+
+    return entries;
+  }
+
+  function findCyclicObservationStarts(
+    entries,
+    observations
+  ) {
+    if (
+      !entries.length ||
+      !observations.length
+    ) {
+      return [];
+    }
+
+    const starts = [];
+
+    for (
+      let start = 0;
+      start < entries.length;
+      start += 1
+    ) {
+      const matched =
+        observations.every(
+          (observation, offset) =>
+            valuesMatch(
+              entries[
+                (
+                  start +
+                  offset
+                ) %
+                entries.length
+              ]?.matchValue,
+              observation?.matchValue ??
+                observation?.value
+            )
+        );
+
+      if (matched) {
+        starts.push(start);
+      }
+    }
+
+    return starts;
+  }
+
+  function findIndependentCandidates(
+    chestType =
+      state.activeChest
+  ) {
+    const normalised =
+      normaliseChestType(
+        chestType
+      );
+    const mainDeckKey =
+      getChestDeckKey(
+        normalised
+      );
+    const mainDeck =
+      getNamedDeck(
+        mainDeckKey
+      );
+    const observations =
+      getRegularObservations(
+        normalised
+      );
+
+    if (
+      !mainDeck.length ||
+      !observations.length
+    ) {
+      return [];
+    }
+
+    const candidateCacheKey = [
+      getEventFingerprint() ||
+        "event",
+      normalised,
+      ...observations.map(
+        observation =>
+          createRewardMatchKey(
+            observation?.matchValue ??
+              observation?.value
+          )
+      )
+    ].join("::");
+
+    if (
+      independentCandidateCache.has(
+        candidateCacheKey
+      )
+    ) {
+      return independentCandidateCache.get(
+        candidateCacheKey
+      );
+    }
+
+    const poolKeys =
+      Array.from(
+        new Set(
+          mainDeck
+            .map(
+              rawValue =>
+                getMainPoolKey(
+                  mainDeckKey,
+                  rawValue
+                )
+            )
+            .filter(Boolean)
+        )
+      );
+
+    if (!poolKeys.length) {
+      return [];
+    }
+
+    const poolEntries =
+      Object.fromEntries(
+        poolKeys.map(
+          poolKey => [
+            poolKey,
+            getIndependentPoolEntries(
+              poolKey,
+              normalised
+            )
+          ]
+        )
+      );
+    const candidates = [];
+
+    for (
+      let mainStart = 0;
+      mainStart < mainDeck.length;
+      mainStart += 1
+    ) {
+      const observationsByPool = {};
+      let compatible = true;
+
+      for (
+        let offset = 0;
+        offset < observations.length;
+        offset += 1
+      ) {
+        const rawValue =
+          mainDeck[
+            (
+              mainStart +
+              offset
+            ) %
+            mainDeck.length
+          ];
+        const poolKey =
+          getMainPoolKey(
+            mainDeckKey,
+            rawValue
+          );
+        const entries =
+          poolEntries[
+            poolKey
+          ] || [];
+        const observation =
+          observations[offset];
+
+        if (
+          !poolKey ||
+          !entries.some(
+            entry =>
+              valuesMatch(
+                entry.matchValue,
+                observation?.matchValue ??
+                  observation?.value
+              )
+          )
+        ) {
+          compatible = false;
+          break;
+        }
+
+        (
+          observationsByPool[
+            poolKey
+          ] ||= []
+        ).push(
+          observation
+        );
+      }
+
+      if (!compatible) {
+        continue;
+      }
+
+      const poolStarts = {};
+
+      for (
+        const [
+          poolKey,
+          poolObservations
+        ] of Object.entries(
+          observationsByPool
+        )
+      ) {
+        const starts =
+          findCyclicObservationStarts(
+            poolEntries[poolKey],
+            poolObservations
+          );
+
+        if (!starts.length) {
+          compatible = false;
+          break;
+        }
+
+        poolStarts[poolKey] =
+          starts;
+      }
+
+      if (compatible) {
+        candidates.push({
+          mainStart,
+          mainCurrent:
+            (
+              mainStart +
+              observations.length -
+              1
+            ) %
+            mainDeck.length,
+          observationsByPool,
+          poolStarts,
+          poolEntries
+        });
+      }
+    }
+
+    independentCandidateCache.set(
+      candidateCacheKey,
+      candidates
+    );
+
+    return candidates;
+  }
+
   function findCandidateStarts(
     chestType =
       state.activeChest
   ) {
+    const independent =
+      findIndependentCandidates(
+        chestType
+      );
+
+    if (independent.length) {
+      return independent.map(
+        candidate =>
+          candidate.mainStart
+      );
+    }
+
     const deck =
       getNormalisedDeck(
         chestType
@@ -3729,6 +4093,10 @@ function valuesMatch(
       findCandidateStarts(
         normalised
       );
+    const independentCandidates =
+      findIndependentCandidates(
+        normalised
+      );
 
     if (!candidateStarts.length) {
       return {
@@ -3754,18 +4122,33 @@ function valuesMatch(
     }
 
     const currentPositions =
-      candidateStarts.map(
-        start =>
-          (
-            start +
-            observations.length -
-            1
-          ) %
-          deck.length
-      );
+      independentCandidates.length
+        ? independentCandidates.map(
+            candidate =>
+              candidate.mainCurrent
+          )
+        : candidateStarts.map(
+            start =>
+              (
+                start +
+                observations.length -
+                1
+              ) %
+              deck.length
+          );
 
     const solved =
-      candidateStarts.length === 1;
+      candidateStarts.length === 1 &&
+      (
+        !independentCandidates.length ||
+        Object.values(
+          independentCandidates[0]
+            .poolStarts
+        ).every(
+          starts =>
+            starts.length === 1
+        )
+      );
 
     const currentIndex =
       solved
@@ -3803,6 +4186,14 @@ function valuesMatch(
 
       candidates:
         candidateStarts,
+
+      independentCandidates,
+
+      nestedState:
+        solved &&
+        independentCandidates.length
+          ? independentCandidates[0]
+          : null,
 
       currentPositions,
 
@@ -3911,96 +4302,50 @@ function valuesMatch(
       );
 
     const predictedRegularRewards = [];
+    const nestedState =
+      solution.nestedState;
+    const mainDeckKey =
+      getChestDeckKey(
+        normalised
+      );
+    const mainDeck =
+      nestedState
+        ? getNamedDeck(
+            mainDeckKey
+          )
+        : [];
+    const nestedPoolCursors = {};
 
-    if (
-      bonusEvery &&
-      regularSinceBonus !== null &&
-      regularSinceBonus >= bonusEvery
-    ) {
-      const chestLabel =
-        getChestLabel(normalised);
+    if (nestedState) {
+      Object.entries(
+        nestedState.poolEntries
+      ).forEach(
+        ([poolKey, entries]) => {
+          const starts =
+            nestedState
+              .poolStarts[
+                poolKey
+              ] || [];
+          const observedCount =
+            nestedState
+              .observationsByPool[
+                poolKey
+              ]?.length || 0;
 
-      const bonusReward =
-        bonusDeck.length
-          ? (() => {
-              const startingReward =
-                bonusDeck[
-                  bonusOffset %
-                  bonusDeck.length
-                ];
-
-              const sharedAdvance =
-                countSharedPoolAdvances(
-                  predictedRegularRewards,
-                  startingReward,
-                  normalised
-                );
-
-              return bonusDeck[
-                (
-                  bonusOffset +
-                  sharedAdvance
+          nestedPoolCursors[
+            poolKey
+          ] =
+            starts.length === 1
+              ? (
+                  starts[0] +
+                  observedCount
                 ) %
-                bonusDeck.length
-              ];
-            })()
-          : null;
-
-      upcoming.push({
-        number: upcoming.length + 1,
-        index:
-          bonusReward?.index ??
-          null,
-        position:
-          bonusReward?.position ??
-          null,
-        name:
-          bonusReward?.name ||
-          `${chestLabel} Bonus Chest`,
-        label:
-          bonusReward?.name ||
-          `${chestLabel} Bonus Chest`,
-        code:
-          bonusReward?.code ||
-          `${normalised}_bonus`,
-        amount:
-          bonusReward?.amount ??
-          null,
-        value:
-          cloneValue(
-            bonusReward?.matchValue
-          ),
-        matchValue:
-          cloneValue(
-            bonusReward?.matchValue
-          ),
-        reward:
-          cloneValue(
-            bonusReward?.raw
-          ),
-        raw:
-          cloneValue(
-            bonusReward?.raw
-          ),
-        isBonus: true,
-        bonus: true,
-        bonusEvery,
-        bonusAfterRegularChest: 0,
-        displayValue:
-          bonusReward
-            ? (
-                bonusReward.amount === null
-                  ? bonusReward.name
-                  : (
-                      `${bonusReward.name} — ` +
-                      `${bonusReward.amount}`
-                    )
-              )
-            : `${chestLabel} Bonus Chest`
-      });
-
-      bonusOffset += 1;
-      regularSinceBonus = 0;
+                entries.length
+              : getNextNamedDeckIndex(
+                  poolKey
+                );
+        }
+      );
     }
 
     for (
@@ -4013,10 +4358,54 @@ function valuesMatch(
           solution.currentIndex +
           offset
         ) %
-        deck.length;
+        (
+          nestedState
+            ? mainDeck.length
+            : deck.length
+        );
 
-      const reward =
-        deck[index];
+      let reward;
+
+      if (nestedState) {
+        const poolKey =
+          getMainPoolKey(
+            mainDeckKey,
+            mainDeck[index]
+          );
+        const entries =
+          nestedState
+            .poolEntries[
+              poolKey
+            ] || [];
+
+        if (!entries.length) {
+          return [];
+        }
+
+        const poolIndex =
+          (
+            nestedPoolCursors[
+              poolKey
+            ] || 0
+          ) %
+          entries.length;
+
+        reward =
+          entries[
+            poolIndex
+          ];
+
+        nestedPoolCursors[
+          poolKey
+        ] =
+          (
+            poolIndex + 1
+          ) %
+          entries.length;
+      } else {
+        reward =
+          deck[index];
+      }
 
       predictedRegularRewards.push(
         reward
@@ -4078,7 +4467,7 @@ function valuesMatch(
       ) {
         regularSinceBonus += 1;
 
-        if (regularSinceBonus >= bonusEvery) {
+        if (regularSinceBonus === bonusEvery) {
           const chestLabel =
             getChestLabel(normalised);
 
@@ -4217,21 +4606,6 @@ function valuesMatch(
         getChestLabel(
           normalised
         ),
-
-      bonusEvery:
-        getBonusFrequency(
-          normalised
-        ),
-
-      bonusProgress:
-        getBonusProgress(
-          normalised
-        ),
-
-      bonusDeckLength:
-        getNormalisedBonusDeck(
-          normalised
-        ).length,
 
       loaded:
         hasChestDeck(
