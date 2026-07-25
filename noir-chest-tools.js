@@ -297,6 +297,44 @@
     };
   }
 
+  function calculateBudgetBonuses(chestType, regularOpenings) {
+    const meta = CHEST_META[chestType] || CHEST_META.gold;
+    const openings = Math.max(0, Math.floor(Number(regularOpenings) || 0));
+    const engine = window.LivePredictorEngine;
+    const rawProgress = engine?.getBonusProgress?.(chestType);
+    const progressKnown =
+      rawProgress !== null &&
+      rawProgress !== undefined &&
+      rawProgress !== "";
+
+    if (progressKnown) {
+      const progress = Math.max(
+        0,
+        Math.min(meta.bonusEvery - 1, Math.floor(Number(rawProgress) || 0))
+      );
+      const bonuses = Math.floor((progress + openings) / meta.bonusEvery);
+      return {
+        known: true,
+        minimum: bonuses,
+        maximum: bonuses,
+        totalMinimum: openings + bonuses,
+        totalMaximum: openings + bonuses
+      };
+    }
+
+    const minimum = Math.floor(openings / meta.bonusEvery);
+    const maximum = Math.floor(
+      (openings + meta.bonusEvery - 1) / meta.bonusEvery
+    );
+    return {
+      known: false,
+      minimum,
+      maximum,
+      totalMinimum: openings + minimum,
+      totalMaximum: openings + maximum
+    };
+  }
+
   function getBudgetPrediction(chestType, openings) {
     const engine = window.LivePredictorEngine;
     const safeOpenings = Math.max(0, Math.floor(Number(openings) || 0));
@@ -456,6 +494,18 @@
     const expected = expectedRewards(state.chestType, openings, context).slice(0, 8);
     const prediction = getBudgetPrediction(state.chestType, openings);
     const meta = CHEST_META[state.chestType];
+    const bonusEstimate = calculateBudgetBonuses(
+      state.chestType,
+      openings
+    );
+    const bonusText =
+      bonusEstimate.minimum === bonusEstimate.maximum
+        ? `${bonusEstimate.minimum} bonus chest${bonusEstimate.minimum === 1 ? "" : "s"}`
+        : `${bonusEstimate.minimum}–${bonusEstimate.maximum} bonus chests`;
+    const totalText =
+      bonusEstimate.totalMinimum === bonusEstimate.totalMaximum
+        ? `${bonusEstimate.totalMinimum} total reward${bonusEstimate.totalMinimum === 1 ? "" : "s"}`
+        : `${bonusEstimate.totalMinimum}–${bonusEstimate.totalMaximum} total rewards`;
     return `
       <section class="nct-section">
         <article class="nct-budget-tip">
@@ -490,14 +540,21 @@
           Calculate My Chest Budget
         </button>
         <article class="nct-budget-total">
-          <span>You can open</span>
-          <strong>${formatNumber(openings, 0)} ${meta.label} chest${openings === 1 ? "" : "s"}</strong>
+          <span>Your rubies buy</span>
+          <strong>${formatNumber(openings, 0)} regular ${meta.label} chest${openings === 1 ? "" : "s"}</strong>
           <small>
             ${budget.tenPacks} × 10-pack${budget.singles ? ` + ${budget.singles} single${budget.singles === 1 ? "" : "s"}` : ""}
             · ${formatNumber(budget.spent, 0)} rubies spent
             · ${formatNumber(budget.remaining, 0)} left
           </small>
-          <small>About ${formatNumber(openings / meta.bonusEvery)} bonus chest${openings / meta.bonusEvery === 1 ? "" : "s"} over the long run</small>
+          <strong class="nct-budget-grand-total">
+            + ${bonusText} = ${totalText}
+          </strong>
+          <small>
+            ${bonusEstimate.known
+              ? "Calculated from your saved in-game bonus progress."
+              : `Enter your bonus progress in Live Predictor for an exact total. ${meta.label} awards a bonus every ${meta.bonusEvery} regular chests.`}
+          </small>
         </article>
         ${prediction.solved && prediction.predictions.length ? `
           <div class="nct-prediction-heading">
@@ -965,6 +1022,7 @@
     expectedRewards,
     calculateBudget,
     calculateChestBudget,
+    calculateBudgetBonuses,
     getBudgetPrediction,
     getVerificationSummary,
     getEventIdentity,
