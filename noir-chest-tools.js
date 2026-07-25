@@ -553,7 +553,9 @@
           <small>
             ${bonusEstimate.known
               ? "Calculated from your saved in-game bonus progress."
-              : `Enter your bonus progress in Live Predictor for an exact total. ${meta.label} awards a bonus every ${meta.bonusEvery} regular chests.`}
+              : bonusEstimate.minimum === bonusEstimate.maximum
+                ? `This total is exact because these openings complete full ${meta.bonusEvery}-chest bonus cycles.`
+                : `Enter your bonus progress in Live Predictor for an exact total. ${meta.label} awards a bonus every ${meta.bonusEvery} regular chests.`}
           </small>
         </article>
         ${prediction.solved && prediction.predictions.length ? `
