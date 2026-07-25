@@ -4213,11 +4213,16 @@ function valuesMatch(
             deck.length,
 
       confidence:
-        calculateConfidence(
-          candidateStarts.length,
-          deck.length,
-          observations.length
-        ),
+        solved
+          ? 100
+          : Math.min(
+              99,
+              calculateConfidence(
+                candidateStarts.length,
+                deck.length,
+                observations.length
+              )
+            ),
 
       message:
         solved
