@@ -882,7 +882,13 @@
       .nct-readiness-chests .warning small { color: #e1bb60; }
       .nct-event-change { margin: 14px 0 0; color: #f0d98f; }
       .nct-home-tools { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 20px; }
-      .nct-launch { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, rgba(29,20,6,.97), rgba(8,8,7,.98)); border-color: rgba(218,184,87,.52); }
+      .nct-launch { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, rgba(29,20,6,.97), rgba(8,8,7,.98)); border-color: rgba(218,184,87,.42); }
+      .nct-launch.nct-finder { border-color: rgba(151,103,176,.4); background: linear-gradient(135deg, rgba(48,25,58,.62), rgba(7,4,7,.98) 74%); }
+      .nct-launch.nct-budget { border-color: rgba(87,135,177,.42); background: linear-gradient(135deg, rgba(24,43,62,.66), rgba(4,6,8,.98) 74%); }
+      .nct-launch.nct-share { border-color: rgba(174,96,112,.4); background: linear-gradient(135deg, rgba(57,25,32,.62), rgba(8,4,5,.98) 74%); }
+      .nct-launch.nct-finder .nct-launch-icon { color: #ae7fc3; }
+      .nct-launch.nct-budget .nct-launch-icon { color: #75a9cf; }
+      .nct-launch.nct-share .nct-launch-icon { color: #c17b8b; }
       .nct-home-tools .nct-launch { margin: 0; min-height: 138px; padding: 19px; }
       .nct-launch strong { display: block; font-size: 25px; }
       .nct-home-tools .nct-launch strong { font-size: 19px; }
@@ -996,7 +1002,7 @@
     ].forEach(tool => {
       const launch = document.createElement("button");
       launch.type = "button";
-      launch.className = "nct-launch";
+      launch.className = `nct-launch nct-${tool.view}`;
       launch.innerHTML = `
         <span><strong>${tool.title}</strong><small>${tool.description}</small></span>
         <span class="nct-launch-icon" aria-hidden="true">${tool.icon}</span>
