@@ -313,7 +313,20 @@
         <strong>${report.ready ? "✓ Ready for players" : `${readyCount}/4 chests ready`}</strong>
         <small>${escapeHtml(report.eventName)} · Regular and bonus rewards checked</small>
       </div>
-      <button type="button" class="nct-banner-button">View check</button>
+      <div class="nct-readiness-chests">
+        ${CHEST_ORDER.map(type => {
+          const chest = report.chests[type] || {};
+          const meta = CHEST_META[type];
+          return `
+            <div class="${chest.ready ? "ready" : "warning"}">
+              <span>${meta.icon}</span>
+              <b>${meta.label}</b>
+              <small>${chest.ready ? "Ready" : "Check needed"}</small>
+              <em>${chest.regularRewards || 0} regular · ${chest.bonusRewards || 0} bonus</em>
+            </div>
+          `;
+        }).join("")}
+      </div>
       ${change?.changed ? `
         <p class="nct-event-change">
           New event detected: ${escapeHtml(change.eventName)}. Your previous
@@ -321,10 +334,6 @@
         </p>
       ` : ""}
     `;
-    banner.querySelector("button")?.addEventListener("click", () => {
-      state.view = "readiness";
-      open();
-    });
   }
 
   function renderFinder(context) {
@@ -650,17 +659,28 @@
         border: 1px solid rgba(95,215,174,.46); padding: 24px; text-align: left;
         box-sizing: border-box;
       }
-      .nct-readiness-banner { display: grid; grid-template-columns: 1fr auto; gap: 10px 18px; }
+      .nct-readiness-banner { display: block; }
       .nct-readiness-banner strong { display: block; font-size: 21px; color: #79dfbc; }
       .nct-readiness-banner small { display: block; margin-top: 7px; color: #a9a49c; }
       .nct-readiness-banner.nct-not-ready { border-color: rgba(225,179,79,.55); background: linear-gradient(135deg, rgba(42,30,8,.96), rgba(8,8,7,.98)); }
       .nct-readiness-banner.nct-not-ready strong { color: #e6c469; }
-      .nct-banner-button { align-self: center; color: #ead078; border: 1px solid rgba(234,208,120,.42); border-radius: 999px; background: transparent; padding: 10px 14px; }
-      .nct-event-change { grid-column: 1 / -1; margin: 5px 0 0; color: #f0d98f; }
+      .nct-readiness-chests { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 9px; margin-top: 18px; }
+      .nct-readiness-chests > div { min-width: 0; padding: 13px 10px; border: 1px solid rgba(91,205,165,.3); border-radius: 15px; background: rgba(0,0,0,.22); }
+      .nct-readiness-chests span { margin-right: 4px; }
+      .nct-readiness-chests b { font-size: 14px; }
+      .nct-readiness-chests small { color: #73d9b5; font-size: 12px; font-weight: 800; }
+      .nct-readiness-chests em { display: block; margin-top: 5px; color: #8f8a82; font-size: 11px; font-style: normal; }
+      .nct-readiness-chests .warning small { color: #e1bb60; }
+      .nct-event-change { margin: 14px 0 0; color: #f0d98f; }
+      .nct-home-tools { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 20px; }
       .nct-launch { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, rgba(29,20,6,.97), rgba(8,8,7,.98)); border-color: rgba(218,184,87,.52); }
+      .nct-home-tools .nct-launch { margin: 0; min-height: 138px; padding: 19px; }
       .nct-launch strong { display: block; font-size: 25px; }
+      .nct-home-tools .nct-launch strong { font-size: 19px; }
       .nct-launch small { display: block; max-width: 520px; margin-top: 8px; color: #aaa49b; font-size: 16px; line-height: 1.45; }
+      .nct-home-tools .nct-launch small { font-size: 13px; }
       .nct-launch-icon { color: #e2c469; font-size: 35px; }
+      .nct-home-tools .nct-launch-icon { margin-left: 8px; font-size: 27px; }
       .nct-overlay { position: fixed; inset: 0; z-index: 10000; display: none; overflow-y: auto; background: rgba(0,0,0,.94); padding: 18px; box-sizing: border-box; }
       .nct-overlay.open { display: block; }
       .nct-shell { max-width: 920px; margin: 0 auto; color: #eee9df; }
@@ -705,8 +725,9 @@
       .nct-empty-large { margin-top: 25vh; }
       @media (max-width: 680px) {
         .nct-result-list, .nct-check-grid, .nct-fields { grid-template-columns: 1fr; }
-        .nct-readiness-banner { grid-template-columns: 1fr; }
-        .nct-banner-button { justify-self: start; }
+        .nct-readiness-chests { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .nct-home-tools { grid-template-columns: 1fr; }
+        .nct-home-tools .nct-launch { min-height: 0; }
       }
     `;
     document.head.appendChild(style);
@@ -725,20 +746,43 @@
     banner.className = "nct-readiness-banner";
     chestGrid?.insertAdjacentElement("afterend", banner);
 
-    const launch = document.createElement("button");
-    launch.type = "button";
-    launch.className = "nct-launch";
-    launch.innerHTML = `
-      <span><strong>Chest Tools</strong>
-      <small>Find rewards, calculate your chest budget, check event readiness and create Discord-ready result cards.</small></span>
-      <span class="nct-launch-icon" aria-hidden="true">⌁</span>
-    `;
-    launch.addEventListener("click", () => {
-      state.view = "finder";
-      open();
+    const tools = document.createElement("section");
+    tools.className = "nct-home-tools";
+    [
+      {
+        view: "finder",
+        title: "Reward Finder",
+        description: "Find any reward across every regular and bonus chest.",
+        icon: "⌕"
+      },
+      {
+        view: "budget",
+        title: "Chest Budget",
+        description: "See how many chests you can open and estimated returns.",
+        icon: "◈"
+      },
+      {
+        view: "share",
+        title: "Share Cards",
+        description: "Create clean Noir results ready to share with your team.",
+        icon: "↗"
+      }
+    ].forEach(tool => {
+      const launch = document.createElement("button");
+      launch.type = "button";
+      launch.className = "nct-launch";
+      launch.innerHTML = `
+        <span><strong>${tool.title}</strong><small>${tool.description}</small></span>
+        <span class="nct-launch-icon" aria-hidden="true">${tool.icon}</span>
+      `;
+      launch.addEventListener("click", () => {
+        state.view = tool.view;
+        open();
+      });
+      tools.appendChild(launch);
     });
 
-    (plannerLaunch || rateLaunch || banner).insertAdjacentElement("afterend", launch);
+    (plannerLaunch || rateLaunch || banner).insertAdjacentElement("afterend", tools);
 
     const overlay = document.createElement("section");
     overlay.id = "noirChestToolsOverlay";
