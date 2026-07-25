@@ -14,6 +14,24 @@
 
   <link rel="stylesheet" href="styles.css">
 
+  <style>
+    .home-platform-statement {
+      margin: 0 0 28px;
+      padding: 18px 20px;
+      border-left: 3px solid #d9ba5d;
+      border-radius: 0 16px 16px 0;
+      background: linear-gradient(90deg, rgba(217, 186, 93, .12), transparent);
+      color: #eee8dc;
+      font-size: clamp(1.05rem, 3.6vw, 1.3rem);
+      font-weight: 750;
+      line-height: 1.45;
+      letter-spacing: .01em;
+    }
+    .home-platform-statement span {
+      color: #d9ba5d;
+    }
+  </style>
+
   <!-- Supabase browser library -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -90,6 +108,11 @@
       <section id="homeView" class="view active">
 
         <div class="hero-card glass-panel">
+
+          <p class="home-platform-statement">
+            The complete WD chest platform —
+            <span>predict, compare, plan and verify, all in one place.</span>
+          </p>
 
           <p class="eyebrow">
             WELCOME BACK
