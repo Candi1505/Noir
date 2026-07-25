@@ -71,6 +71,7 @@
     expediteConsumable2: "1-Hour Speedups",
     expediteConsumable3: "3-Hour Speedups",
     expediteConsumable4: "12-Hour Speedups",
+    energyPack: "Energy Packs",
     foodConsumable2: "Food Packs",
     cmCrystaldarkGemstone: "Dark Gemstones",
     cmCrystalearthGemstone: "Earth Gemstones",
@@ -83,12 +84,20 @@
     increaseBuildingHP1: "+30% Tower HP",
     innerFire01: "Inner Fire",
     innerFireConsumable: "Inner Fire",
+    repairConsumable: "Defense Hammers",
     chest0: "Bronze Chests",
     chest1: "Silver Chests",
     chest2: "Gold Chests",
     chest11: "Platinum Chests",
     chest27: "Draconic Chests",
-    chest33: "Freedom Chests"
+    chest33: "Freedom Chests",
+    E24Q3InvokerDragonEvolutionFragment: "Orion Shards",
+    E24Q4FestiveHunterDragonEvolutionFragment: "Razor Shards",
+    E25Q1FestiveSorcererDragonEvolutionFragment: "Volcaryx Shards",
+    E25Q2FestiveWarriorDragonEvolutionFragment: "Riphorn Shards",
+    E25Q3FestiveWarriorDragonEvolutionFragment: "Eldrath Shards",
+    E25Q4FestiveHunterDragonEvolutionFragment: "Drekgor Shards",
+    E26Q1FestiveInvokerDragonEvolutionFragment: "Voltgar Shards"
   };
 
   const RARITY_ORDER = {
