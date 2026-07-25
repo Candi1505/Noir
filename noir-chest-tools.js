@@ -11,10 +11,22 @@
 
   const CHEST_ORDER = ["gold", "platinum", "draconic", "freedom"];
   const CHEST_META = {
-    gold: { label: "Gold", icon: "◆", bonusEvery: 30 },
-    platinum: { label: "Platinum", icon: "✦", bonusEvery: 30 },
-    draconic: { label: "Draconic", icon: "🐉", bonusEvery: 30 },
-    freedom: { label: "Freedom", icon: "🦅", bonusEvery: 15 }
+    gold: {
+      label: "Gold", icon: "◆", bonusEvery: 30,
+      singleCost: 500, tenPackCost: 4000
+    },
+    platinum: {
+      label: "Platinum", icon: "✦", bonusEvery: 30,
+      singleCost: 1350, tenPackCost: 12000
+    },
+    draconic: {
+      label: "Draconic", icon: "🐉", bonusEvery: 30,
+      singleCost: 1000, tenPackCost: 8000
+    },
+    freedom: {
+      label: "Freedom", icon: "🦅", bonusEvery: 15,
+      singleCost: 1350, tenPackCost: 12000
+    }
   };
   const EVENT_KEY = "noirChestToolsEvent";
   const VERIFICATION_KEY = "noirChestToolsVerification";
@@ -23,7 +35,6 @@
     query: "",
     chestType: "gold",
     currency: 12000,
-    cost: 1200,
     shareOpenings: 10
   };
 
@@ -267,6 +278,25 @@
     return each > 0 ? Math.floor(available / each) : 0;
   }
 
+  function calculateChestBudget(currency, chestType) {
+    const available = Math.max(0, Math.floor(Number(currency) || 0));
+    const meta = CHEST_META[chestType] || CHEST_META.gold;
+    const tenPacks = Math.floor(available / meta.tenPackCost);
+    const afterPacks = available - tenPacks * meta.tenPackCost;
+    const singles = Math.floor(afterPacks / meta.singleCost);
+    const spent =
+      tenPacks * meta.tenPackCost +
+      singles * meta.singleCost;
+
+    return {
+      openings: tenPacks * 10 + singles,
+      tenPacks,
+      singles,
+      spent,
+      remaining: available - spent
+    };
+  }
+
   function getBudgetPrediction(chestType, openings) {
     const engine = window.LivePredictorEngine;
     const safeOpenings = Math.max(0, Math.floor(Number(openings) || 0));
@@ -421,7 +451,8 @@
   }
 
   function renderBudget(context) {
-    const openings = calculateBudget(state.currency, state.cost);
+    const budget = calculateChestBudget(state.currency, state.chestType);
+    const openings = budget.openings;
     const expected = expectedRewards(state.chestType, openings, context).slice(0, 8);
     const prediction = getBudgetPrediction(state.chestType, openings);
     const meta = CHEST_META[state.chestType];
@@ -448,10 +479,11 @@
             <input id="nctCurrency" class="nct-input" type="number" min="0"
               value="${state.currency}">
           </label>
-          <label>Cost per chest (rubies)
-            <input id="nctCost" class="nct-input" type="number" min="1"
-              value="${state.cost}">
-          </label>
+          <div class="nct-price-guide">
+            <span>Current ${meta.label} prices</span>
+            <strong>1 for ${formatNumber(meta.singleCost, 0)} rubies</strong>
+            <strong>10 for ${formatNumber(meta.tenPackCost, 0)} rubies</strong>
+          </div>
         </div>
         <button id="nctCalculateBudget" type="button"
           class="nct-primary nct-calculate-budget">
@@ -460,6 +492,11 @@
         <article class="nct-budget-total">
           <span>You can open</span>
           <strong>${formatNumber(openings, 0)} ${meta.label} chest${openings === 1 ? "" : "s"}</strong>
+          <small>
+            ${budget.tenPacks} × 10-pack${budget.singles ? ` + ${budget.singles} single${budget.singles === 1 ? "" : "s"}` : ""}
+            · ${formatNumber(budget.spent, 0)} rubies spent
+            · ${formatNumber(budget.remaining, 0)} left
+          </small>
           <small>About ${formatNumber(openings / meta.bonusEvery)} bonus chest${openings / meta.bonusEvery === 1 ? "" : "s"} over the long run</small>
         </article>
         ${prediction.solved && prediction.predictions.length ? `
@@ -726,20 +763,12 @@
       state.currency = Math.max(0, Number(event.target.value) || 0);
       render();
     });
-    overlay.querySelector("#nctCost")?.addEventListener("change", event => {
-      state.cost = Math.max(1, Number(event.target.value) || 1);
-      render();
-    });
     overlay.querySelector("#nctCalculateBudget")?.addEventListener("click", () => {
       state.chestType =
         overlay.querySelector("#nctBudgetChest")?.value || state.chestType;
       state.currency = Math.max(
         0,
         Number(overlay.querySelector("#nctCurrency")?.value) || 0
-      );
-      state.cost = Math.max(
-        1,
-        Number(overlay.querySelector("#nctCost")?.value) || 1
       );
       render();
     });
@@ -822,6 +851,10 @@
       .nct-result p, .nct-check-card p { margin: 5px 0; color: #99938a; }
       .nct-pill { color: #e3c66e; font-size: 11px; letter-spacing: .12em; }
       .nct-fields { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+      .nct-price-guide { margin-bottom: 16px; padding: 13px 15px; border: 1px solid #373532; border-radius: 15px; background: #101010; }
+      .nct-price-guide span, .nct-price-guide strong { display: block; }
+      .nct-price-guide span { margin-bottom: 6px; color: #918b82; font-size: 12px; }
+      .nct-price-guide strong { color: #e4c76d; line-height: 1.45; }
       .nct-budget-tip { margin-bottom: 20px; padding: 19px; border: 1px solid rgba(222,191,100,.4); border-radius: 18px; background: rgba(57,42,8,.28); }
       .nct-budget-tip strong { color: #ead078; }
       .nct-budget-tip p { margin: 7px 0 0; color: #aaa49a; line-height: 1.5; }
@@ -931,6 +964,7 @@
     findRewards,
     expectedRewards,
     calculateBudget,
+    calculateChestBudget,
     getBudgetPrediction,
     getVerificationSummary,
     getEventIdentity,
