@@ -4261,9 +4261,24 @@ function valuesMatch(
         normalised
       );
 
+    const partialNestedState =
+      !solution.solved &&
+      solution.candidateCount === 1 &&
+      solution.independentCandidates?.length === 1
+        ? solution.independentCandidates[0]
+        : null;
+
+    const predictionCurrentIndex =
+      solution.currentIndex ??
+      partialNestedState?.mainCurrent ??
+      null;
+
     if (
-      !solution.solved ||
-      solution.currentIndex === null ||
+      (
+        !solution.solved &&
+        !partialNestedState
+      ) ||
+      predictionCurrentIndex === null ||
       !deck.length
     ) {
       return [];
@@ -4308,7 +4323,8 @@ function valuesMatch(
 
     const predictedRegularRewards = [];
     const nestedState =
-      solution.nestedState;
+      solution.nestedState ||
+      partialNestedState;
     const mainDeckKey =
       getChestDeckKey(
         normalised
@@ -4346,9 +4362,7 @@ function valuesMatch(
                   observedCount
                 ) %
                 entries.length
-              : getNextNamedDeckIndex(
-                  poolKey
-                );
+              : null;
         }
       );
     }
@@ -4360,7 +4374,7 @@ function valuesMatch(
     ) {
       const index =
         (
-          solution.currentIndex +
+          predictionCurrentIndex +
           offset
         ) %
         (
@@ -4383,8 +4397,12 @@ function valuesMatch(
               poolKey
             ] || [];
 
-        if (!entries.length) {
-          return [];
+        if (
+          !entries.length ||
+          nestedPoolCursors[poolKey] === null ||
+          nestedPoolCursors[poolKey] === undefined
+        ) {
+          break;
         }
 
         const poolIndex =
