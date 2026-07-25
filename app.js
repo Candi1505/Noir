@@ -1921,15 +1921,107 @@
     );
 
 
-    const activeSession =
-      appState.activeSession;
-
-
     const resumeButton =
       getElement(
         "resumeSessionButton"
       );
 
+    const predictorEngine =
+      window.LivePredictorEngine;
+    const predictorProgress =
+      (
+        predictorEngine
+          ?.supportedChests ||
+        []
+      )
+        .map(chestType => {
+          try {
+            const chest =
+              predictorEngine
+                .getChestData(
+                  chestType
+                );
+
+            return {
+              chestType,
+              label:
+                chest?.label ||
+                capitalise(
+                  chestType
+                ),
+              count:
+                Array.isArray(
+                  chest
+                    ?.recordedRewards
+                )
+                  ? chest
+                      .recordedRewards
+                      .length
+                  : 0,
+              confidence:
+                Number(
+                  chest?.confidence
+                ) || 0
+            };
+          } catch (error) {
+            return {
+              chestType,
+              label:
+                capitalise(
+                  chestType
+                ),
+              count: 0,
+              confidence: 0
+            };
+          }
+        })
+        .filter(
+          chest =>
+            chest.count > 0
+        );
+
+    if (
+      predictorProgress.length
+    ) {
+      setText(
+        getElement(
+          "activeSessionTitle"
+        ),
+        "Saved predictor progress"
+      );
+
+      setText(
+        getElement(
+          "activeSessionText"
+        ),
+        predictorProgress
+          .map(chest => {
+            const solved =
+              chest.confidence >= 100
+                ? " • 100% confidence"
+                : "";
+
+            return (
+              `${chest.label}: ` +
+              `${chest.count} reward` +
+              `${chest.count === 1 ? "" : "s"}` +
+              ` recorded${solved}`
+            );
+          })
+          .join(" · ")
+      );
+
+      resumeButton
+        ?.classList
+        .add(
+          "hidden"
+        );
+
+      return;
+    }
+
+    const activeSession =
+      appState.activeSession;
 
     if (
       !activeSession
@@ -1941,7 +2033,7 @@
           "activeSessionTitle"
         ),
 
-        "No active session"
+        "No saved predictor progress"
 
       );
 
@@ -1952,7 +2044,7 @@
           "activeSessionText"
         ),
 
-        "Start Gold, Platinum, Draconic or Freedom tracking to build a visible sequence."
+        "Open Gold, Platinum, Draconic or Freedom and record rewards to begin."
 
       );
 
@@ -3565,6 +3657,16 @@ function getArmoryPage(position, positionsPerPage = 20) {
     }
 
     eventsBound = true;
+
+    window.addEventListener(
+      "chest-companion-live-predictor-updated",
+      renderHomeScreen
+    );
+
+    window.addEventListener(
+      "chest-companion-player-event-reset",
+      renderHomeScreen
+    );
 
 
     getAllElements(
