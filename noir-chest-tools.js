@@ -267,6 +267,61 @@
     return each > 0 ? Math.floor(available / each) : 0;
   }
 
+  function getBudgetPrediction(chestType, openings) {
+    const engine = window.LivePredictorEngine;
+    const safeOpenings = Math.max(0, Math.floor(Number(openings) || 0));
+
+    if (!engine || !safeOpenings) {
+      return {
+        solved: false,
+        confidence: 0,
+        predictions: [],
+        regularOpenings: safeOpenings,
+        limited: false,
+        bonusProgressKnown: false
+      };
+    }
+
+    try {
+      const status = engine.getChestStatus?.(chestType) || {};
+      const solved = Boolean(status.solved) && Number(status.confidence) >= 100;
+      const predictionCount = Math.min(safeOpenings, 100);
+      let regularNumber = 0;
+      const predictions = solved
+        ? (engine.predictUpcoming?.(predictionCount, chestType) || [])
+            .map(reward => {
+              const isBonus = Boolean(reward.isBonus || reward.bonus);
+              if (!isBonus) regularNumber += 1;
+              return {
+                ...reward,
+                budgetRegularNumber: isBonus ? null : regularNumber
+              };
+            })
+        : [];
+      const bonusProgress = engine.getBonusProgress?.(chestType);
+
+      return {
+        solved,
+        confidence: Number(status.confidence) || 0,
+        predictions,
+        regularOpenings: safeOpenings,
+        limited: safeOpenings > 100,
+        bonusProgressKnown:
+          bonusProgress !== null &&
+          bonusProgress !== undefined
+      };
+    } catch (error) {
+      return {
+        solved: false,
+        confidence: 0,
+        predictions: [],
+        regularOpenings: safeOpenings,
+        limited: false,
+        bonusProgressKnown: false
+      };
+    }
+  }
+
   function getVerificationSummary() {
     const summary = {};
     CHEST_ORDER.forEach(chestType => {
@@ -368,9 +423,17 @@
   function renderBudget(context) {
     const openings = calculateBudget(state.currency, state.cost);
     const expected = expectedRewards(state.chestType, openings, context).slice(0, 8);
+    const prediction = getBudgetPrediction(state.chestType, openings);
     const meta = CHEST_META[state.chestType];
     return `
       <section class="nct-section">
+        <article class="nct-budget-tip">
+          <strong>Want to see what you should actually receive?</strong>
+          <p>
+            Complete your ${meta.label} chest predictions first if you want
+            Noir to estimate the rewards you’ll receive when spending your rubies.
+          </p>
+        </article>
         <div class="nct-fields">
           <label>Chest
             <select id="nctBudgetChest" class="nct-input">
@@ -395,13 +458,54 @@
           <strong>${formatNumber(openings, 0)} ${meta.label} chest${openings === 1 ? "" : "s"}</strong>
           <small>About ${formatNumber(openings / meta.bonusEvery)} bonus chest${openings / meta.bonusEvery === 1 ? "" : "s"} over the long run</small>
         </article>
-        <h3>Estimated rewards</h3>
-        <p class="nct-help">These are long-term averages, not guaranteed results.</p>
-        <div class="nct-simple-list">
-          ${expected.length ? expected.map(item => `
-            <div><span>${escapeHtml(item.name)}</span><strong>About ${formatNumber(item.amount)}</strong></div>
-          `).join("") : `<p class="nct-empty">Enter your currency and current chest cost.</p>`}
-        </div>
+        ${prediction.solved && prediction.predictions.length ? `
+          <div class="nct-prediction-heading">
+            <div>
+              <p class="eyebrow">YOUR SOLVED SEQUENCE</p>
+              <h3>Predicted rewards</h3>
+            </div>
+            <span>100% confidence</span>
+          </div>
+          <p class="nct-help">
+            These come from your saved ${meta.label} prediction—not general
+            drop-rate averages. Viewing them does not move your sequence.
+          </p>
+          ${!prediction.bonusProgressKnown ? `
+            <p class="nct-budget-warning">
+              Enter your in-game bonus progress in Live Predictor to include
+              the exact bonus-chest position.
+            </p>
+          ` : ""}
+          ${prediction.limited ? `
+            <p class="nct-budget-warning">
+              Noir displays the first 100 regular chest predictions at a time.
+            </p>
+          ` : ""}
+          <div class="nct-predicted-list">
+            ${prediction.predictions.map(reward => `
+              <div class="${reward.isBonus || reward.bonus ? "bonus" : ""}">
+                <span class="nct-predicted-number">
+                  ${reward.isBonus || reward.bonus ? "BONUS" : reward.budgetRegularNumber}
+                </span>
+                <span>${escapeHtml(reward.name || reward.label || "Reward")}</span>
+                <strong>${reward.amount === null || reward.amount === undefined
+                  ? ""
+                  : formatNumber(reward.amount, 0)}</strong>
+              </div>
+            `).join("")}
+          </div>
+        ` : `
+          <h3>Estimated rewards</h3>
+          <p class="nct-help">
+            Your ${meta.label} sequence is not solved yet, so these are
+            long-term averages—not guaranteed rewards.
+          </p>
+          <div class="nct-simple-list">
+            ${expected.length ? expected.map(item => `
+              <div><span>${escapeHtml(item.name)}</span><strong>About ${formatNumber(item.amount)}</strong></div>
+            `).join("") : `<p class="nct-empty">Enter your rubies and current chest cost.</p>`}
+          </div>
+        `}
       </section>
     `;
   }
@@ -701,12 +805,24 @@
       .nct-result p, .nct-check-card p { margin: 5px 0; color: #99938a; }
       .nct-pill { color: #e3c66e; font-size: 11px; letter-spacing: .12em; }
       .nct-fields { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+      .nct-budget-tip { margin-bottom: 20px; padding: 19px; border: 1px solid rgba(222,191,100,.4); border-radius: 18px; background: rgba(57,42,8,.28); }
+      .nct-budget-tip strong { color: #ead078; }
+      .nct-budget-tip p { margin: 7px 0 0; color: #aaa49a; line-height: 1.5; }
       .nct-budget-total { padding: 26px; margin: 8px 0 28px; border-radius: 22px; border: 1px solid rgba(220,188,96,.48); background: rgba(54,40,8,.3); }
       .nct-budget-total span, .nct-budget-total small { display: block; color: #aaa49a; }
       .nct-budget-total strong { display: block; margin: 8px 0; color: #ecd178; font-size: 28px; }
       .nct-simple-list { border-top: 1px solid #302e2a; }
       .nct-simple-list div { display: flex; justify-content: space-between; gap: 20px; padding: 14px 4px; border-bottom: 1px solid #302e2a; }
       .nct-simple-list strong { color: #e2c569; text-align: right; }
+      .nct-prediction-heading { display: flex; justify-content: space-between; align-items: center; gap: 15px; }
+      .nct-prediction-heading h3 { margin: 5px 0 0; }
+      .nct-prediction-heading > span { flex: 0 0 auto; padding: 8px 11px; border: 1px solid rgba(100,218,177,.4); border-radius: 999px; color: #79dfbc; font-size: 12px; font-weight: 800; }
+      .nct-budget-warning { padding: 13px 15px; border-radius: 14px; background: rgba(70,48,4,.34); color: #e2c46b; line-height: 1.45; }
+      .nct-predicted-list { max-height: 560px; overflow-y: auto; border-top: 1px solid #302e2a; }
+      .nct-predicted-list > div { display: grid; grid-template-columns: 62px 1fr auto; align-items: center; gap: 12px; padding: 14px 4px; border-bottom: 1px solid #302e2a; }
+      .nct-predicted-list > div.bonus { margin: 7px 0; padding: 14px 10px; border: 1px solid rgba(224,190,91,.46); border-radius: 13px; background: rgba(63,43,4,.3); }
+      .nct-predicted-number { color: #8e8981; font-size: 12px; font-weight: 800; }
+      .nct-predicted-list .bonus .nct-predicted-number, .nct-predicted-list strong { color: #e3c66d; }
       .nct-readiness-summary { padding: 24px; border-radius: 22px; border: 1px solid #3f3b33; }
       .nct-readiness-summary strong { display: block; font-size: 27px; color: #77dcb8; }
       .nct-readiness-summary.warning strong { color: #e6c169; }
@@ -797,6 +913,7 @@
     findRewards,
     expectedRewards,
     calculateBudget,
+    getBudgetPrediction,
     getVerificationSummary,
     getEventIdentity,
     renderReadinessBanner,
