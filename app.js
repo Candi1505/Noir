@@ -1935,6 +1935,18 @@
         []
       )
         .map(chestType => {
+          const observations =
+            predictorEngine
+              ?.getObservations?.(
+                chestType
+              );
+          const count =
+            Array.isArray(
+              observations
+            )
+              ? observations.length
+              : 0;
+
           try {
             const chest =
               predictorEngine
@@ -1949,15 +1961,7 @@
                 capitalise(
                   chestType
                 ),
-              count:
-                Array.isArray(
-                  chest
-                    ?.recordedRewards
-                )
-                  ? chest
-                      .recordedRewards
-                      .length
-                  : 0,
+              count,
               confidence:
                 Number(
                   chest?.confidence
@@ -1970,7 +1974,7 @@
                 capitalise(
                   chestType
                 ),
-              count: 0,
+              count,
               confidence: 0
             };
           }
