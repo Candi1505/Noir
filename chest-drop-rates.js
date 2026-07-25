@@ -63,7 +63,32 @@
     fullHeal: "Full Heals",
     iceShard: "Ice Shards",
     mysticFragment: "Mystic Fragments",
-    urbanflareSigil: "Urbanflare Sigils"
+    urbanflareSigil: "Urbanflare Sigils",
+    xpMultiplierSpellConsumable01: "Dragon XP Boosts",
+    xpMultiplierSpellConsumable02: "Dragon XP Boosts",
+    expediteConsumable1: "15-Minute Speedups",
+    expediteConsumable1a: "30-Minute Speedups",
+    expediteConsumable2: "1-Hour Speedups",
+    expediteConsumable3: "3-Hour Speedups",
+    expediteConsumable4: "12-Hour Speedups",
+    foodConsumable2: "Food Packs",
+    cmCrystaldarkGemstone: "Dark Gemstones",
+    cmCrystalearthGemstone: "Earth Gemstones",
+    cmCrystalfireGemstone: "Fire Gemstones",
+    cmCrystaliceGemstone: "Ice Gemstones",
+    cmCrystalwindGemstone: "Wind Gemstones",
+    increaseAttack1: "+30% Dragon Attack",
+    increaseHP1: "+30% Dragon HP",
+    increaseBuildingAttack1: "+30% Tower Attack",
+    increaseBuildingHP1: "+30% Tower HP",
+    innerFire01: "Inner Fire",
+    innerFireConsumable: "Inner Fire",
+    chest0: "Bronze Chests",
+    chest1: "Silver Chests",
+    chest2: "Gold Chests",
+    chest11: "Platinum Chests",
+    chest27: "Draconic Chests",
+    chest33: "Freedom Chests"
   };
 
   const RARITY_ORDER = {
