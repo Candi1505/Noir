@@ -4062,8 +4062,8 @@
       `lp-confidence lp-confidence-${confidenceLevel}`;
 
     if (
-      playerPosition !== null ||
-      matchCount === 1
+      selectedChest?.solved ||
+      playerPosition !== null
     ) {
       title.textContent =
         "Position solved";
@@ -4078,6 +4078,25 @@
         `${formatNumber(
           playerPosition
         )}. Upcoming rewards can now be predicted.`;
+
+      return;
+    }
+
+    if (
+      matchCount === 1 &&
+      getPredictions(selectedChest).length
+    ) {
+      title.textContent =
+        "Main sequence located";
+
+      confidenceBadge.textContent =
+        confidence === null
+          ? "Almost solved"
+          : `${confidence}%`;
+
+      note.textContent =
+        "Safe upcoming rewards are shown below. " +
+        "Record the next consecutive reward to finish locating every reward pool.";
 
       return;
     }
@@ -4347,7 +4366,10 @@
       return;
     }
 
-    if (playerPosition === null) {
+    if (
+      playerPosition === null &&
+      !predictions.length
+    ) {
       container.innerHTML = `
         <div class="lp-prediction-empty">
           Upcoming rewards will appear here
