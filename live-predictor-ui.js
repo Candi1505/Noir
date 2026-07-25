@@ -3552,7 +3552,7 @@
 
       bonusProgressInput.max =
         String(
-          bonusEvery
+          bonusEvery - 1
         );
 
       if (
@@ -3567,7 +3567,7 @@
       }
 
       bonusProgressInput.placeholder =
-        `0–${bonusEvery}`;
+        `0–${bonusEvery - 1}`;
 
       if (bonusProgressHelp) {
         bonusProgressHelp.textContent =
@@ -3577,13 +3577,9 @@
                 `Enter the number currently shown on the game’s ` +
                 `${bonusEvery}-chest bonus bar.`
               )
-            : progress >= bonusEvery
-              ? (
-                  `${bonusEvery}/${bonusEvery} — bonus chest is due now.`
-                )
-              : (
-                  `${progress}/${bonusEvery} regular chests toward the next bonus.`
-                );
+            : (
+                `${progress}/${bonusEvery} regular chests toward the next bonus.`
+              );
       }
     }
 
@@ -5425,7 +5421,8 @@
   }
 
   function handleBonusProgressChange(
-    input
+    input,
+    options = {}
   ) {
     if (
       typeof Engine
@@ -5451,8 +5448,44 @@
 
     Engine.setBonusProgress(
       selectedChest.chestType,
-      value
+      value,
+      {
+        silent:
+          Boolean(options.silent)
+      }
     );
+
+    if (options.silent) {
+      const bonusEvery =
+        Number(
+          selectedChest.bonusEvery
+        ) || (
+          selectedChest.chestType ===
+            "freedom"
+            ? 15
+            : 30
+        );
+
+      const help =
+        document.getElementById(
+          "lpBonusProgressHelp"
+        );
+
+      if (help) {
+        help.textContent =
+          value === null
+            ? (
+                `Enter the number currently shown on the game’s ` +
+                `${bonusEvery}-chest bonus bar.`
+              )
+            : (
+                `${Math.max(0, Math.min(bonusEvery - 1, Math.floor(value)))}` +
+                `/${bonusEvery} regular chests toward the next bonus.`
+              );
+      }
+
+      return;
+    }
 
     render();
   }
@@ -5598,7 +5631,10 @@
         "input",
         () => {
           handleBonusProgressChange(
-            bonusProgressInput
+            bonusProgressInput,
+            {
+              silent: true
+            }
           );
         }
       );
