@@ -3499,7 +3499,12 @@
       const bonusEvery =
         Number(
           selectedChest?.bonusEvery
-        ) || 30;
+        ) || (
+          selectedChest?.chestType ===
+            "freedom"
+            ? 15
+            : 30
+        );
 
       const progress =
         selectedChest
