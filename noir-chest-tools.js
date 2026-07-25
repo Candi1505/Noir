@@ -972,11 +972,13 @@
     const chestGrid = document.querySelector("#homeView .chest-grid");
     const rateLaunch = document.querySelector(".cdr-launch");
     const plannerLaunch = document.querySelector(".cp-launch");
+    const predictorProgress =
+      document.querySelector("#activeSessionTitle")?.closest(".content-panel");
 
     const banner = document.createElement("section");
     banner.id = "noirReadinessBanner";
     banner.className = "nct-readiness-banner";
-    chestGrid?.insertAdjacentElement("afterend", banner);
+    (predictorProgress || chestGrid)?.insertAdjacentElement("afterend", banner);
 
     const tools = document.createElement("section");
     tools.className = "nct-home-tools";
