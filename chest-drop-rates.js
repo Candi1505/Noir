@@ -680,6 +680,51 @@
     );
   }
 
+  function formatOdds(
+    probability
+  ) {
+    if (
+      !Number.isFinite(probability) ||
+      probability <= 0
+    ) {
+      return "Not expected";
+    }
+
+    const oneIn =
+      Math.max(
+        1,
+        Math.round(
+          1 / probability
+        )
+      );
+
+    return oneIn === 1
+      ? "About every chest"
+      : `About 1 in ${oneIn} chests`;
+  }
+
+  function getChanceLabel(
+    probability
+  ) {
+    if (probability >= 0.1) {
+      return "Very common";
+    }
+
+    if (probability >= 0.05) {
+      return "Common";
+    }
+
+    if (probability >= 0.02) {
+      return "Uncommon";
+    }
+
+    if (probability >= 0.01) {
+      return "Rare";
+    }
+
+    return "Very rare";
+  }
+
   function escapeHtml(value) {
     return String(value ?? "")
       .replaceAll("&", "&amp;")
@@ -746,6 +791,16 @@
           ? null
           : expectedDrops *
             reward.amount;
+      const expectedText =
+        expectedAmount === null
+          ? `${formatNumber(
+              expectedDrops,
+              1
+            )} time(s)`
+          : `${formatNumber(
+              expectedAmount,
+              1
+            )} total`;
 
       return `
         <article class="cdr-reward-card cdr-${reward.rarity.toLowerCase()}">
@@ -758,14 +813,20 @@
                 ${escapeHtml(reward.name)}
               </h4>
             </div>
-            <strong class="cdr-rate">
-              ${formatPercent(reward.probability)}
-            </strong>
+            <span class="cdr-chance-label">
+              ${getChanceLabel(reward.probability)}
+            </span>
+          </div>
+
+          <div class="cdr-plain-chance">
+            <span>How often it appears</span>
+            <strong>${formatOdds(reward.probability)}</strong>
+            <small>${formatPercent(reward.probability)} chance each chest</small>
           </div>
 
           <div class="cdr-reward-details">
             <span>
-              Drop amount
+              You receive
               <strong>
                 ${
                   reward.amount === null
@@ -776,13 +837,9 @@
             </span>
 
             <span>
-              Average from ${state.openings}
+              If you open ${state.openings}
               <strong>
-                ${
-                  expectedAmount === null
-                    ? `${formatNumber(expectedDrops)} drop(s)`
-                    : formatNumber(expectedAmount)
-                }
+                Around ${expectedText}
               </strong>
             </span>
           </div>
@@ -802,6 +859,13 @@
     rates
   ) {
     return `
+      <div class="cdr-explainer">
+        <strong>Easy comparison</strong>
+        <p>
+          Each number below shows roughly how many of that reward
+          tier you could see if you opened 100 regular chests.
+        </p>
+      </div>
       <section class="cdr-compare-grid">
         ${Object.values(rates).map(chest => {
           const regularSummary =
@@ -830,20 +894,20 @@
 
               <dl>
                 <div>
-                  <dt>Epic</dt>
-                  <dd>${formatPercent(regularSummary.Epic || 0)}</dd>
+                  <dt>Epic in 100 chests</dt>
+                  <dd>About ${Math.round((regularSummary.Epic || 0) * 100)}</dd>
                 </div>
                 <div>
-                  <dt>Legendary</dt>
-                  <dd>${formatPercent(regularSummary.Legendary || 0)}</dd>
+                  <dt>Legendary in 100</dt>
+                  <dd>About ${Math.round((regularSummary.Legendary || 0) * 100)}</dd>
                 </div>
                 <div>
-                  <dt>Mythic</dt>
-                  <dd>${formatPercent(regularSummary.Mythic || 0)}</dd>
+                  <dt>Mythic in 100</dt>
+                  <dd>About ${Math.round((regularSummary.Mythic || 0) * 100)}</dd>
                 </div>
                 <div>
-                  <dt>Bonus</dt>
-                  <dd>Every ${chest.bonusEvery}</dd>
+                  <dt>Bonus chest</dt>
+                  <dd>After ${chest.bonusEvery}</dd>
                 </div>
               </dl>
 
@@ -854,7 +918,7 @@
                       Most common:
                       <strong>
                         ${escapeHtml(topReward.name)}
-                        (${formatPercent(topReward.probability)})
+                        — ${formatOdds(topReward.probability)}
                       </strong>
                     </p>
                   `
@@ -975,7 +1039,7 @@
                 </div>
 
                 <label class="cdr-opening-control">
-                  Estimate openings
+                  If I open
                   <select id="cdrOpenings">
                     ${[1, 10, 50, 100].map(value => `
                       <option value="${value}" ${state.openings === value ? "selected" : ""}>
@@ -996,22 +1060,35 @@
                 </label>
               </section>
 
+              <div class="cdr-explainer">
+                <strong>How to read this</strong>
+                <p>
+                  “About 1 in 10” means you would usually see that
+                  reward once across many groups of 10 chests. It
+                  is an average—not a promise that every group of
+                  10 will contain one.
+                </p>
+              </div>
+
               <section class="cdr-summary">
                 <article>
-                  <span>Reward variations</span>
-                  <strong>${distribution.rewards.length}</strong>
+                  <span>Possible rewards</span>
+                  <strong>${distribution.rewards.length} versions</strong>
                 </article>
                 <article>
-                  <span>Epic chance</span>
-                  <strong>${formatPercent(raritySummary.Epic || 0)}</strong>
+                  <span>Epic rewards</span>
+                  <strong>${formatOdds(raritySummary.Epic || 0)}</strong>
+                  <small>${formatPercent(raritySummary.Epic || 0)} overall</small>
                 </article>
                 <article>
-                  <span>Legendary chance</span>
-                  <strong>${formatPercent(raritySummary.Legendary || 0)}</strong>
+                  <span>Legendary rewards</span>
+                  <strong>${formatOdds(raritySummary.Legendary || 0)}</strong>
+                  <small>${formatPercent(raritySummary.Legendary || 0)} overall</small>
                 </article>
                 <article>
-                  <span>Mythic chance</span>
-                  <strong>${formatPercent(raritySummary.Mythic || 0)}</strong>
+                  <span>Mythic rewards</span>
+                  <strong>${formatOdds(raritySummary.Mythic || 0)}</strong>
+                  <small>${formatPercent(raritySummary.Mythic || 0)} overall</small>
                 </article>
               </section>
 
@@ -1031,10 +1108,10 @@
               </section>
 
               <p class="cdr-footnote">
-                Rates are calculated from the current
+                These are long-term averages calculated from the current
                 ${escapeHtml(eventData.event || "live")} event deck.
-                “Average” is an estimate across many openings; use
-                Live Predictor for your exact upcoming sequence.
+                They do not tell you your next chest—use Live Predictor
+                for your exact upcoming sequence.
               </p>
             `
         }
@@ -1311,6 +1388,20 @@
         padding: 0 12px;
       }
       .cdr-search-control input { width: 100%; }
+      .cdr-explainer {
+        padding: 15px 17px;
+        margin-bottom: 14px;
+        border: 1px solid rgba(218,181,93,.3);
+        border-radius: 16px;
+        background: rgba(218,181,93,.08);
+      }
+      .cdr-explainer strong { color: #e4c66d; }
+      .cdr-explainer p {
+        margin: 7px 0 0;
+        color: #b7b1a8;
+        font-size: .86rem;
+        line-height: 1.55;
+      }
       .cdr-summary {
         display: grid;
         grid-template-columns: repeat(4, 1fr);
@@ -1324,7 +1415,8 @@
         background: rgba(255,255,255,.035);
       }
       .cdr-summary span { display: block; color: #918c84; font-size: .76rem; margin-bottom: 7px; }
-      .cdr-summary strong { color: #e4c66d; font-size: 1.15rem; }
+      .cdr-summary strong { display: block; color: #e4c66d; font-size: 1rem; }
+      .cdr-summary small { display: block; color: #77726b; margin-top: 5px; font-size: .7rem; }
       .cdr-notice {
         padding: 13px 16px;
         margin-bottom: 14px;
@@ -1359,7 +1451,27 @@
       .cdr-reward-heading { display: flex; justify-content: space-between; gap: 14px; align-items: flex-start; }
       .cdr-reward-heading h4 { margin: 4px 0 0; font-size: 1rem; }
       .cdr-rarity { color: #8f8a82; text-transform: uppercase; letter-spacing: .13em; font-size: .64rem; font-weight: 850; }
-      .cdr-rate { color: #e4c66d; font-size: 1.1rem; }
+      .cdr-chance-label {
+        flex: 0 0 auto;
+        padding: 6px 9px;
+        border: 1px solid rgba(218,181,93,.28);
+        border-radius: 999px;
+        color: #d8bd72;
+        background: rgba(218,181,93,.08);
+        font-size: .7rem;
+        font-weight: 850;
+      }
+      .cdr-plain-chance {
+        display: grid;
+        gap: 3px;
+        margin-top: 15px;
+        padding: 12px;
+        border-radius: 13px;
+        background: rgba(255,255,255,.035);
+      }
+      .cdr-plain-chance span { color: #8f8a82; font-size: .7rem; }
+      .cdr-plain-chance strong { color: #e4c66d; font-size: 1.06rem; }
+      .cdr-plain-chance small { color: #77726b; font-size: .7rem; }
       .cdr-reward-details {
         display: grid;
         grid-template-columns: 1fr 1fr;
