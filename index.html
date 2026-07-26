@@ -1257,6 +1257,18 @@
             id="refreshApplicationButton"
             type="button"
             class="button secondary-button full-width-button"
+            onclick="
+              if (window.NoirRefreshApp) {
+                window.NoirRefreshApp(this);
+              } else {
+                this.disabled = true;
+                this.textContent = 'Refreshing...';
+                const refreshUrl = new URL(window.location.href);
+                refreshUrl.searchParams.set('refresh', String(Date.now()));
+                window.location.assign(refreshUrl.toString());
+              }
+              return false;
+            "
           >
             Refresh App
           </button>
@@ -1414,7 +1426,7 @@
 
 <script src="predictor-engine.js"></script>
 
-<script src="app.js?v=20260726-5"></script>
+<script src="app.js?v=20260726-6"></script>
 
 </body>
 </html>
