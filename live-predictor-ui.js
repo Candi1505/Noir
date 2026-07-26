@@ -38,6 +38,13 @@
   let bonusProgressRenderTimer =
     null;
 
+  const upcomingRewardSearch = {
+    gold: "",
+    platinum: "",
+    draconic: "",
+    freedom: ""
+  };
+
   function escapeHTML(value) {
     return String(value ?? "").replace(
       /[&<>"']/g,
@@ -1599,8 +1606,77 @@
       .lp-prediction-card.lp-bonus.lp-bonus-focus {
         animation: lpBonusFocus 1.25s ease 2;
       }
+      .lp-prediction-card.lp-reward-focus {
+        animation: lpRewardFocus 1.25s ease 2;
+      }
       @keyframes lpBonusFocus {
         50% { box-shadow: 0 0 0 4px rgba(224, 190, 91, 0.2); }
+      }
+      @keyframes lpRewardFocus {
+        50% {
+          border-color: rgba(111, 218, 184, 0.78);
+          box-shadow: 0 0 0 4px rgba(111, 218, 184, 0.18);
+        }
+      }
+
+      .lp-reward-finder {
+        margin-top: 14px;
+        padding: 16px;
+        border: 1px solid rgba(111, 218, 184, 0.28);
+        border-radius: 16px;
+        background: linear-gradient(145deg, rgba(15, 55, 45, 0.24), rgba(8, 9, 8, 0.96));
+      }
+      .lp-reward-finder label {
+        display: block;
+        margin-bottom: 8px;
+        color: #d8d4cb;
+        font-weight: 850;
+      }
+      .lp-reward-finder p {
+        margin: 0 0 12px;
+        color: #979187;
+        font-size: 13px;
+        line-height: 1.5;
+      }
+      .lp-reward-find-result {
+        margin-top: 12px;
+      }
+      .lp-reward-find-empty,
+      .lp-reward-find-miss {
+        padding: 13px 14px;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.035);
+        color: #aaa49a;
+        line-height: 1.5;
+      }
+      .lp-reward-find-miss {
+        border: 1px solid rgba(224, 190, 91, 0.28);
+        color: #d5bd72;
+      }
+      .lp-reward-match {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 10px;
+        align-items: center;
+        padding: 13px 0;
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+      }
+      .lp-reward-match:first-child { border-top: 0; }
+      .lp-reward-match strong,
+      .lp-reward-match small { display: block; }
+      .lp-reward-match strong { color: #7fd9bd; }
+      .lp-reward-match small {
+        margin-top: 4px;
+        color: #99938a;
+        line-height: 1.4;
+      }
+      .lp-jump-reward {
+        padding: 9px 12px;
+        border: 1px solid rgba(111, 218, 184, 0.38);
+        border-radius: 10px;
+        background: rgba(111, 218, 184, 0.08);
+        color: #7fd9bd;
+        font-weight: 850;
       }
 
       .lp-prediction-card {
@@ -2431,6 +2507,33 @@
             id="lpNextBonus"
             class="lp-next-bonus hidden"
           ></div>
+
+          <div class="lp-reward-finder">
+            <label for="lpUpcomingRewardSearch">
+              Find an upcoming reward
+            </label>
+
+            <p>
+              Choose any reward to see exactly how far away it is
+              within your confirmed predictions.
+            </p>
+
+            <select
+              id="lpUpcomingRewardSearch"
+              class="lp-input"
+            >
+              <option value="">Choose a reward</option>
+            </select>
+
+            <div
+              id="lpUpcomingRewardResult"
+              class="lp-reward-find-result"
+            >
+              <div class="lp-reward-find-empty">
+                Solve your sequence, then choose a reward.
+              </div>
+            </div>
+          </div>
 
           <div
             id="lpPredictionSummary"
@@ -4354,6 +4457,16 @@
         "lpNextBonus"
       );
 
+    const rewardSearch =
+      document.getElementById(
+        "lpUpcomingRewardSearch"
+      );
+
+    const rewardSearchResult =
+      document.getElementById(
+        "lpUpcomingRewardResult"
+      );
+
     const warning =
       document.getElementById(
         "lpPredictionWarning"
@@ -4364,6 +4477,8 @@
       !countElement ||
       !container ||
       !bonusSummary ||
+      !rewardSearch ||
+      !rewardSearchResult ||
       !warning
     ) {
       return;
@@ -4378,6 +4493,55 @@
       getPredictions(
         selectedChest
       );
+
+    const chestType =
+      selectedChest?.chestType ||
+      status?.activeChest ||
+      "gold";
+
+    const rewardNames =
+      Array.from(
+        new Set(
+          (
+            selectedChest?.rewards ||
+            selectedChest?.entries ||
+            []
+          )
+            .map(
+              reward =>
+                String(
+                  reward?.name ||
+                  reward?.label ||
+                  ""
+                ).trim()
+            )
+            .filter(Boolean)
+        )
+      ).sort(
+        (left, right) =>
+          left.localeCompare(right)
+      );
+
+    const selectedReward =
+      upcomingRewardSearch[
+        chestType
+      ] || "";
+
+    rewardSearch.innerHTML = `
+      <option value="">Choose a reward</option>
+      ${rewardNames.map(name => `
+        <option
+          value="${escapeHTML(name)}"
+          ${name === selectedReward ? "selected" : ""}
+        >
+          ${escapeHTML(name)}
+        </option>
+      `).join("")}
+    `;
+
+    rewardSearch.disabled =
+      !selectedChest?.loaded ||
+      !rewardNames.length;
 
     positionElement.textContent =
       playerPosition === null
@@ -4410,6 +4574,12 @@
       warning.textContent =
         "Predictions are unavailable because this chest deck is not loaded.";
 
+      rewardSearchResult.innerHTML = `
+        <div class="lp-reward-find-empty">
+          This chest does not have live prediction data yet.
+        </div>
+      `;
+
       return;
     }
 
@@ -4427,6 +4597,12 @@
       warning.textContent =
         "Record consecutive chest rewards until the solver locates one matching position.";
 
+      rewardSearchResult.innerHTML = `
+        <div class="lp-reward-find-empty">
+          Record consecutive rewards to unlock exact reward distances.
+        </div>
+      `;
+
       return;
     }
 
@@ -4440,6 +4616,12 @@
 
       warning.textContent =
         "Refresh the live data or record another chest to generate updated predictions.";
+
+      rewardSearchResult.innerHTML = `
+        <div class="lp-reward-find-empty">
+          No confirmed predictions are available to search yet.
+        </div>
+      `;
 
       return;
     }
@@ -4483,6 +4665,7 @@
                     : ""
                 }"
                 data-lp-bonus="${prediction.isBonus ? "true" : "false"}"
+                data-lp-prediction-index="${index}"
               >
                 <div class="lp-prediction-position">
                   ${
@@ -4535,6 +4718,104 @@
           }
         )
         .join("");
+
+    if (!selectedReward) {
+      rewardSearchResult.innerHTML = `
+        <div class="lp-reward-find-empty">
+          Choose a reward to search the next ${visiblePredictions.length}
+          confirmed prediction${visiblePredictions.length === 1 ? "" : "s"}.
+        </div>
+      `;
+    } else {
+      const matches =
+        visiblePredictions
+          .map(
+            (entry, index) => ({
+              prediction:
+                normalisePrediction(
+                  entry,
+                  index,
+                  playerPosition
+                ),
+              index,
+              regularBefore:
+                visiblePredictions
+                  .slice(0, index + 1)
+                  .filter(
+                    item =>
+                      !item?.isBonus &&
+                      !item?.bonus
+                  )
+                  .length
+            }))
+          .filter(
+            match =>
+              match.prediction.name
+                .toLowerCase() ===
+              selectedReward
+                .toLowerCase()
+          );
+
+      rewardSearchResult.innerHTML =
+        matches.length
+          ? matches.map(
+              (match, occurrence) => {
+                const regularDistance =
+                  match.prediction.isBonus
+                    ? Math.max(
+                        0,
+                        match.regularBefore
+                      )
+                    : match.regularBefore;
+
+                const distanceText =
+                  match.prediction.isBonus
+                    ? (
+                        regularDistance === 0
+                          ? "Your next reward is this bonus chest."
+                          : `Bonus chest after ${regularDistance} regular chest${regularDistance === 1 ? "" : "s"}.`
+                      )
+                    : (
+                        regularDistance === 1
+                          ? "Your next regular chest."
+                          : `${regularDistance} regular chests away.`
+                      );
+
+                return `
+                  <div class="lp-reward-match">
+                    <div>
+                      <strong>
+                        ${occurrence === 0 ? "Nearest confirmed result" : `Confirmed occurrence ${occurrence + 1}`}
+                      </strong>
+                      <small>
+                        ${escapeHTML(distanceText)}
+                        ${match.prediction.amount === null
+                          ? ""
+                          : ` Reward amount: ${formatNumber(match.prediction.amount)}.`}
+                      </small>
+                    </div>
+
+                    <button
+                      type="button"
+                      class="lp-jump-reward"
+                      data-lp-jump-prediction="${match.index}"
+                    >
+                      Jump
+                    </button>
+                  </div>
+                `;
+              }
+            ).join("")
+          : `
+              <div class="lp-reward-find-miss">
+                ${escapeHTML(selectedReward)} is not within your next
+                ${visiblePredictions.length} confirmed prediction${visiblePredictions.length === 1 ? "" : "s"}.
+                ${selectedChest?.solved
+                  ? "It may be further ahead than the current 100-reward view."
+                  : "Record the next consecutive reward to extend the safe search."}
+              </div>
+            `;
+    }
 
     const firstBonusIndex =
       visiblePredictions.findIndex(
@@ -5531,6 +5812,16 @@
         "lpBonusProgress"
       );
 
+    const upcomingRewardSelect =
+      document.getElementById(
+        "lpUpcomingRewardSearch"
+      );
+
+    const upcomingRewardResult =
+      document.getElementById(
+        "lpUpcomingRewardResult"
+      );
+
     const recordButton =
       document.getElementById(
         "lpRecordChest"
@@ -5709,6 +6000,67 @@
           window.setTimeout(
             () => bonusCard.classList.add(
               "lp-bonus-focus"
+            ),
+            0
+          );
+        }
+      );
+
+    upcomingRewardSelect
+      ?.addEventListener(
+        "change",
+        event => {
+          const selectedChest =
+            getSelectedChest(
+              Engine.getStatus()
+            );
+
+          if (!selectedChest) {
+            return;
+          }
+
+          upcomingRewardSearch[
+            selectedChest.chestType
+          ] = event.target.value;
+
+          renderPredictions(
+            Engine.getStatus()
+          );
+        }
+      );
+
+    upcomingRewardResult
+      ?.addEventListener(
+        "click",
+        event => {
+          const button =
+            event.target.closest(
+              "[data-lp-jump-prediction]"
+            );
+
+          if (!button) {
+            return;
+          }
+
+          const predictionCard =
+            document.querySelector(
+              `#lpPredictionList [data-lp-prediction-index="${button.dataset.lpJumpPrediction}"]`
+            );
+
+          if (!predictionCard) {
+            return;
+          }
+
+          predictionCard.scrollIntoView({
+            behavior: "smooth",
+            block: "center"
+          });
+          predictionCard.classList.remove(
+            "lp-reward-focus"
+          );
+          window.setTimeout(
+            () => predictionCard.classList.add(
+              "lp-reward-focus"
             ),
             0
           );
