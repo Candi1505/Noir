@@ -2507,3 +2507,22 @@ textarea:focus-visible {
 * {
   scrollbar-color: #242424 #000000;
 }
+
+
+/* Safe full-size Settings refresh control */
+#refreshApplicationButton {
+  appearance: none;
+  border: 1px solid rgba(185, 149, 66, 0.42);
+  border-radius: 999px;
+  padding: 0.85rem 1.15rem;
+  background: linear-gradient(180deg, rgba(55, 45, 21, 0.7), rgba(24, 19, 9, 0.82));
+  color: var(--gold-light);
+  font: inherit;
+  font-weight: 650;
+  transition: 0.18s ease;
+}
+
+#refreshApplicationButton:hover {
+  border-color: rgba(200, 167, 74, 0.62);
+  background: linear-gradient(180deg, rgba(70, 56, 25, 0.76), rgba(31, 24, 10, 0.88));
+}
