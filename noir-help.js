@@ -468,7 +468,8 @@
             </p>
             <div class="noir-help-callout noir-help-warning">
               Different players and chest types may need different numbers of
-              starting rewards. There is no fixed “five rewards” rule.
+              consecutive starting rewards. Keep recording until Noir
+              explicitly says safe predictions are ready.
             </div>
           </div>
         </details>
