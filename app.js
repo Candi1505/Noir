@@ -3648,6 +3648,29 @@ function getArmoryPage(position, positionsPerPage = 20) {
   }
 
 
+  function refreshApplication() {
+
+    /*
+     * A changing URL forces the browser to request the current
+     * GitHub Pages build while leaving all player storage intact.
+     */
+    const refreshUrl =
+      new URL(
+        window.location.href
+      );
+
+    refreshUrl.searchParams.set(
+      "refresh",
+      String(Date.now())
+    );
+
+    window.location.replace(
+      refreshUrl.toString()
+    );
+
+  }
+
+
   /* =======================================================
      EVENT LISTENERS
   ======================================================= */
@@ -3760,6 +3783,14 @@ function getArmoryPage(position, positionsPerPage = 20) {
     )?.addEventListener(
       "click",
       resetApplication
+    );
+
+
+    getElement(
+      "refreshApplicationButton"
+    )?.addEventListener(
+      "click",
+      refreshApplication
     );
 
 
