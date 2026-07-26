@@ -55,6 +55,9 @@
     owned: 0
   };
 
+  let amountRenderTimer =
+    null;
+
   function escapeHtml(value) {
     return String(value ?? "")
       .replaceAll("&", "&amp;")
@@ -757,37 +760,60 @@
         );
     });
 
-    overlay
-      ?.querySelector("#cpGoal")
-      ?.addEventListener(
-        "change",
+    [
+      {
+        id: "cpGoal",
+        key: "goal"
+      },
+      {
+        id: "cpOwned",
+        key: "owned"
+      }
+    ].forEach(field => {
+      const input =
+        overlay?.querySelector(
+          `#${field.id}`
+        );
+
+      const saveValue =
         event => {
-          state.goal =
+          state[field.key] =
             Math.max(
               0,
               Number(
                 event.target.value
               ) || 0
             );
-          render();
+        };
+
+      input?.addEventListener(
+        "input",
+        event => {
+          saveValue(event);
+
+          window.clearTimeout(
+            amountRenderTimer
+          );
+
+          amountRenderTimer =
+            window.setTimeout(
+              render,
+              300
+            );
         }
       );
 
-    overlay
-      ?.querySelector("#cpOwned")
-      ?.addEventListener(
+      input?.addEventListener(
         "change",
         event => {
-          state.owned =
-            Math.max(
-              0,
-              Number(
-                event.target.value
-              ) || 0
-            );
+          window.clearTimeout(
+            amountRenderTimer
+          );
+          saveValue(event);
           render();
         }
       );
+    });
   }
 
   function open() {
