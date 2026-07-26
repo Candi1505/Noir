@@ -35,6 +35,9 @@
     freedom: "🦅"
   };
 
+  let bonusProgressRenderTimer =
+    null;
+
   function escapeHTML(value) {
     return String(value ?? "").replace(
       /[&<>"']/g,
@@ -4863,7 +4866,11 @@
       Engine.refresh();
     }
 
-    render();
+    /*
+     * A non-silent engine update dispatches the shared refresh
+     * event, which renders the overlay once. Silent updates are
+     * used while the player is still typing.
+     */
   }
 
   function callRecordMethod(
@@ -5487,7 +5494,10 @@
       return;
     }
 
-    render();
+    /*
+     * The non-silent engine call above dispatches the shared
+     * predictor update event, which renders the overlay.
+     */
   }
 
     function attachEvents() {
@@ -5636,6 +5646,18 @@
               silent: true
             }
           );
+
+          window.clearTimeout(
+            bonusProgressRenderTimer
+          );
+
+          bonusProgressRenderTimer =
+            window.setTimeout(
+              () => {
+                Engine.refresh();
+              },
+              350
+            );
         }
       );
 
@@ -5643,6 +5665,10 @@
       ?.addEventListener(
         "change",
         () => {
+          window.clearTimeout(
+            bonusProgressRenderTimer
+          );
+
           handleBonusProgressChange(
             bonusProgressInput
           );
