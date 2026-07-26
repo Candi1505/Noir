@@ -1620,11 +1620,30 @@
       }
 
       .lp-reward-finder {
-        margin-top: 14px;
         padding: 16px;
         border: 1px solid rgba(111, 218, 184, 0.28);
         border-radius: 16px;
         background: linear-gradient(145deg, rgba(15, 55, 45, 0.24), rgba(8, 9, 8, 0.96));
+      }
+      .lp-reward-finder-card {
+        border-color: rgba(111, 218, 184, 0.34);
+        background:
+          linear-gradient(
+            145deg,
+            rgba(10, 43, 35, 0.42),
+            rgba(7, 8, 7, 0.98)
+          );
+      }
+      .lp-reward-finder-card .lp-card-header {
+        margin-bottom: 14px;
+      }
+      .lp-reward-finder-kicker {
+        margin: 0 0 7px;
+        color: #7fd9bd;
+        font-size: 11px;
+        font-weight: 950;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
       }
       .lp-reward-finder label {
         display: block;
@@ -2168,6 +2187,53 @@
         </section>
 
         <section
+          id="lpRewardFinderCard"
+          class="lp-card lp-reward-finder-card"
+        >
+          <div class="lp-card-header">
+            <div class="lp-card-heading">
+              <p class="lp-reward-finder-kicker">
+                EXACT REWARD SEARCH
+              </p>
+
+              <h2>
+                Find a reward
+              </h2>
+
+              <p class="lp-muted">
+                Record consecutive chest rewards until Noir locates
+                your sequence. Once predictions are ready, choose the
+                reward you want and Noir will show exactly how many
+                regular chests away it is.
+              </p>
+            </div>
+          </div>
+
+          <div class="lp-reward-finder">
+            <label for="lpUpcomingRewardSearch">
+              Reward you are looking for
+            </label>
+
+            <select
+              id="lpUpcomingRewardSearch"
+              class="lp-input"
+              disabled
+            >
+              <option value="">Predictions not ready yet</option>
+            </select>
+
+            <div
+              id="lpUpcomingRewardResult"
+              class="lp-reward-find-result"
+            >
+              <div class="lp-reward-find-empty">
+                Record your first consecutive reward below to begin.
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section
           id="lpRecorderCard"
           class="lp-card"
         >
@@ -2507,33 +2573,6 @@
             id="lpNextBonus"
             class="lp-next-bonus hidden"
           ></div>
-
-          <div class="lp-reward-finder">
-            <label for="lpUpcomingRewardSearch">
-              Find an upcoming reward
-            </label>
-
-            <p>
-              Choose any reward to see exactly how far away it is
-              within your confirmed predictions.
-            </p>
-
-            <select
-              id="lpUpcomingRewardSearch"
-              class="lp-input"
-            >
-              <option value="">Choose a reward</option>
-            </select>
-
-            <div
-              id="lpUpcomingRewardResult"
-              class="lp-reward-find-result"
-            >
-              <div class="lp-reward-find-empty">
-                Solve your sequence, then choose a reward.
-              </div>
-            </div>
-          </div>
 
           <div
             id="lpPredictionSummary"
@@ -4527,8 +4566,17 @@
         chestType
       ] || "";
 
+    const finderReady =
+      Boolean(
+        selectedChest?.loaded &&
+        predictions.length &&
+        rewardNames.length
+      );
+
     rewardSearch.innerHTML = `
-      <option value="">Choose a reward</option>
+      <option value="">
+        ${finderReady ? "Choose a reward" : "Predictions not ready yet"}
+      </option>
       ${rewardNames.map(name => `
         <option
           value="${escapeHTML(name)}"
@@ -4540,8 +4588,7 @@
     `;
 
     rewardSearch.disabled =
-      !selectedChest?.loaded ||
-      !rewardNames.length;
+      !finderReady;
 
     positionElement.textContent =
       playerPosition === null
