@@ -613,8 +613,8 @@
               <li>A short description of what happened.</li>
             </ul>
             <div class="noir-help-callout noir-help-warning">
-              For your security, never email your WD IGN, HAR files, passwords,
-              login codes or any account/session information.
+              For your security, never email your WD IGN, passwords, login
+              codes or any account/session information.
             </div>
             <a
               class="noir-help-email"
