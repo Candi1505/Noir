@@ -3648,12 +3648,27 @@ function getArmoryPage(position, positionsPerPage = 20) {
   }
 
 
-  function refreshApplication() {
+  function refreshApplication(
+    button =
+      getElement(
+        "refreshApplicationButton"
+      )
+  ) {
 
     /*
      * A changing URL forces the browser to request the current
      * GitHub Pages build while leaving all player storage intact.
      */
+    if (button) {
+      button.disabled = true;
+      button.textContent =
+        "Refreshing...";
+      button.setAttribute(
+        "aria-busy",
+        "true"
+      );
+    }
+
     const refreshUrl =
       new URL(
         window.location.href
@@ -3664,11 +3679,21 @@ function getArmoryPage(position, positionsPerPage = 20) {
       String(Date.now())
     );
 
-    window.location.replace(
+    window.location.assign(
       refreshUrl.toString()
     );
 
+    window.setTimeout(
+      () => {
+        window.location.reload();
+      },
+      750
+    );
+
   }
+
+  window.NoirRefreshApp =
+    refreshApplication;
 
 
   /* =======================================================
@@ -3783,14 +3808,6 @@ function getArmoryPage(position, positionsPerPage = 20) {
     )?.addEventListener(
       "click",
       resetApplication
-    );
-
-
-    getElement(
-      "refreshApplicationButton"
-    )?.addEventListener(
-      "click",
-      refreshApplication
     );
 
 
