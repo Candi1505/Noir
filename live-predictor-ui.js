@@ -592,6 +592,7 @@
         display: block;
         width: 100%;
 
+        min-height: 132px;
         padding: 15px;
 
         border:
@@ -682,6 +683,13 @@
         line-height: 1.3;
       }
 
+      .lp-chest-icon {
+        display: block;
+        margin-bottom: 15px;
+        font-size: 26px;
+        line-height: 1;
+      }
+
       .lp-chest-loaded,
       .lp-chest-missing {
         flex: 0 0 auto;
@@ -700,12 +708,10 @@
       }
 
       .lp-chest-stats {
-        display: grid;
-        grid-template-columns:
-          minmax(0, 1fr);
-
-        gap: 8px;
-        margin-top: 13px;
+        margin-top: 10px;
+        color: #858585;
+        font-size: 12px;
+        line-height: 1.4;
       }
 
       .lp-mini-stat {
@@ -1062,7 +1068,7 @@
         display: grid;
         gap: 8px;
 
-        max-height: 270px;
+        max-height: 175px;
         margin-top: 10px;
         padding-right: 2px;
 
@@ -1340,6 +1346,57 @@
 
         font-size: 12px;
         font-weight: 900;
+      }
+
+      .lp-recorder-confidence {
+        margin: 0 0 16px;
+        padding: 14px;
+        border: 1px solid rgba(217, 191, 118, 0.24);
+        border-radius: 15px;
+        background:
+          linear-gradient(
+            145deg,
+            rgba(185, 149, 66, 0.09),
+            rgba(8, 8, 8, 0.94)
+          );
+      }
+
+      .lp-recorder-confidence-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .lp-recorder-confidence-copy span,
+      .lp-recorder-confidence-copy strong {
+        display: block;
+      }
+
+      .lp-recorder-confidence-copy span {
+        color: #858585;
+        font-size: 10px;
+        font-weight: 900;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+
+      .lp-recorder-confidence-copy strong {
+        margin-top: 5px;
+        color: #ded9cf;
+        font-size: 16px;
+        line-height: 1.3;
+      }
+
+      .lp-recorder-confidence-note {
+        margin-top: 10px;
+        color: #99938a;
+        font-size: 12px;
+        line-height: 1.5;
+      }
+
+      .lp-recorder-confidence-note.lp-ready {
+        color: #7fd9bd;
       }
       
             .lp-history {
@@ -1957,16 +2014,14 @@
           align-self: flex-start;
         }
 
-        .lp-chest-grid {
-          grid-template-columns: 1fr;
-        }
-
         .lp-recorder-grid {
           grid-template-columns: 1fr;
         }
 
         .lp-recorder-actions {
-          grid-template-columns: 1fr;
+          grid-template-columns:
+            minmax(0, 1fr)
+            96px;
         }
 
         .lp-solver-grid {
@@ -2011,10 +2066,6 @@
 
         .lp-selected-stat.lp-wide {
           grid-column: auto;
-        }
-
-        .lp-chest-stats {
-          grid-template-columns: 1fr 1fr;
         }
 
         .lp-history-item {
@@ -2255,6 +2306,35 @@
             >
               0
             </span>
+          </div>
+
+          <div class="lp-recorder-confidence">
+            <div class="lp-recorder-confidence-top">
+              <div class="lp-recorder-confidence-copy">
+                <span>
+                  Prediction confidence
+                </span>
+
+                <strong id="lpRecorderSolverTitle">
+                  Waiting for rewards
+                </strong>
+              </div>
+
+              <div
+                id="lpRecorderConfidence"
+                class="lp-confidence lp-confidence-low"
+              >
+                Not solved
+              </div>
+            </div>
+
+            <div
+              id="lpRecorderConfidenceNote"
+              class="lp-recorder-confidence-note"
+            >
+              Keep recording consecutive rewards until Noir says
+              predictions are ready.
+            </div>
           </div>
 
           <div class="lp-recorder">
@@ -2652,9 +2732,15 @@
                 chest.chestType
               }"
             >
+              <span
+                class="lp-chest-icon"
+                aria-hidden="true"
+              >
+                ${icon}
+              </span>
+
               <div class="lp-chest-top">
                 <span class="lp-chest-name">
-                  ${icon}
                   ${escapeHTML(
                     chest.label
                   )}
@@ -2674,15 +2760,9 @@
               </div>
 
               <div class="lp-chest-stats">
-                <div class="lp-mini-stat">
-                  <span>Deck length</span>
-
-                  <strong>
-                    ${formatNumber(
-                      chest.length
-                    )}
-                  </strong>
-                </div>
+                ${formatNumber(
+                  chest.length
+                )} rewards in the live deck
               </div>
             </button>
           `;
@@ -4099,6 +4179,150 @@
     return "low";
   }
 
+  function renderRecorderConfidence(
+    status
+  ) {
+    const selectedChest =
+      getSelectedChest(status);
+
+    const title =
+      document.getElementById(
+        "lpRecorderSolverTitle"
+      );
+
+    const badge =
+      document.getElementById(
+        "lpRecorderConfidence"
+      );
+
+    const note =
+      document.getElementById(
+        "lpRecorderConfidenceNote"
+      );
+
+    if (!title || !badge || !note) {
+      return;
+    }
+
+    const history =
+      getRecordedHistory(
+        selectedChest
+      );
+
+    const playerPosition =
+      getPlayerPosition(
+        selectedChest
+      );
+
+    const matchCount =
+      getMatchCount(
+        selectedChest
+      );
+
+    const confidence =
+      getConfidence(
+        selectedChest
+      );
+
+    const predictions =
+      getPredictions(
+        selectedChest
+      );
+
+    let titleText =
+      "Waiting for rewards";
+    let badgeText =
+      "Not solved";
+    let level =
+      "low";
+    let noteText =
+      "Keep recording consecutive rewards until Noir says predictions are ready.";
+    let ready =
+      false;
+
+    if (!selectedChest?.loaded) {
+      titleText =
+        "Deck unavailable";
+      badgeText =
+        "Not ready";
+      noteText =
+        "Choose a chest with live event data before recording.";
+    } else if (!history.length) {
+      noteText =
+        "Record your first reward below, then continue in the exact order received.";
+    } else if (
+      selectedChest.solved ||
+      playerPosition !== null
+    ) {
+      titleText =
+        "Predictions ready";
+      badgeText =
+        confidence === null
+          ? "Solved"
+          : `${confidence}%`;
+      level =
+        "high";
+      ready =
+        true;
+      noteText =
+        `${predictions.length} confirmed upcoming reward${predictions.length === 1 ? "" : "s"} available. You can stop recording and use Find a Reward.`;
+    } else if (
+      matchCount === 1 &&
+      predictions.length
+    ) {
+      titleText =
+        "Safe predictions ready";
+      badgeText =
+        confidence === null
+          ? "Almost solved"
+          : `${confidence}%`;
+      level =
+        "high";
+      ready =
+        true;
+      noteText =
+        `${predictions.length} safe upcoming reward${predictions.length === 1 ? "" : "s"} available. Record one more only if you want to extend the list.`;
+    } else if (matchCount === 0) {
+      titleText =
+        "Check your last reward";
+      badgeText =
+        "No match";
+      noteText =
+        "Undo the last entry and check the chest, reward and amount before continuing.";
+    } else {
+      level =
+        getConfidenceLevel(
+          confidence ?? 0,
+          matchCount,
+          playerPosition
+        );
+      titleText =
+        "Keep recording";
+      badgeText =
+        confidence === null
+          ? `${history.length} entered`
+          : `${confidence}%`;
+      noteText =
+        matchCount !== null &&
+        matchCount > 1
+          ? `${formatNumber(matchCount)} possible positions remain. Enter the next consecutive reward.`
+          : "Enter the next consecutive reward so Noir can locate your position.";
+    }
+
+    title.textContent =
+      titleText;
+    badge.textContent =
+      badgeText;
+    badge.className =
+      `lp-confidence lp-confidence-${level}`;
+    note.textContent =
+      noteText;
+    note.classList.toggle(
+      "lp-ready",
+      ready
+    );
+  }
+
   function renderSolver(status) {
     const selectedChest =
       getSelectedChest(status);
@@ -4985,6 +5209,10 @@
       status
     );
 
+    renderRecorderConfidence(
+      status
+    );
+
     renderPredictions(
       status
     );
@@ -5488,6 +5716,16 @@
       document.getElementById(
         "lpRewardAmount"
       );
+
+    const searchInput =
+      document.getElementById(
+        "lpRewardSearch"
+      );
+
+    if (searchInput) {
+      searchInput.value =
+        reward.name;
+    }
 
     if (amountInput) {
       amountInput.value =
