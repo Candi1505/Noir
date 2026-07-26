@@ -289,6 +289,19 @@
         color: #d2bd7e;
       }
 
+      .noir-help-email {
+        display: block;
+        margin-top: 14px;
+        padding: 14px 16px;
+        border: 1px solid rgba(111, 218, 184, .38);
+        border-radius: 14px;
+        background: rgba(111, 218, 184, .09);
+        color: #8ce0c4;
+        font-weight: 900;
+        text-align: center;
+        text-decoration: none;
+      }
+
       .noir-help-tip {
         padding: 17px;
         color: #9d978d;
@@ -579,6 +592,34 @@
               Never reset saved history simply because the safe list is short.
               A short list usually means Noir needs one result from a new pool.
             </div>
+          </div>
+        </details>
+
+        <details class="noir-help-section">
+          <summary>
+            <span class="noir-help-section-icon">✉</span>
+            Help &amp; Feedback
+          </summary>
+          <div class="noir-help-body">
+            <p>
+              Found a problem or have an idea for Noir? Email Chest Companion
+              and include:
+            </p>
+            <ul>
+              <li>The chest type you were using.</li>
+              <li>Screenshots of Noir and the game result.</li>
+              <li>The confidence shown at the time.</li>
+              <li>Whether it was a regular or bonus chest.</li>
+              <li>A short description of what happened.</li>
+            </ul>
+            <div class="noir-help-callout noir-help-warning">
+              For your security, never email HAR files, passwords, login codes
+              or account/session information.
+            </div>
+            <a
+              class="noir-help-email"
+              href="mailto:noirchestcompanion@gmail.com?subject=Noir%20Help%20%26%20Feedback"
+            >Email Noir Chest Companion</a>
           </div>
         </details>
 
