@@ -101,8 +101,8 @@
 
   function blankFortPlanner() {
     return {
-      currentLevel: 871,
-      targetLevel: 900,
+      currentLevel: 0,
+      targetLevel: 0,
       currentXp: 0,
       maximumTowerLevel: 233,
       storedTowers: []
@@ -111,12 +111,19 @@
 
   function normaliseFortPlanner(value) {
     const safe = value && typeof value === "object" ? value : {};
+    const parsedCurrentLevel = Number.parseInt(safe.currentLevel, 10) || 0;
+    const parsedTargetLevel = Number.parseInt(safe.targetLevel, 10) || 0;
+    const savedTowers = Array.isArray(safe.storedTowers) ? safe.storedTowers : [];
+    const wasEffDemoDefault = parsedCurrentLevel === 871 &&
+      parsedTargetLevel === 900 &&
+      !Number.parseInt(safe.currentXp, 10) &&
+      savedTowers.length === 0;
     return {
-      currentLevel: Math.max(700, Math.min(998, Number.parseInt(safe.currentLevel, 10) || 871)),
-      targetLevel: Math.max(701, Math.min(999, Number.parseInt(safe.targetLevel, 10) || 900)),
+      currentLevel: wasEffDemoDefault || parsedCurrentLevel === 0 ? 0 : Math.max(600, Math.min(998, parsedCurrentLevel)),
+      targetLevel: wasEffDemoDefault || parsedTargetLevel === 0 ? 0 : Math.max(601, Math.min(999, parsedTargetLevel)),
       currentXp: Math.max(0, Number.parseInt(safe.currentXp, 10) || 0),
       maximumTowerLevel: Math.max(1, Math.min(250, Number.parseInt(safe.maximumTowerLevel, 10) || 233)),
-      storedTowers: (Array.isArray(safe.storedTowers) ? safe.storedTowers : []).map(item => ({
+      storedTowers: savedTowers.map(item => ({
         type: String(item?.type || ""),
         level: Math.max(0, Number.parseInt(item?.level, 10) || 0),
         quantity: Math.max(1, Math.min(100, Number.parseInt(item?.quantity, 10) || 1))
@@ -856,19 +863,32 @@
   }
 
   function playerXpForLevel(level) {
-    const value = Number(level);
-    if (value >= 871) {
-      let xp = 29052574;
-      for (let current = 872; current <= value; current += 1) xp = Math.round(xp * 1.01);
-      return xp;
-    }
-    return Math.round(6091563 * Math.pow(1.01, value - 714));
+    const value = Math.max(600, Math.min(999, Number(level) || 600));
+    let xp = 1959262;
+    for (let current = 601; current <= value; current += 1) xp = Math.round(xp * 1.01);
+    return xp;
   }
 
   function fortPlan(value) {
     const planner = normaliseFortPlanner(value);
     const currentLevel = planner.currentLevel;
-    const targetLevel = Math.max(currentLevel + 1, planner.targetLevel);
+    const targetLevel = planner.targetLevel;
+    const ready = currentLevel >= 600 && targetLevel > currentLevel;
+    if (!ready) {
+      return {
+        planner,
+        currentLevel,
+        targetLevel,
+        xpNeeded: 0,
+        earnedXp: 0,
+        simulatedLevel: currentLevel,
+        progressXp: planner.currentXp,
+        reached: false,
+        ready: false,
+        route: [],
+        summary: []
+      };
+    }
     const xpNeeded = Array.from({ length: targetLevel - currentLevel }, (_, index) =>
       playerXpForLevel(currentLevel + index + 1)
     ).reduce((sum, xp) => sum + xp, 0) - planner.currentXp;
@@ -932,6 +952,7 @@
       simulatedLevel,
       progressXp,
       reached: simulatedLevel >= targetLevel,
+      ready: true,
       route,
       summary
     };
@@ -950,12 +971,12 @@
   function renderFortPlanner(layout) {
     const result = fortPlan(layout.fortPlanner);
     const levelled = result.simulatedLevel - result.currentLevel;
-    const targetCoverage = result.xpNeeded > 0
+    const targetCoverage = result.ready && result.xpNeeded > 0
       ? Math.min(100, (result.earnedXp / result.xpNeeded) * 100)
-      : 100;
+      : 0;
     const shortfallXp = Math.max(0, result.xpNeeded - result.earnedXp);
     const averageXp = result.route.length ? result.earnedXp / result.route.length : 0;
-    const nextLevelXp = result.simulatedLevel < 999 ? playerXpForLevel(result.simulatedLevel + 1) : 0;
+    const nextLevelXp = result.ready && result.simulatedLevel < 999 ? playerXpForLevel(result.simulatedLevel + 1) : 0;
     const nextLevelProgress = nextLevelXp
       ? Math.min(100, (result.progressXp / nextLevelXp) * 100)
       : 100;
@@ -967,8 +988,8 @@
         </div>
         <p class="nbp-muted">Enter the active or stored towers you can upgrade. Noir simulates legal upgrades and checks whether they contain enough building XP to reach your target.</p>
         <div class="nbp-fort-targets">
-          <label>Current player level<input data-fort-field="currentLevel" type="number" min="700" max="998" value="${result.planner.currentLevel}"></label>
-          <label>Target player level<input data-fort-field="targetLevel" type="number" min="701" max="999" value="${result.planner.targetLevel}"></label>
+          <label>Current player level<input data-fort-field="currentLevel" type="number" min="0" max="998" value="${result.planner.currentLevel}"></label>
+          <label>Target player level<input data-fort-field="targetLevel" type="number" min="0" max="999" value="${result.planner.targetLevel}"></label>
           <label>XP already earned toward next level<input data-fort-field="currentXp" type="number" min="0" value="${result.planner.currentXp}"></label>
           <label>Highest available tower level<input data-fort-field="maximumTowerLevel" type="number" min="1" max="250" value="${result.planner.maximumTowerLevel}"></label>
         </div>
@@ -976,7 +997,7 @@
           <label>Available tower<select id="nbpFortTowerType">
             ${Object.keys(CATALOG.towerLevels || {}).sort().map(type => `<option>${escapeHtml(type)}</option>`).join("")}
           </select></label>
-          <label>Current level<input id="nbpFortTowerLevel" type="number" min="0" value="1"></label>
+          <label>Current level<input id="nbpFortTowerLevel" type="number" min="0" value="0"></label>
           <label>Quantity<input id="nbpFortTowerQuantity" type="number" min="1" max="100" value="1"></label>
           <button type="button" class="nbp-primary" id="nbpAddStoredTower">Add tower</button>
         </div>
@@ -989,9 +1010,11 @@
           `).join("") || `<p class="nbp-empty-copy">Add the active or stored towers available for Fort.</p>`}
         </div>
         <div class="nbp-fort-result ${result.reached ? "reached" : "short"}">
-          <strong>${result.reached ? `Target ${result.targetLevel} is reachable` : `Available towers reach level ${result.simulatedLevel}`}</strong>
+          <strong>${!result.ready ? "Enter your levels to calculate" : result.reached ? `Target ${result.targetLevel} is reachable` : `Available towers reach level ${result.simulatedLevel}`}</strong>
           <p>${formatNumber(result.xpNeeded)} XP required · ${formatNumber(result.earnedXp)} XP planned · ${result.route.length} upgrades</p>
-          ${result.reached
+          ${!result.ready
+            ? `<p>Enter a current level from 600 and a higher target level.</p>`
+            : result.reached
             ? `<p>Estimated build time before speedups: ${formatDuration(result.route.reduce((sum, step) => sum + step.seconds, 0))}</p>`
             : `<p>${result.targetLevel - result.simulatedLevel} player level${result.targetLevel - result.simulatedLevel === 1 ? "" : "s"} remain after every legal entered upgrade.</p>`}
         </div>
@@ -1000,7 +1023,7 @@
           <article><small>XP still required</small><strong>${formatNumber(shortfallXp)}</strong></article>
           <article><small>Average XP per upgrade</small><strong>${formatNumber(averageXp)}</strong></article>
           <article><small>Projected player level</small><strong>${result.simulatedLevel}</strong></article>
-          <article><small>Progress into next level</small><strong>${result.reached ? "Target reached" : `${formatNumber(result.progressXp)} / ${formatNumber(nextLevelXp)} (${nextLevelProgress.toFixed(1)}%)`}</strong></article>
+          <article><small>Progress into next level</small><strong>${!result.ready ? "0" : result.reached ? "Target reached" : `${formatNumber(result.progressXp)} / ${formatNumber(nextLevelXp)} (${nextLevelProgress.toFixed(1)}%)`}</strong></article>
           <article><small>Player levels gained</small><strong>${levelled}</strong></article>
         </div>
         ${result.summary.length ? `
@@ -1011,7 +1034,7 @@
             `).join("")}
           </div>
         ` : ""}
-        <p class="nbp-trust-copy">Supports player levels 700–999 using the current WD level curve. Results depend on the available towers and current XP entered by the player.</p>
+        <p class="nbp-trust-copy">Supports player levels 600–999 using the current WD level curve. Results depend on the available towers and current XP entered by the player.</p>
       </section>
     `;
   }
