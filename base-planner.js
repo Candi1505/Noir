@@ -123,6 +123,7 @@
 
   let selectedSlot = null;
   let dragSlot = null;
+  let recognitionDraft = null;
   let state = loadState();
 
   function blankSlots() {
@@ -487,6 +488,9 @@
           if (image.width < 500 || image.height < 300) {
             throw new Error("That image is too small to be a readable base screenshot.");
           }
+          if (image.width / image.height < 1.2) {
+            throw new Error("Choose a landscape WD base-map screenshot so the tower markers are readable.");
+          }
           const maxDimension = 1100;
           const scale = Math.min(1, maxDimension / Math.max(image.width, image.height));
           const canvas = document.createElement("canvas");
@@ -543,10 +547,148 @@
         ${layout.referencePhotos.map((photo, index) => `
           <figure>
             <img src="${escapeHtml(photo)}" alt="Base reference screenshot ${index + 1}">
-            <button type="button" data-remove-photo="${index}" aria-label="Remove screenshot ${index + 1}">Remove</button>
+            <div class="nbp-photo-actions">
+              <button type="button" data-analyse-photo="${index}">Map towers</button>
+              <button type="button" data-remove-photo="${index}" aria-label="Remove screenshot ${index + 1}">Remove</button>
+            </div>
           </figure>
         `).join("")}
       </div>
+    `;
+  }
+
+  function startRecognition(index, layout = activeLayout()) {
+    const source = layout.referencePhotos[index];
+    if (!source) return false;
+    recognitionDraft = {
+      source,
+      sourceIndex: index,
+      markers: [],
+      nextSlot: 0
+    };
+    return true;
+  }
+
+  function addRecognitionMarker(x, y) {
+    if (!recognitionDraft || recognitionDraft.markers.length >= TOTAL_SLOTS) return false;
+    const slot = recognitionDraft.nextSlot;
+    recognitionDraft.markers.push({
+      id: `recognised-${Date.now()}-${recognitionDraft.markers.length}`,
+      x: Math.max(0, Math.min(100, Number(x) || 0)),
+      y: Math.max(0, Math.min(100, Number(y) || 0)),
+      slot,
+      type: "",
+      level: 0
+    });
+    recognitionDraft.nextSlot = Math.min(TOTAL_SLOTS - 1, slot + 1);
+    return true;
+  }
+
+  function updateRecognitionMarker(index, field, value) {
+    const marker = recognitionDraft?.markers?.[index];
+    if (!marker) return false;
+    if (field === "type") marker.type = TOWER_TYPES.includes(value) ? value : "";
+    if (field === "level") marker.level = Math.max(0, Number.parseInt(value, 10) || 0);
+    if (field === "slot") marker.slot = Math.max(0, Math.min(TOTAL_SLOTS - 1, (Number.parseInt(value, 10) || 1) - 1));
+    return true;
+  }
+
+  function applyRecognitionDraft(mode = "replace", layout = activeLayout()) {
+    const markers = recognitionDraft?.markers || [];
+    if (!markers.length) throw new Error("Mark at least one tower first.");
+    if (markers.some(marker => !marker.type || marker.level < 1)) {
+      throw new Error("Review every marker and enter its tower name and level first.");
+    }
+    const markedSlots = markers.map(marker => Number(marker.slot));
+    if (new Set(markedSlots).size !== markedSlots.length) {
+      throw new Error("Each marked tower needs a different base position.");
+    }
+    if (mode === "fill") {
+      const emptySlots = layout.slots.filter(slot => !slot).length;
+      if (markers.length > emptySlots) {
+        throw new Error(`This layout only has ${emptySlots} empty position(s). Remove some markers or replace the existing layout.`);
+      }
+    }
+    const target = mode === "fill" ? [...layout.slots] : blankSlots();
+    markers.forEach(marker => {
+      let slot = marker.slot;
+      if (mode === "fill" && target[slot]) slot = target.findIndex(item => !item);
+      if (slot < 0) return;
+      target[slot] = normaliseTower({
+        id: marker.id,
+        type: marker.type,
+        level: marker.level
+      });
+    });
+    layout.slots = target;
+    saveState();
+    recognitionDraft = null;
+    return markers.length;
+  }
+
+  function renderRecognitionWorkbench() {
+    if (!recognitionDraft) return "";
+    const reviewed = recognitionDraft.markers.filter(marker => marker.type && marker.level > 0).length;
+    return `
+      <section class="nbp-panel nbp-recognition">
+        <span class="nbp-kicker">PRIVATE SCREENSHOT MAPPER</span>
+        <h3>Tap each tower, then review it</h3>
+        <p>
+          Tap tower markers in path order from the front of the base. Noir records the
+          position and prepares the layout; you confirm the exact tower and level because
+          tiny overlapping map icons cannot be identified safely from every screenshot.
+        </p>
+        <div class="nbp-recognition-stage" id="nbpRecognitionStage">
+          <img src="${escapeHtml(recognitionDraft.source)}" alt="Base screenshot being mapped">
+          ${recognitionDraft.markers.map((marker, index) => `
+            <span class="nbp-recognition-pin" style="left:${marker.x}%;top:${marker.y}%">${index + 1}</span>
+          `).join("")}
+        </div>
+        <div class="nbp-recognition-status">
+          <strong>${recognitionDraft.markers.length}/40 marked</strong>
+          <span>${reviewed} fully reviewed</span>
+        </div>
+        <div class="nbp-recognition-list">
+          ${recognitionDraft.markers.map((marker, index) => `
+            <div class="nbp-recognition-row">
+              <strong>#${index + 1}</strong>
+              <label>
+                Base position
+                <input data-recognition-index="${index}" data-recognition-field="slot"
+                  type="number" min="1" max="40" value="${marker.slot + 1}">
+              </label>
+              <label>
+                Tower
+                <select data-recognition-index="${index}" data-recognition-field="type">
+                  <option value="">Choose tower…</option>
+                  ${TOWER_TYPES.map(type => `<option ${marker.type === type ? "selected" : ""}>${escapeHtml(type)}</option>`).join("")}
+                </select>
+              </label>
+              <label>
+                Level
+                <input data-recognition-index="${index}" data-recognition-field="level"
+                  type="number" min="1" inputmode="numeric" value="${marker.level || ""}" placeholder="Level">
+              </label>
+              <button type="button" data-remove-recognition="${index}" aria-label="Remove marker ${index + 1}">Remove</button>
+            </div>
+          `).join("")}
+        </div>
+        <div class="nbp-recognition-actions">
+          <button id="nbpUndoRecognition" type="button" ${recognitionDraft.markers.length ? "" : "disabled"}>Undo last</button>
+          <button id="nbpCancelRecognition" type="button">Cancel scan</button>
+          <button id="nbpApplyRecognition" class="nbp-primary" type="button">
+            Review &amp; create layout
+          </button>
+        </div>
+        <label class="nbp-recognition-mode">
+          <input id="nbpRecognitionFill" type="checkbox">
+          <span>Keep existing towers and use the first available empty positions.</span>
+        </label>
+        <small>
+          Nothing is uploaded. Noir does not change the saved layout until you press
+          “Review &amp; create layout” and confirm how it should be applied.
+        </small>
+      </section>
     `;
   }
 
@@ -724,10 +866,12 @@
           </button>
           ${renderReferencePhotos(layout)}
           <small>
-            Screenshots are visual references only. They cannot reliably reveal every
-            tower level or stored tower, so use the automatic option below when available.
+            Tap “Map towers” on a screenshot to create an editable layout from it.
+            Exact names and levels must be reviewed before Noir applies anything.
           </small>
         </section>
+
+        ${renderRecognitionWorkbench()}
 
         <section class="nbp-panel nbp-snapshot">
           <span class="nbp-kicker">FORTIFICATION SETUP</span>
@@ -838,6 +982,7 @@
     overlay.querySelector("#nbpLayoutSelect")?.addEventListener("change", event => {
       state.activeId = event.target.value;
       selectedSlot = null;
+      recognitionDraft = null;
       saveState();
       renderEditor();
     });
@@ -855,6 +1000,7 @@
       state.layouts.push(layout);
       state.activeId = layout.id;
       selectedSlot = null;
+      recognitionDraft = null;
       saveState();
       renderEditor();
     });
@@ -866,6 +1012,7 @@
       state.layouts.push(copy);
       state.activeId = copy.id;
       selectedSlot = null;
+      recognitionDraft = null;
       saveState();
       renderEditor();
     });
@@ -969,6 +1116,72 @@
         removeReferencePhoto(Number(button.dataset.removePhoto));
         renderEditor();
       });
+    });
+
+    overlay.querySelectorAll("[data-analyse-photo]").forEach(button => {
+      button.addEventListener("click", () => {
+        if (!startRecognition(Number(button.dataset.analysePhoto))) return;
+        renderEditor();
+        overlay.querySelector(".nbp-recognition")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    });
+
+    overlay.querySelector("#nbpRecognitionStage")?.addEventListener("click", event => {
+      const stage = event.currentTarget;
+      const rect = stage.getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
+      addRecognitionMarker(
+        ((event.clientX - rect.left) / rect.width) * 100,
+        ((event.clientY - rect.top) / rect.height) * 100
+      );
+      renderEditor();
+      overlay.querySelector(".nbp-recognition")?.scrollIntoView({ block: "start" });
+    });
+
+    overlay.querySelectorAll("[data-recognition-field]").forEach(input => {
+      input.addEventListener("input", event => {
+        updateRecognitionMarker(
+          Number(event.target.dataset.recognitionIndex),
+          event.target.dataset.recognitionField,
+          event.target.value
+        );
+      });
+    });
+
+    overlay.querySelectorAll("[data-remove-recognition]").forEach(button => {
+      button.addEventListener("click", () => {
+        recognitionDraft?.markers.splice(Number(button.dataset.removeRecognition), 1);
+        renderEditor();
+      });
+    });
+
+    overlay.querySelector("#nbpUndoRecognition")?.addEventListener("click", () => {
+      const removed = recognitionDraft?.markers.pop();
+      if (recognitionDraft && Number.isFinite(Number(removed?.slot))) {
+        recognitionDraft.nextSlot = Number(removed.slot);
+      }
+      renderEditor();
+    });
+
+    overlay.querySelector("#nbpCancelRecognition")?.addEventListener("click", () => {
+      recognitionDraft = null;
+      renderEditor();
+    });
+
+    overlay.querySelector("#nbpApplyRecognition")?.addEventListener("click", () => {
+      const fill = Boolean(overlay.querySelector("#nbpRecognitionFill")?.checked);
+      const occupied = activeLayout().slots.filter(Boolean).length;
+      const action = fill
+        ? "add these reviewed towers to empty positions"
+        : `replace the current ${occupied} recorded tower position${occupied === 1 ? "" : "s"}`;
+      try {
+        if (!window.confirm(`Use this screenshot draft to ${action}?`)) return;
+        applyRecognitionDraft(fill ? "fill" : "replace");
+        renderEditor();
+        overlay.querySelector(".nbp-base-map")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      } catch (error) {
+        window.alert(error?.message || "The screenshot draft is not ready yet.");
+      }
     });
 
     overlay.querySelectorAll("[data-slot]").forEach(button => {
@@ -1110,10 +1323,51 @@
         border-radius: 15px; background: #08090a;
       }
       .nbp-photo-grid img { display: block; width: 100%; height: 210px; object-fit: contain; }
+      .nbp-photo-actions {
+        position: absolute; right: 8px; bottom: 8px; display: flex; gap: 7px;
+      }
       .nbp-photo-grid button {
-        position: absolute; right: 8px; bottom: 8px; padding: 8px 10px;
+        padding: 8px 10px;
         background: rgba(6,7,8,.9); color: #dda2ad; border-color: rgba(190,105,121,.55);
       }
+      .nbp-photo-grid [data-analyse-photo] {
+        color: #92dbc1; border-color: rgba(83,185,149,.55);
+      }
+      .nbp-recognition h3 { margin: 8px 0; }
+      .nbp-recognition > p, .nbp-recognition > small {
+        display: block; color: #a39d94; line-height: 1.55;
+      }
+      .nbp-recognition-stage {
+        position: relative; margin-top: 15px; overflow: hidden; cursor: crosshair;
+        border: 1px solid rgba(105,177,214,.5); border-radius: 16px; background: #050607;
+      }
+      .nbp-recognition-stage img { display: block; width: 100%; height: auto; }
+      .nbp-recognition-pin {
+        position: absolute; width: 30px; height: 30px; display: grid; place-items: center;
+        transform: translate(-50%, -50%); border: 2px solid #f0d479; border-radius: 50%;
+        background: rgba(5,7,8,.9); color: #f0d479; font-size: 12px; font-weight: 950;
+        box-shadow: 0 0 0 4px rgba(5,7,8,.45);
+      }
+      .nbp-recognition-status {
+        display: flex; justify-content: space-between; gap: 12px; margin: 12px 0;
+        padding: 12px 14px; border: 1px solid rgba(84,185,150,.35); border-radius: 13px;
+        background: rgba(27,78,61,.2); color: #94ddc3;
+      }
+      .nbp-recognition-list { display: grid; gap: 9px; }
+      .nbp-recognition-row {
+        display: grid; grid-template-columns: auto 110px 1fr 110px auto; gap: 9px;
+        align-items: end; padding: 11px; border: 1px solid #303237; border-radius: 14px;
+        background: #0d0e10;
+      }
+      .nbp-recognition-row > strong { align-self: center; color: #d9be69; }
+      .nbp-recognition-row label { color: #99938a; font-size: 11px; font-weight: 800; }
+      .nbp-recognition-row input, .nbp-recognition-row select { margin-top: 5px; padding: 10px; }
+      .nbp-recognition-row button { color: #dda2ad; border-color: rgba(190,105,121,.45); }
+      .nbp-recognition-actions { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 13px; }
+      .nbp-recognition-mode {
+        display: flex; gap: 10px; align-items: center; margin: 12px 0; color: #b5afa6;
+      }
+      .nbp-recognition-mode input { width: 21px; margin: 0; flex: 0 0 auto; }
       .nbp-support-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 13px; }
       .nbp-support-grid > div, .nbp-stored-list > div {
         padding: 14px; border: 1px solid #303237; border-radius: 15px; background: #0d0e10;
@@ -1182,6 +1436,9 @@
         .nbp-island-path { grid-template-columns: repeat(5, minmax(82px, 1fr)); overflow-x: auto; padding-bottom: 5px; }
         .nbp-slot { min-width: 82px; }
         .nbp-summary-grid, .nbp-support-grid, .nbp-stored-list, .nbp-photo-grid { grid-template-columns: repeat(2, 1fr); }
+        .nbp-recognition-row { grid-template-columns: 42px 1fr 1fr; }
+        .nbp-recognition-row label:nth-of-type(2) { grid-column: 2 / -1; }
+        .nbp-recognition-row button { grid-column: 2 / -1; }
       }
     `;
     document.head.appendChild(style);
@@ -1230,6 +1487,7 @@
     overlay?.setAttribute("aria-hidden", "true");
     document.body.style.overflow = "";
     selectedSlot = null;
+    recognitionDraft = null;
   }
 
   window.NoirBasePlanner = Object.freeze({
@@ -1244,6 +1502,10 @@
     importBaseSnapshot,
     addReferencePhotos,
     removeReferencePhoto,
+    startRecognition,
+    addRecognitionMarker,
+    updateRecognitionMarker,
+    applyRecognitionDraft,
     addTower,
     moveTower,
     removeTower,
