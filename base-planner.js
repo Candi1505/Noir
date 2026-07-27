@@ -56,6 +56,16 @@
     ["rings", "Rings"]
   ];
   const PERCH_RIDER_EXCEPTIONS = new Set(["Freeda", "Vivian"]);
+  const KNOWN_DRAGON_PERCH_BONUSES = {
+    Aevros: { elementalResistance: "wind-10", towerBonus: "tower-health-15", specialBonus: "tower-ward-25" },
+    Cerebron: { elementalResistance: "dark-10", towerBonus: "supershot-15", specialBonus: "refund-supershot-25" },
+    Krygant: { elementalResistance: "ice-10", towerBonus: "tower-health-15", specialBonus: "tower-ward-25" },
+    Xytheris: { elementalResistance: "fire-10", towerBonus: "supershot-15", specialBonus: "" },
+    Rakmo: { elementalResistance: "dark-10", towerBonus: "tower-health-15", specialBonus: "" },
+    Varuag: { elementalResistance: "ice-10", towerBonus: "tower-attack-10", specialBonus: "" },
+    Simba: { elementalResistance: "earth-10", towerBonus: "tower-health-15", specialBonus: "tower-ward-25" },
+    Nartaka: { elementalResistance: "dark-10", towerBonus: "tower-attack-10", specialBonus: "double-attack-20" }
+  };
 
   let state = loadState();
   let selectedSlot = null;
@@ -80,6 +90,9 @@
       dragonLevel: 0,
       riderName: "",
       riderLevel: 0,
+      elementalResistance: "",
+      towerBonus: "",
+      specialBonus: "",
       riderSkills: [],
       riderSkillLevels: {},
       riderGear: Object.fromEntries(GEAR_SLOTS.map(([slot]) => [slot, { name: "", rarity: "", level: 0 }]))
@@ -119,6 +132,9 @@
       dragonClass: String(safe.dragonClass || ""),
       dragonTier: String(safe.dragonTier || ""),
       riderName: String(safe.riderName || ""),
+      elementalResistance: String(safe.elementalResistance || ""),
+      towerBonus: String(safe.towerBonus || ""),
+      specialBonus: String(safe.specialBonus || ""),
       riderSkills: Array.isArray(safe.riderSkills)
         ? safe.riderSkills.map(String).filter(Boolean)
         : String(safe.riderSkills || "").split(/[,|]/).map(value => value.trim()).filter(Boolean),
@@ -370,7 +386,26 @@
     return { hp, attack };
   }
 
-  function towerPower(tower, perches = []) {
+  const PERCH_COVERAGE = {
+    "Seagazer Perch": new Set([1, 2]),
+    "Riverwatch Perch": new Set([3, 4, 5]),
+    "Stonespear Perch": new Set([6, 7])
+  };
+
+  function perchTowerModifier(towerIndex, perches) {
+    const islandIndex = Math.floor(towerIndex / SLOTS_PER_ISLAND);
+    const coveringPerch = perches.find(perch =>
+      perch?.level &&
+      perch?.dragonName &&
+      PERCH_COVERAGE[perch.name]?.has(islandIndex)
+    );
+    return {
+      hp: coveringPerch?.towerBonus === "tower-health-15" ? 0.15 : 0,
+      attack: coveringPerch?.towerBonus === "tower-attack-10" ? 0.1 : 0
+    };
+  }
+
+  function towerPower(tower, perches = [], towerIndex = 0) {
     if (!tower) return 0;
     const level = Math.max(1, tower.level || 1);
     const officialLevels = CATALOG.towerLevels?.[tower.type];
@@ -391,10 +426,12 @@
     const rider = riderModifier(tower, perches);
     const consumableHp = tower.towerHpBoost ? 0.3 : 0;
     const consumableAttack = tower.towerAttackBoost ? 0.3 : 0;
+    const perch = perchTowerModifier(towerIndex, perches);
     return power * (1 + (
       monument.hp + monument.attack +
       rider.hp + rider.attack +
-      consumableHp + consumableAttack
+      consumableHp + consumableAttack +
+      perch.hp + perch.attack
     ) / 2);
   }
 
@@ -448,7 +485,7 @@
   }
 
   function evaluate(slots, perches = []) {
-    let raw = slots.reduce((sum, tower) => sum + towerPower(tower, perches), 0);
+    let raw = slots.reduce((sum, tower, index) => sum + towerPower(tower, perches, index), 0);
     let effectiveness = 50;
     let bonus = 0;
     let penalty = 0;
@@ -504,6 +541,22 @@
 
     const activePerches = perches.filter(perch => perch?.level && perch?.dragonName).length;
     bonus += activePerches * 2;
+    perches
+      .filter(perch => perch?.level && perch?.dragonName)
+      .forEach(perch => {
+        let strategicBonus = 0;
+        if (perch.elementalResistance) strategicBonus += 2;
+        if (perch.towerBonus === "supershot-15") strategicBonus += 2;
+        if (perch.specialBonus) strategicBonus += 2;
+        bonus += strategicBonus;
+        if (strategicBonus) {
+          findings.push({
+            severity: "good",
+            title: `${perch.name} dragon bonuses active`,
+            detail: "Its resistance and special battle benefits are included in defensive effectiveness."
+          });
+        }
+      });
     effectiveness = Math.max(0, Math.min(100, effectiveness + bonus - penalty));
     return { raw, effectiveness, findings, bonus, penalty };
   }
@@ -631,6 +684,25 @@
                 <label>Dragon level<input data-perch="${index}" data-field="dragonLevel" type="number" min="0" value="${perch.dragonLevel || ""}"></label>
               </div>
               <label>Tier / rarity<input data-perch="${index}" data-field="dragonTier" value="${escapeHtml(perch.dragonTier)}" placeholder="e.g. Mythic · Obsidian"></label>
+              <fieldset class="nbp-perch-bonuses">
+                <legend>Dragon perch bonuses</legend>
+                <label>Resistance<select data-perch="${index}" data-field="elementalResistance">
+                  <option value="">None</option>
+                  ${["Wind", "Dark", "Ice", "Fire", "Earth"].map(element => `<option value="${element.toLowerCase()}-10" ${perch.elementalResistance === `${element.toLowerCase()}-10` ? "selected" : ""}>10% ${element}</option>`).join("")}
+                </select></label>
+                <label>Main bonus<select data-perch="${index}" data-field="towerBonus">
+                  <option value="">None</option>
+                  <option value="tower-health-15" ${perch.towerBonus === "tower-health-15" ? "selected" : ""}>Tower Health 15%</option>
+                  <option value="tower-attack-10" ${perch.towerBonus === "tower-attack-10" ? "selected" : ""}>Tower Attack 10%</option>
+                  <option value="supershot-15" ${perch.towerBonus === "supershot-15" ? "selected" : ""}>Supershot 15%</option>
+                </select></label>
+                <label>Special bonus<select data-perch="${index}" data-field="specialBonus">
+                  <option value="">None</option>
+                  <option value="tower-ward-25" ${perch.specialBonus === "tower-ward-25" ? "selected" : ""}>Tower Ward 25% HP</option>
+                  <option value="refund-supershot-25" ${perch.specialBonus === "refund-supershot-25" ? "selected" : ""}>Refund Supershot 25%</option>
+                  <option value="double-attack-20" ${perch.specialBonus === "double-attack-20" ? "selected" : ""}>2× Attack 20%</option>
+                </select></label>
+              </fieldset>
               <label>Perch rider<input data-catalog-kind="rider" data-perch="${index}" data-field="riderName" value="${escapeHtml(perch.riderName)}" placeholder="Tap to search perch riders" autocomplete="off"></label>
               <label>Rider level<input data-perch="${index}" data-field="riderLevel" type="number" min="0" value="${perch.riderLevel || ""}"></label>
               <details class="nbp-perch-details">
@@ -849,9 +921,15 @@
             results.hidden = true;
             if (kind === "dragon") {
               const perchIndex = Number(input.dataset.perch);
+              const bonuses = KNOWN_DRAGON_PERCH_BONUSES[item.name] || {
+                elementalResistance: "",
+                towerBonus: "",
+                specialBonus: ""
+              };
               pushHistory();
               layout.perches[perchIndex].dragonName = item.name;
               layout.perches[perchIndex].dragonClass = item.dragonClass || "";
+              Object.assign(layout.perches[perchIndex], bonuses);
               if (!layout.perches[perchIndex].dragonTier) {
                 layout.perches[perchIndex].dragonTier = [item.rarity, item.type].filter(Boolean).join(" · ");
               }
@@ -1174,7 +1252,7 @@
       .nbp-meter-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}.nbp-meter-grid article{padding:16px;border:1px solid #303237;border-radius:16px;background:#0d0e10}.nbp-meter-grid span,.nbp-meter-grid strong,.nbp-meter-grid b{display:block}.nbp-meter-grid span{color:#8f8b85;font-size:12px}.nbp-meter-grid strong{margin-top:7px;color:#dcc16e;font-size:24px}.nbp-meter-grid b{margin-top:5px;color:#a8a39b;font-size:12px}.nbp-meter{height:8px;margin-top:13px;overflow:hidden;border-radius:99px;background:#222}.nbp-meter i{display:block;height:100%;border-radius:99px;background:#d9bd68}.nbp-meter-grid .up strong,.nbp-meter-grid .up b{color:#72d6b2}.nbp-meter-grid .up .nbp-meter i{background:#61cda7}.nbp-meter-grid .down strong,.nbp-meter-grid .down b{color:#e18a98}.nbp-meter-grid .down .nbp-meter i{background:#d77384}
       .nbp-toolbar,.nbp-editor-actions{display:flex;flex-wrap:wrap;gap:8px}.nbp-toolbar button:disabled,.nbp-panel button:disabled{opacity:.4}.nbp-islands{display:grid;gap:12px;margin-top:16px}.nbp-island{padding:14px;border:1px solid #303338;border-radius:19px;background:linear-gradient(90deg,rgba(25,30,35,.95),rgba(10,11,12,.98))}.nbp-island header{display:flex;justify-content:space-between;margin-bottom:12px}.nbp-island header span{color:#8e99a4;font-size:12px}.nbp-island-slots{display:grid;grid-template-columns:repeat(5,1fr);gap:9px}.nbp-slot{position:relative;min-height:102px;padding:25px 9px 10px!important;text-align:left;overflow:hidden}.nbp-slot>span{position:absolute;top:7px;right:8px;color:#7d8288;font-size:10px}.nbp-slot strong,.nbp-slot small{display:block}.nbp-slot strong{font-size:13px}.nbp-slot small{margin-top:6px;color:#d6b968;font-size:11px}.nbp-slot.empty{border-style:dashed;color:#777c82}.nbp-slot.occupied{border-color:rgba(215,186,100,.4);background:rgba(47,38,14,.32)}.nbp-slot.selected{outline:2px solid #79c5ef;border-color:#79c5ef}
       .nbp-form-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.nbp-editor-actions{margin-top:14px}.nbp-perch-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}.nbp-perch-card{min-width:0;padding:15px;border:1px solid #303236;border-radius:16px;background:#0a0b0c}.nbp-perch-card legend{padding:0 7px;color:#d8bc69;font-weight:900}.nbp-perch-card label{display:block;margin-top:10px}.nbp-two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-      .nbp-perch-details{margin-top:13px;padding-top:11px;border-top:1px solid #292b2e}.nbp-perch-details summary{color:#d8bc69;font-weight:850;cursor:pointer}.nbp-add-row{display:grid;grid-template-columns:1fr auto;gap:7px;align-items:end}.nbp-add-row button{margin-top:7px}.nbp-chip-list{display:grid;gap:7px;margin-top:9px}.nbp-skill-chip{display:grid;grid-template-columns:minmax(0,1fr) 76px 36px;gap:7px;align-items:center;padding:8px 9px;border:1px solid rgba(83,156,123,.35);border-radius:12px;background:rgba(34,81,65,.25);color:#b9dcca}.nbp-skill-chip strong{font-size:12px;overflow-wrap:anywhere}.nbp-skill-chip label{font-size:10px}.nbp-skill-chip input{min-height:34px;padding:6px}.nbp-skill-chip button{min-height:34px;padding:5px;border-radius:9px;color:#e5a3ae;background:rgba(110,37,54,.25)}.nbp-chip-list small{color:#8f8b85}.nbp-gear-grid{display:grid;gap:9px}.nbp-gear-piece{padding:10px;border:1px solid #292b2e;border-radius:12px;background:#0d0e10}.nbp-gear-grid label{font-size:11px}.nbp-equipment-pair{display:grid;grid-template-columns:minmax(0,1fr) 92px;gap:8px;align-items:end}.nbp-tower-boosts{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:3px 0 0;padding:10px;border:1px solid #303237;border-radius:13px}.nbp-tower-boosts legend{padding:0 5px;color:#d8bc69;font-size:12px;font-weight:850}.nbp-tower-boosts label{display:flex;gap:8px;align-items:center;min-height:42px;padding:8px 10px;border:1px solid rgba(216,188,105,.22);border-radius:10px;background:#0d0e10}.nbp-tower-boosts input{width:20px;height:20px;min-height:0;margin:0;accent-color:#d8bc69}.nbp-tower-boosts span{font-size:12px;font-weight:800}
+      .nbp-perch-details{margin-top:13px;padding-top:11px;border-top:1px solid #292b2e}.nbp-perch-details summary{color:#d8bc69;font-weight:850;cursor:pointer}.nbp-add-row{display:grid;grid-template-columns:1fr auto;gap:7px;align-items:end}.nbp-add-row button{margin-top:7px}.nbp-chip-list{display:grid;gap:7px;margin-top:9px}.nbp-skill-chip{display:grid;grid-template-columns:minmax(0,1fr) 76px 36px;gap:7px;align-items:center;padding:8px 9px;border:1px solid rgba(83,156,123,.35);border-radius:12px;background:rgba(34,81,65,.25);color:#b9dcca}.nbp-skill-chip strong{font-size:12px;overflow-wrap:anywhere}.nbp-skill-chip label{font-size:10px}.nbp-skill-chip input{min-height:34px;padding:6px}.nbp-skill-chip button{min-height:34px;padding:5px;border-radius:9px;color:#e5a3ae;background:rgba(110,37,54,.25)}.nbp-chip-list small{color:#8f8b85}.nbp-gear-grid{display:grid;gap:9px}.nbp-gear-piece{padding:10px;border:1px solid #292b2e;border-radius:12px;background:#0d0e10}.nbp-gear-grid label{font-size:11px}.nbp-equipment-pair{display:grid;grid-template-columns:minmax(0,1fr) 92px;gap:8px;align-items:end}.nbp-tower-boosts{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:3px 0 0;padding:10px;border:1px solid #303237;border-radius:13px}.nbp-tower-boosts legend,.nbp-perch-bonuses legend{padding:0 5px;color:#d8bc69;font-size:12px;font-weight:850}.nbp-tower-boosts label{display:flex;gap:8px;align-items:center;min-height:42px;padding:8px 10px;border:1px solid rgba(216,188,105,.22);border-radius:10px;background:#0d0e10}.nbp-tower-boosts input{width:20px;height:20px;min-height:0;margin:0;accent-color:#d8bc69}.nbp-tower-boosts span{font-size:12px;font-weight:800}.nbp-perch-bonuses{display:grid;gap:8px;margin:5px 0 3px;padding:10px;border:1px solid #303237;border-radius:13px}.nbp-perch-bonuses label{font-size:11px}
       [data-catalog-kind]{position:relative}.nbp-suggestions{position:relative;z-index:8;max-height:280px;margin-top:6px;overflow-y:auto;border:1px solid #4a4c50;border-radius:13px;background:#090a0b;box-shadow:0 14px 32px rgba(0,0,0,.55)}.nbp-suggestions button{display:block;width:100%;padding:11px 12px;border:0!important;border-bottom:1px solid #242629!important;border-radius:0!important;text-align:left;background:#0d0e10!important}.nbp-suggestions button:last-child{border-bottom:0!important}.nbp-suggestions strong,.nbp-suggestions small{display:block}.nbp-suggestions strong{color:#eeeae2}.nbp-suggestions small{margin-top:4px;color:#a9a39a;font-size:11px}.nbp-suggestions p{margin:0;padding:13px;color:#99938a}
       .nbp-findings{display:grid;gap:10px;margin-top:14px}.nbp-finding{padding:14px 15px;border:1px solid #303030;border-left-width:4px;border-radius:15px;background:#0b0b0b}.nbp-finding strong{display:block}.nbp-finding p{margin:5px 0 0;color:#aaa49b;line-height:1.45}.nbp-finding.error{border-left-color:#e08089}.nbp-finding.warning{border-left-color:#dcc16e}.nbp-finding.good{border-left-color:#69dab0}.nbp-empty-copy{color:#99938a}.nbp-danger-zone{text-align:center}.nbp-danger-zone button{color:#dda2ad;border-color:rgba(190,105,121,.45)}.hidden{display:none!important}
       @media(max-width:720px){.nct-home-tools .nbp-launch{min-height:0}.nbp-base-details,.nbp-meter-grid,.nbp-form-grid,.nbp-perch-grid,.nbp-photo-grid{grid-template-columns:1fr}.nbp-section-heading{align-items:flex-start;flex-wrap:wrap}.nbp-island-slots{grid-template-columns:repeat(5,minmax(82px,1fr));overflow-x:auto;padding-bottom:5px}.nbp-slot{min-width:82px}.nbp-photo-grid img{height:auto;max-height:360px}}
