@@ -173,7 +173,7 @@
         const perch = Array.isArray(safe.perches) ? safe.perches[index] : null;
         if (!perch || typeof perch !== "object") return null;
         return {
-          name: ["Autumn Perch", "Grass Perch", "Volcano Perch"][index],
+          name: ["Riverwatch Perch", "Seagazer Perch", "Stonespear Perch"][index],
           level: Math.max(0, Number.parseInt(perch.level, 10) || 0),
           dragonAssigned: Boolean(perch.dragonAssigned)
         };
@@ -381,9 +381,9 @@
     const perches = Array.from({ length: 3 }, () => null);
     const storedTowers = [];
     const perchLocations = {
-      loc_perchAutumn: [0, "Autumn Perch"],
-      loc_perchGrass: [1, "Grass Perch"],
-      loc_perchVolcano: [2, "Volcano Perch"]
+      loc_perchAutumn: [0, "Riverwatch Perch"],
+      loc_perchGrass: [1, "Seagazer Perch"],
+      loc_perchVolcano: [2, "Stonespear Perch"]
     };
     let skippedCount = 0;
 
@@ -558,7 +558,7 @@
       <div class="nbp-support-grid">
         ${perches.map((perch, index) => `
           <div>
-            <span>${escapeHtml(perch?.name || ["Autumn Perch", "Grass Perch", "Volcano Perch"][index])}</span>
+            <span>${escapeHtml(perch?.name || ["Riverwatch Perch", "Seagazer Perch", "Stonespear Perch"][index])}</span>
             <strong>${perch ? `Level ${perch.level || "not recorded"}` : "Not found"}</strong>
             <small>${perch?.dragonAssigned ? "Dragon assigned" : "No assigned dragon found"}</small>
           </div>
