@@ -7,7 +7,8 @@
   const SLOTS_PER_ISLAND = 5;
   const TOTAL_SLOTS = ISLAND_COUNT * SLOTS_PER_ISLAND;
 
-  const TOWER_TYPES = [
+  const CATALOG = window.NoirBaseCatalog || {};
+  const FALLBACK_TOWER_TYPES = [
     "Archer Tower", "Cannon Tower", "Ballista", "Trebuchet", "Lightning Tower",
     "Storm Tower", "Red Mage Tower", "Blue Mage Tower", "Fire Turret", "Ice Turret",
     "Dark Flak Tower", "Fire Flak Tower", "Ice Flak Tower", "Earth Flak Tower",
@@ -15,6 +16,10 @@
     "Cosmic Orrery", "Charged Volt Tower", "Red Archmage Tower", "Blue Archmage Tower",
     "Oculus Tower", "Nexus Tower", "Nullspire Tower", "Other"
   ];
+  const TOWER_TYPES = Array.from(new Set([
+    ...(Array.isArray(CATALOG.towers) ? CATALOG.towers.map(tower => tower.name) : []),
+    ...FALLBACK_TOWER_TYPES
+  ])).filter(Boolean).sort((left, right) => left.localeCompare(right));
 
   const MODERN = new Set([
     "Dark Flak Tower", "Fire Flak Tower", "Ice Flak Tower", "Earth Flak Tower",
@@ -204,8 +209,48 @@
   function towerPower(tower) {
     if (!tower) return 0;
     const level = Math.max(1, tower.level || 1);
+    const officialLevels = CATALOG.towerLevels?.[tower.type];
+    if (Array.isArray(officialLevels) && officialLevels.length) {
+      const exact = officialLevels.find(item => Number(item.level) === level);
+      if (exact?.power > 0) return exact.power;
+      const closest = officialLevels.reduce((best, item) =>
+        Math.abs(Number(item.level) - level) < Math.abs(Number(best.level) - level) ? item : best
+      );
+      if (closest?.power > 0) return closest.power;
+    }
     const typeWeight = MODERN.has(tower.type) ? 1.18 : MAGES.has(tower.type) ? 1.05 : 1;
     return Math.pow(level, 2.28) * typeWeight;
+  }
+
+  function catalogueEffect(item) {
+    const effects = Array.isArray(item?.effects) ? item.effects : [];
+    return effects.slice(0, 2).map(effect => {
+      const amount = Number(effect.max || effect.min || 0);
+      const value = effect.unit === "%" && amount
+        ? `${(amount * 100).toFixed(amount * 100 >= 10 ? 0 : 1)}%`
+        : amount || "";
+      return `${effect.text || ""}${value ? ` ${value}` : ""}`.trim();
+    }).filter(Boolean).join(" · ");
+  }
+
+  function renderCatalogueLists() {
+    const items = Array.isArray(CATALOG.monumentItems) ? CATALOG.monumentItems : [];
+    const list = kind => `
+      <datalist id="nbp${kind}List">
+        ${items.filter(item => item.kind === kind).map(item => `
+          <option value="${escapeHtml(item.name)}" label="${escapeHtml(`${item.rarity}${catalogueEffect(item) ? ` · ${catalogueEffect(item)}` : ""}`)}"></option>
+        `).join("")}
+      </datalist>
+    `;
+    const riders = Array.isArray(CATALOG.riders) ? CATALOG.riders : [];
+    return `
+      ${list("Rune")}
+      ${list("Glyph")}
+      ${list("Relic")}
+      <datalist id="nbpRiderList">
+        ${riders.map(rider => `<option value="${escapeHtml(rider.name)}" label="${rider.defensive ? "Defensive rider" : "Rider"}"></option>`).join("")}
+      </datalist>
+    `;
   }
 
   function evaluate(slots, perches = []) {
@@ -315,7 +360,7 @@
             <div class="nbp-meter"><i style="width:${result.proposed.effectiveness}%"></i></div>
           </article>
         </div>
-        <p class="nbp-trust-copy">DP is a calibrated estimate from recorded tower power. Effectiveness separately scores placement, conflicts, coverage and synergy; Noir does not generate or hallucinate a replacement base image.</p>
+        <p class="nbp-trust-copy">The DP estimate uses the recorded in-game tower power tables wherever available. Effectiveness separately scores placement, conflicts, coverage and synergy.</p>
       </section>
     `;
   }
@@ -347,7 +392,7 @@
       <section class="nbp-panel">
         <p class="nbp-kicker">BASE SUPPORT</p>
         <h3>Perches, dragons and riders</h3>
-        <p class="nbp-muted">Enter the real assignments so Noir can include their island coverage in later comparisons.</p>
+        <p class="nbp-muted">Enter the real assignments so Noir can include their island coverage. Search the complete rider list instead of typing names from memory.</p>
         <div class="nbp-perch-grid">
           ${layout.perches.map((perch, index) => `
             <fieldset class="nbp-perch-card">
@@ -362,7 +407,7 @@
                 <label>Dragon level<input data-perch="${index}" data-field="dragonLevel" type="number" min="0" value="${perch.dragonLevel || ""}"></label>
               </div>
               <label>Tier / rarity<input data-perch="${index}" data-field="dragonTier" value="${escapeHtml(perch.dragonTier)}" placeholder="e.g. Mythic · Obsidian"></label>
-              <label>Rider<input data-perch="${index}" data-field="riderName" value="${escapeHtml(perch.riderName)}" placeholder="Rider name"></label>
+              <label>Rider<input list="nbpRiderList" data-perch="${index}" data-field="riderName" value="${escapeHtml(perch.riderName)}" placeholder="Search riders"></label>
               <label>Rider level<input data-perch="${index}" data-field="riderLevel" type="number" min="0" value="${perch.riderLevel || ""}"></label>
               <label>Skills<input data-perch="${index}" data-field="riderSkills" value="${escapeHtml(perch.riderSkills)}" placeholder="Skill build"></label>
               <label>Gear<input data-perch="${index}" data-field="riderGear" value="${escapeHtml(perch.riderGear)}" placeholder="Rider gear"></label>
@@ -390,12 +435,13 @@
           </select></label>
           <label>Level<input id="nbpTowerLevel" type="number" min="0" value="${tower?.level || ""}" placeholder="Tower level"></label>
           <label>Custom name<input id="nbpTowerCustom" value="${escapeHtml(tower?.customName || "")}" placeholder="Only for Other"></label>
-          <label>Rune<input id="nbpTowerRunes" value="${escapeHtml(tower?.runes || "")}" placeholder="Equipped rune"></label>
-          <label>Glyph<input id="nbpTowerGlyph" value="${escapeHtml(tower?.glyph || "")}" placeholder="Equipped glyph"></label>
-          <label>Relic<input id="nbpTowerRelic" value="${escapeHtml(tower?.relic || "")}" placeholder="Equipped relic"></label>
+          <label>Rune<input list="nbpRuneList" id="nbpTowerRunes" value="${escapeHtml(tower?.runes || "")}" placeholder="Search 281 runes"></label>
+          <label>Glyph<input list="nbpGlyphList" id="nbpTowerGlyph" value="${escapeHtml(tower?.glyph || "")}" placeholder="Search 287 glyphs"></label>
+          <label>Relic<input list="nbpRelicList" id="nbpTowerRelic" value="${escapeHtml(tower?.relic || "")}" placeholder="Search 23 relics"></label>
         </div>
         <div class="nbp-editor-actions">
           <button type="button" class="nbp-primary" id="nbpSaveTower">Save tower</button>
+          <button type="button" id="nbpSaveAndNext">Save & next slot</button>
           <button type="button" class="nbp-danger" id="nbpRemoveTower">Clear slot</button>
         </div>
       </section>
@@ -484,6 +530,7 @@
         ${renderTowerForm(layout)}
         ${renderPerches(layout)}
         ${renderAdvice(layout)}
+        ${renderCatalogueLists()}
         <section class="nbp-panel nbp-danger-zone">
           <button type="button" id="nbpResetAll">Delete this saved base</button>
         </section>
@@ -554,9 +601,10 @@
       selectedSlot = null;
       render();
     });
-    overlay.querySelector("#nbpSaveTower")?.addEventListener("click", () => {
+    function saveSelectedTower(goNext = false) {
       if (selectedSlot === null) return;
       const type = overlay.querySelector("#nbpTowerType")?.value;
+      const savedIndex = selectedSlot;
       pushHistory();
       layout.slots[selectedSlot] = type ? normaliseTower({
         ...layout.slots[selectedSlot],
@@ -567,9 +615,20 @@
         glyph: overlay.querySelector("#nbpTowerGlyph")?.value,
         relic: overlay.querySelector("#nbpTowerRelic")?.value
       }) : null;
+      if (goNext) {
+        const nextEmpty = layout.slots.findIndex((tower, index) => index > savedIndex && !tower);
+        selectedSlot = nextEmpty >= 0 ? nextEmpty : null;
+      }
       saveState();
       render();
+      if (goNext && selectedSlot !== null) {
+        document.getElementById("nbpTowerEditor")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    }
+    overlay.querySelector("#nbpSaveTower")?.addEventListener("click", () => {
+      saveSelectedTower(false);
     });
+    overlay.querySelector("#nbpSaveAndNext")?.addEventListener("click", () => saveSelectedTower(true));
     overlay.querySelector("#nbpRemoveTower")?.addEventListener("click", () => {
       if (selectedSlot === null) return;
       pushHistory();
