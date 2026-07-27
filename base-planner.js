@@ -940,7 +940,14 @@
               <span class="nbp-kicker">BASE MAP</span>
               <h3>40 real tower positions</h3>
             </div>
-            <button id="nbpClearSelection" type="button">Clear selection</button>
+            <div class="nbp-map-actions">
+              <button id="nbpClearSelection" type="button" ${selectedSlot === null ? "disabled" : ""}>
+                Deselect
+              </button>
+              <button id="nbpRemoveSelected" class="nbp-danger" type="button" ${selectedSlot === null ? "disabled" : ""}>
+                Remove tower
+              </button>
+            </div>
           </div>
           <p id="nbpMoveHint" class="nbp-move-hint">
             ${selectedSlot === null ? "Tap a tower, then tap its destination to swap." : `Slot ${selectedSlot + 1} selected. Choose its destination.`}
@@ -956,9 +963,6 @@
               <span class="nbp-kicker">CHECK &amp; COMPARE</span>
               <h3>Layout summary</h3>
             </div>
-            <button id="nbpRemoveSelected" type="button" ${selectedSlot === null ? "disabled" : ""}>
-              Remove selected
-            </button>
           </div>
           ${renderSummary(layout)}
         </section>
@@ -1216,13 +1220,25 @@
       });
     });
 
-    overlay.querySelector("#nbpClearSelection")?.addEventListener("click", () => {
+    overlay.querySelector("#nbpClearSelection")?.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
       selectedSlot = null;
       renderEditor();
     });
 
-    overlay.querySelector("#nbpRemoveSelected")?.addEventListener("click", () => {
+    overlay.querySelector("#nbpRemoveSelected")?.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
       if (selectedSlot === null) return;
+      const tower = activeLayout().slots[selectedSlot];
+      if (!tower) return;
+      const island = islandForSlot(selectedSlot) + 1;
+      const position = (selectedSlot % SLOTS_PER_ISLAND) + 1;
+      const confirmed = window.confirm(
+        `Remove ${towerLabel(tower)} from Island ${island}, position ${position}?`
+      );
+      if (!confirmed) return;
       removeTower(selectedSlot);
       selectedSlot = null;
       renderEditor();
@@ -1381,6 +1397,12 @@
       .nbp-stored-list > div { display: flex; justify-content: space-between; gap: 12px; }
       .nbp-empty-copy { color: #99938a; }
       .nbp-section-heading { display: flex; justify-content: space-between; align-items: center; gap: 13px; }
+      .nbp-map-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+      .nbp-map-actions button:disabled { cursor: not-allowed; opacity: .42; }
+      .nbp-map-actions .nbp-danger {
+        border-color: rgba(204,112,129,.55);
+        color: #e1a5b0;
+      }
       .nbp-move-hint {
         margin: 12px 0 18px; padding: 12px 14px; border: 1px solid rgba(117,172,211,.35);
         border-radius: 14px; background: rgba(35,77,105,.2); color: #9ac8e7;
@@ -1429,6 +1451,8 @@
       .nbp-privacy button { color: #dda2ad; border-color: rgba(190,105,121,.45); }
       .hidden { display: none !important; }
       @media (max-width: 720px) {
+        .nbp-section-heading { align-items: flex-start; flex-wrap: wrap; }
+        .nbp-map-actions { justify-content: flex-start; width: 100%; }
         .nbp-recognition-pin {
           width: 22px; height: 22px; border-width: 1px; font-size: 10px;
           box-shadow: 0 0 0 1px rgba(5,7,8,.5);
