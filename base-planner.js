@@ -104,6 +104,7 @@
       currentLevel: 871,
       targetLevel: 900,
       currentXp: 0,
+      maximumTowerLevel: 233,
       storedTowers: []
     };
   }
@@ -114,6 +115,7 @@
       currentLevel: Math.max(700, Math.min(998, Number.parseInt(safe.currentLevel, 10) || 871)),
       targetLevel: Math.max(701, Math.min(999, Number.parseInt(safe.targetLevel, 10) || 900)),
       currentXp: Math.max(0, Number.parseInt(safe.currentXp, 10) || 0),
+      maximumTowerLevel: Math.max(1, Math.min(250, Number.parseInt(safe.maximumTowerLevel, 10) || 233)),
       storedTowers: (Array.isArray(safe.storedTowers) ? safe.storedTowers : []).map(item => ({
         type: String(item?.type || ""),
         level: Math.max(0, Number.parseInt(item?.level, 10) || 0),
@@ -884,7 +886,9 @@
     while (simulatedLevel < targetLevel && route.length < safetyLimit) {
       const choices = instances.map((instance, index) => {
         const next = CATALOG.towerLevels?.[instance.type]?.find(row => Number(row.level) === instance.level + 1);
-        return next && (!next.playerLevelRequired || next.playerLevelRequired <= simulatedLevel)
+        return next &&
+          Number(next.level) <= planner.maximumTowerLevel &&
+          (!next.playerLevelRequired || next.playerLevelRequired <= simulatedLevel)
           ? { instance, instanceIndex: index, next }
           : null;
       }).filter(Boolean).sort((left, right) =>
@@ -946,40 +950,58 @@
   function renderFortPlanner(layout) {
     const result = fortPlan(layout.fortPlanner);
     const levelled = result.simulatedLevel - result.currentLevel;
+    const targetCoverage = result.xpNeeded > 0
+      ? Math.min(100, (result.earnedXp / result.xpNeeded) * 100)
+      : 100;
+    const shortfallXp = Math.max(0, result.xpNeeded - result.earnedXp);
+    const averageXp = result.route.length ? result.earnedXp / result.route.length : 0;
+    const nextLevelXp = result.simulatedLevel < 999 ? playerXpForLevel(result.simulatedLevel + 1) : 0;
+    const nextLevelProgress = nextLevelXp
+      ? Math.min(100, (result.progressXp / nextLevelXp) * 100)
+      : 100;
     return `
       <section class="nbp-panel nbp-fort-planner">
         <div class="nbp-section-heading">
           <div><p class="nbp-kicker">FORTIFICATION PLANNER</p><h3>Plan a target player level</h3></div>
           <span class="nbp-estimate-label">Game XP values</span>
         </div>
-        <p class="nbp-muted">Enter the towers you have in storage. Noir simulates legal upgrades and checks whether they contain enough building XP to reach your target.</p>
+        <p class="nbp-muted">Enter the active or stored towers you can upgrade. Noir simulates legal upgrades and checks whether they contain enough building XP to reach your target.</p>
         <div class="nbp-fort-targets">
           <label>Current player level<input data-fort-field="currentLevel" type="number" min="700" max="998" value="${result.planner.currentLevel}"></label>
           <label>Target player level<input data-fort-field="targetLevel" type="number" min="701" max="999" value="${result.planner.targetLevel}"></label>
           <label>XP already earned toward next level<input data-fort-field="currentXp" type="number" min="0" value="${result.planner.currentXp}"></label>
+          <label>Highest available tower level<input data-fort-field="maximumTowerLevel" type="number" min="1" max="250" value="${result.planner.maximumTowerLevel}"></label>
         </div>
         <div class="nbp-fort-entry">
-          <label>Stored tower<select id="nbpFortTowerType">
+          <label>Available tower<select id="nbpFortTowerType">
             ${Object.keys(CATALOG.towerLevels || {}).sort().map(type => `<option>${escapeHtml(type)}</option>`).join("")}
           </select></label>
           <label>Current level<input id="nbpFortTowerLevel" type="number" min="0" value="1"></label>
           <label>Quantity<input id="nbpFortTowerQuantity" type="number" min="1" max="100" value="1"></label>
-          <button type="button" class="nbp-primary" id="nbpAddStoredTower">Add stored tower</button>
+          <button type="button" class="nbp-primary" id="nbpAddStoredTower">Add tower</button>
         </div>
         <div class="nbp-fort-storage">
           ${result.planner.storedTowers.map((entry, index) => `
             <article>
-              <div><strong>${escapeHtml(entry.type)}</strong><small>Level ${entry.level} · ${entry.quantity} stored</small></div>
+              <div><strong>${escapeHtml(entry.type)}</strong><small>Level ${entry.level} · quantity ${entry.quantity}</small></div>
               <button type="button" data-remove-stored="${index}">Remove</button>
             </article>
-          `).join("") || `<p class="nbp-empty-copy">Add the stored towers available for Fort.</p>`}
+          `).join("") || `<p class="nbp-empty-copy">Add the active or stored towers available for Fort.</p>`}
         </div>
         <div class="nbp-fort-result ${result.reached ? "reached" : "short"}">
-          <strong>${result.reached ? `Target ${result.targetLevel} is reachable` : `Entered storage reaches level ${result.simulatedLevel}`}</strong>
+          <strong>${result.reached ? `Target ${result.targetLevel} is reachable` : `Available towers reach level ${result.simulatedLevel}`}</strong>
           <p>${formatNumber(result.xpNeeded)} XP required · ${formatNumber(result.earnedXp)} XP planned · ${result.route.length} upgrades</p>
           ${result.reached
             ? `<p>Estimated build time before speedups: ${formatDuration(result.route.reduce((sum, step) => sum + step.seconds, 0))}</p>`
             : `<p>${result.targetLevel - result.simulatedLevel} player level${result.targetLevel - result.simulatedLevel === 1 ? "" : "s"} remain after every legal entered upgrade.</p>`}
+        </div>
+        <div class="nbp-fort-stats">
+          <article><small>Target XP covered</small><strong>${targetCoverage.toFixed(2)}%</strong></article>
+          <article><small>XP still required</small><strong>${formatNumber(shortfallXp)}</strong></article>
+          <article><small>Average XP per upgrade</small><strong>${formatNumber(averageXp)}</strong></article>
+          <article><small>Projected player level</small><strong>${result.simulatedLevel}</strong></article>
+          <article><small>Progress into next level</small><strong>${result.reached ? "Target reached" : `${formatNumber(result.progressXp)} / ${formatNumber(nextLevelXp)} (${nextLevelProgress.toFixed(1)}%)`}</strong></article>
+          <article><small>Player levels gained</small><strong>${levelled}</strong></article>
         </div>
         ${result.summary.length ? `
           <div class="nbp-fort-route">
@@ -989,7 +1011,7 @@
             `).join("")}
           </div>
         ` : ""}
-        <p class="nbp-trust-copy">Supports player levels 700–999 using the current WD level curve. Results depend on the stored towers and current XP entered by the player.</p>
+        <p class="nbp-trust-copy">Supports player levels 700–999 using the current WD level curve. Results depend on the available towers and current XP entered by the player.</p>
       </section>
     `;
   }
@@ -1445,9 +1467,9 @@
       .nbp-form-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.nbp-editor-actions{margin-top:14px}.nbp-perch-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}.nbp-perch-card{min-width:0;padding:15px;border:1px solid #303236;border-radius:16px;background:#0a0b0c}.nbp-perch-card legend{padding:0 7px;color:#d8bc69;font-weight:900}.nbp-perch-card label{display:block;margin-top:10px}.nbp-two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
       .nbp-perch-details{margin-top:13px;padding-top:11px;border-top:1px solid #292b2e}.nbp-perch-details summary{color:#d8bc69;font-weight:850;cursor:pointer}.nbp-add-row{display:grid;grid-template-columns:1fr auto;gap:7px;align-items:end}.nbp-add-row button{margin-top:7px}.nbp-chip-list{display:grid;gap:7px;margin-top:9px}.nbp-skill-chip{display:grid;grid-template-columns:minmax(0,1fr) 76px 36px;gap:7px;align-items:center;padding:8px 9px;border:1px solid rgba(83,156,123,.35);border-radius:12px;background:rgba(34,81,65,.25);color:#b9dcca}.nbp-skill-chip strong{font-size:12px;overflow-wrap:anywhere}.nbp-skill-chip label{font-size:10px}.nbp-skill-chip input{min-height:34px;padding:6px}.nbp-skill-chip button{min-height:34px;padding:5px;border-radius:9px;color:#e5a3ae;background:rgba(110,37,54,.25)}.nbp-chip-list small{color:#8f8b85}.nbp-gear-grid{display:grid;gap:9px}.nbp-gear-piece{padding:10px;border:1px solid #292b2e;border-radius:12px;background:#0d0e10}.nbp-gear-grid label{font-size:11px}.nbp-equipment-pair{display:grid;grid-template-columns:minmax(0,1fr) 92px;gap:8px;align-items:end}.nbp-tower-boosts{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:3px 0 0;padding:10px;border:1px solid #303237;border-radius:13px}.nbp-tower-boosts legend,.nbp-perch-bonuses legend{padding:0 5px;color:#d8bc69;font-size:12px;font-weight:850}.nbp-tower-boosts label{display:flex;gap:8px;align-items:center;min-height:42px;padding:8px 10px;border:1px solid rgba(216,188,105,.22);border-radius:10px;background:#0d0e10}.nbp-tower-boosts input{width:20px;height:20px;min-height:0;margin:0;accent-color:#d8bc69}.nbp-tower-boosts span{font-size:12px;font-weight:800}.nbp-perch-bonuses{display:grid;gap:8px;margin:5px 0 3px;padding:10px;border:1px solid #303237;border-radius:13px}.nbp-perch-bonuses label{font-size:11px}
       [data-catalog-kind]{position:relative}.nbp-suggestions{position:relative;z-index:8;max-height:280px;margin-top:6px;overflow-y:auto;border:1px solid #4a4c50;border-radius:13px;background:#090a0b;box-shadow:0 14px 32px rgba(0,0,0,.55)}.nbp-suggestions button{display:block;width:100%;padding:11px 12px;border:0!important;border-bottom:1px solid #242629!important;border-radius:0!important;text-align:left;background:#0d0e10!important}.nbp-suggestions button:last-child{border-bottom:0!important}.nbp-suggestions strong,.nbp-suggestions small{display:block}.nbp-suggestions strong{color:#eeeae2}.nbp-suggestions small{margin-top:4px;color:#a9a39a;font-size:11px}.nbp-suggestions p{margin:0;padding:13px;color:#99938a}
-      .nbp-fort-targets{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.nbp-fort-entry{display:grid;grid-template-columns:minmax(170px,1fr) 110px 90px auto;gap:9px;align-items:end;margin-top:15px}.nbp-fort-entry button{min-height:47px}.nbp-fort-storage{display:grid;gap:7px;margin-top:13px}.nbp-fort-storage article,.nbp-fort-route article{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 12px;border:1px solid #303237;border-radius:12px;background:#0c0d0f}.nbp-fort-storage strong,.nbp-fort-storage small{display:block}.nbp-fort-storage small{margin-top:4px;color:#9c978f}.nbp-fort-result{margin-top:14px;padding:15px;border:1px solid #3b3d41;border-radius:15px;background:#0b0c0d}.nbp-fort-result.reached{border-color:rgba(79,188,147,.55);background:rgba(29,74,58,.2)}.nbp-fort-result.short{border-color:rgba(213,184,95,.4)}.nbp-fort-result strong{color:#dfc36e}.nbp-fort-result p{margin:6px 0 0;color:#aaa49b}.nbp-fort-route{display:grid;gap:7px;margin-top:14px}.nbp-fort-route h4{margin:0 0 2px}.nbp-fort-route span{color:#a9a39a;font-size:12px;text-align:right}
+      .nbp-fort-targets{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.nbp-fort-entry{display:grid;grid-template-columns:minmax(170px,1fr) 110px 90px auto;gap:9px;align-items:end;margin-top:15px}.nbp-fort-entry button{min-height:47px}.nbp-fort-storage{display:grid;gap:7px;margin-top:13px}.nbp-fort-storage article,.nbp-fort-route article{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 12px;border:1px solid #303237;border-radius:12px;background:#0c0d0f}.nbp-fort-storage strong,.nbp-fort-storage small{display:block}.nbp-fort-storage small{margin-top:4px;color:#9c978f}.nbp-fort-result{margin-top:14px;padding:15px;border:1px solid #3b3d41;border-radius:15px;background:#0b0c0d}.nbp-fort-result.reached{border-color:rgba(79,188,147,.55);background:rgba(29,74,58,.2)}.nbp-fort-result.short{border-color:rgba(213,184,95,.4)}.nbp-fort-result strong{color:#dfc36e}.nbp-fort-result p{margin:6px 0 0;color:#aaa49b}.nbp-fort-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}.nbp-fort-stats article{padding:12px;border:1px solid #303237;border-radius:12px;background:#0c0d0f}.nbp-fort-stats small,.nbp-fort-stats strong{display:block}.nbp-fort-stats small{color:#9c978f;font-size:11px}.nbp-fort-stats strong{margin-top:5px;color:#dfc36e;font-size:15px}.nbp-fort-route{display:grid;gap:7px;margin-top:14px}.nbp-fort-route h4{margin:0 0 2px}.nbp-fort-route span{color:#a9a39a;font-size:12px;text-align:right}
       .nbp-findings{display:grid;gap:10px;margin-top:14px}.nbp-finding{padding:14px 15px;border:1px solid #303030;border-left-width:4px;border-radius:15px;background:#0b0b0b}.nbp-finding strong{display:block}.nbp-finding p{margin:5px 0 0;color:#aaa49b;line-height:1.45}.nbp-finding.error{border-left-color:#e08089}.nbp-finding.warning{border-left-color:#dcc16e}.nbp-finding.good{border-left-color:#69dab0}.nbp-empty-copy{color:#99938a}.nbp-danger-zone{text-align:center}.nbp-danger-zone button{color:#dda2ad;border-color:rgba(190,105,121,.45)}.hidden{display:none!important}
-      @media(max-width:720px){.nct-home-tools .nbp-launch{min-height:0}.nbp-base-details,.nbp-meter-grid,.nbp-form-grid,.nbp-perch-grid,.nbp-photo-grid,.nbp-fort-targets,.nbp-fort-entry{grid-template-columns:1fr}.nbp-section-heading{align-items:flex-start;flex-wrap:wrap}.nbp-island-slots{grid-template-columns:repeat(5,minmax(82px,1fr));overflow-x:auto;padding-bottom:5px}.nbp-slot{min-width:82px}.nbp-photo-grid img{height:auto;max-height:360px}.nbp-fort-route article{align-items:flex-start;flex-direction:column}.nbp-fort-route span{text-align:left}}
+      @media(max-width:720px){.nct-home-tools .nbp-launch{min-height:0}.nbp-base-details,.nbp-meter-grid,.nbp-form-grid,.nbp-perch-grid,.nbp-photo-grid,.nbp-fort-targets,.nbp-fort-entry{grid-template-columns:1fr}.nbp-fort-stats{grid-template-columns:repeat(2,1fr)}.nbp-section-heading{align-items:flex-start;flex-wrap:wrap}.nbp-island-slots{grid-template-columns:repeat(5,minmax(82px,1fr));overflow-x:auto;padding-bottom:5px}.nbp-slot{min-width:82px}.nbp-photo-grid img{height:auto;max-height:360px}.nbp-fort-route article{align-items:flex-start;flex-direction:column}.nbp-fort-route span{text-align:left}}
     `;
     document.head.appendChild(style);
   }
