@@ -264,7 +264,7 @@
         `).join("")}
       </datalist>
     `;
-    const riders = Array.isArray(CATALOG.riders) ? CATALOG.riders : [];
+    const riders = Array.isArray(CATALOG.riders) ? CATALOG.riders.filter(rider => rider.defensive) : [];
     const skills = Array.isArray(CATALOG.riderSkills) ? CATALOG.riderSkills : [];
     const gear = Array.isArray(CATALOG.riderGear) ? CATALOG.riderGear : [];
     return `
@@ -272,7 +272,7 @@
       ${list("Glyph")}
       ${list("Relic")}
       <datalist id="nbpRiderList">
-        ${riders.map(rider => `<option value="${escapeHtml(rider.name)}" label="${rider.defensive ? "Defensive rider" : "Rider"}"></option>`).join("")}
+        ${riders.map(rider => `<option value="${escapeHtml(rider.name)}" label="Perch rider"></option>`).join("")}
       </datalist>
       <datalist id="nbpRiderSkillList">
         ${skills.map(skill => `<option value="${escapeHtml(skill.name)}"></option>`).join("")}
@@ -441,7 +441,7 @@
                 <label>Dragon level<input data-perch="${index}" data-field="dragonLevel" type="number" min="0" value="${perch.dragonLevel || ""}"></label>
               </div>
               <label>Tier / rarity<input data-perch="${index}" data-field="dragonTier" value="${escapeHtml(perch.dragonTier)}" placeholder="e.g. Mythic · Obsidian"></label>
-              <label>Rider<input data-catalog-kind="rider" data-perch="${index}" data-field="riderName" value="${escapeHtml(perch.riderName)}" placeholder="Tap to search riders" autocomplete="off"></label>
+              <label>Perch rider<input data-catalog-kind="rider" data-perch="${index}" data-field="riderName" value="${escapeHtml(perch.riderName)}" placeholder="Tap to search 11 perch riders" autocomplete="off"></label>
               <label>Rider level<input data-perch="${index}" data-field="riderLevel" type="number" min="0" value="${perch.riderLevel || ""}"></label>
               <details class="nbp-perch-details">
                 <summary>Rider skills ${perch.riderSkills.length ? `(${perch.riderSkills.length})` : ""}</summary>
@@ -573,7 +573,9 @@
 
   function catalogueChoices(kind) {
     if (kind === "dragon") return Array.isArray(CATALOG.dragons) ? CATALOG.dragons : [];
-    if (kind === "rider") return Array.isArray(CATALOG.riders) ? CATALOG.riders : [];
+    if (kind === "rider") return Array.isArray(CATALOG.riders)
+      ? CATALOG.riders.filter(rider => rider.defensive)
+      : [];
     if (kind === "skill") return Array.isArray(CATALOG.riderSkills) ? CATALOG.riderSkills : [];
     if (["rune", "glyph", "relic"].includes(kind)) {
       const expected = kind[0].toUpperCase() + kind.slice(1);
@@ -592,7 +594,7 @@
     if (kind === "dragon") {
       return [item.dragonClass, item.element, item.type].filter(Boolean).join(" · ");
     }
-    if (kind === "rider") return item.defensive ? "Defensive rider" : "Rider";
+    if (kind === "rider") return "Perch rider";
     if (kind === "skill") return "Rider skill";
     if (["rune", "glyph", "relic"].includes(kind)) {
       return [item.rarity, catalogueEffect(item)].filter(Boolean).join(" · ");
