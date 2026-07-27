@@ -590,19 +590,14 @@
               <li>Enter each perch’s level, dragon, dragon level and perch rider. Rider skills and all eight gear slots are optional but improve the completed record.</li>
               <li>When the entered layout matches your real base, tap <strong>Save proposal as current</strong>. This becomes the comparison baseline.</li>
               <li>To test a move, tap one tower and then its destination. Noir moves it into an empty slot or swaps it with the tower already there.</li>
-              <li>Watch <strong>Projected defensive strength</strong>, <strong>Defensive effectiveness</strong> and the advice cards. Green is an improvement; red is a weaker or conflicting proposal.</li>
+              <li>Watch <strong>Projected defensive strength</strong>, <strong>Defensive effectiveness</strong> and the advice cards. Green is an improvement; red is a weaker proposal.</li>
               <li>Use Undo, Redo or Restore current layout while experimenting. Save the proposal as current only after making the same changes in WD.</li>
             </ol>
             <div class="noir-help-callout">
               The current DP is the number shown in WD. Projected defensive
               strength is Noir’s planning estimate—it can compare placements,
-              coverage and conflicts, but moving towers does not change WD’s
+              coverage and support, but moving towers does not change WD’s
               displayed DP by itself.
-            </div>
-            <div class="noir-help-callout noir-help-warning">
-              Base rules include no more than two Crystal Howitzers per base
-              and one Soul Drain per island. Noir also warns about recorded
-              tower conflicts, including Dark Flak with Earth Flak.
             </div>
           </div>
         </details>
