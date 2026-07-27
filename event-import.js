@@ -6,7 +6,7 @@
  *
  * Responsibilities:
  * - Read an uploaded .json, .txt or .har file
- * - Parse the War Dragons about_v2 response
+ * - Parse the WD about_v2 response
  * - Detect Gold, Platinum, Draconic and Freedom decks
  * - Parse use_gacha requests when the file is a HAR capture
  * - Keep imported capture information in memory only
