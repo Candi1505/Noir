@@ -196,7 +196,13 @@
 
   function saveState() {
     activeLayout().updatedAt = new Date().toISOString();
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      return true;
+    } catch (error) {
+      console.warn("Noir could not save the base.", error);
+      return false;
+    }
   }
 
   function escapeHtml(value) {
@@ -355,10 +361,13 @@
     const current = evaluate(layout.baselineSlots, layout.baselinePerches);
     const proposed = evaluate(layout.slots, layout.perches);
     const currentDp = parseDp(layout.currentDp);
-    const ratio = current.raw > 0 ? proposed.raw / current.raw : 1;
+    const towerRatio = current.raw > 0 ? proposed.raw / current.raw : 1;
+    const effectivenessChange = proposed.effectiveness - current.effectiveness;
+    const placementRatio = Math.max(0.75, Math.min(1.25, 1 + effectivenessChange * 0.005));
+    const ratio = towerRatio * placementRatio;
     const estimate = currentDp ? currentDp * ratio : 0;
     const dpChange = estimate - currentDp;
-    return { current, proposed, currentDp, estimate, dpChange, ratio };
+    return { current, proposed, currentDp, estimate, dpChange, ratio, towerRatio, placementRatio };
   }
 
   function pushHistory() {
@@ -385,7 +394,7 @@
             <div class="nbp-meter"><i style="width:50%"></i></div>
           </article>
           <article class="${dpDirection}">
-            <span>Proposed DP estimate</span>
+            <span>Projected defensive strength</span>
             <strong>${escapeHtml(formatDp(result.estimate))}</strong>
             <b>${result.currentDp ? `${result.dpChange >= 0 ? "+" : ""}${formatDp(Math.abs(result.dpChange))} (${percentage >= 0 ? "+" : ""}${percentage.toFixed(1)}%)` : "Enter current DP to calibrate"}</b>
             <div class="nbp-meter"><i style="width:${Math.max(4, Math.min(100, 50 + percentage * 2))}%"></i></div>
@@ -397,9 +406,36 @@
             <div class="nbp-meter"><i style="width:${result.proposed.effectiveness}%"></i></div>
           </article>
         </div>
-        <p class="nbp-trust-copy">The DP estimate uses the recorded in-game tower power tables wherever available. Effectiveness separately scores placement, conflicts, coverage and synergy.</p>
+        <p class="nbp-trust-copy">Current DP is the number shown in game. Projected defensive strength is a planning estimate that combines recorded tower power with placement, conflicts, coverage and synergy; rearranging towers does not change the game's displayed DP by itself.</p>
       </section>
     `;
+  }
+
+  function prepareReferencePhoto(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = reject;
+      reader.onload = () => {
+        const image = new Image();
+        image.onerror = reject;
+        image.onload = () => {
+          const maximumSide = 1600;
+          const scale = Math.min(1, maximumSide / Math.max(image.naturalWidth, image.naturalHeight));
+          const canvas = document.createElement("canvas");
+          canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+          canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+          const context = canvas.getContext("2d");
+          if (!context) {
+            resolve(String(reader.result));
+            return;
+          }
+          context.drawImage(image, 0, 0, canvas.width, canvas.height);
+          resolve(canvas.toDataURL("image/jpeg", 0.82));
+        };
+        image.src = String(reader.result);
+      };
+      reader.readAsDataURL(file);
+    });
   }
 
   function renderPhotos(layout) {
@@ -729,16 +765,15 @@
 
     overlay.querySelector("#nbpPhotoInput")?.addEventListener("change", async event => {
       const files = Array.from(event.target.files || []).filter(file => file.type.startsWith("image/"));
+      const previousPhotoCount = layout.referencePhotos.length;
       for (const file of files.slice(0, Math.max(0, 4 - layout.referencePhotos.length))) {
-        const data = await new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result);
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
+        const data = await prepareReferencePhoto(file);
         layout.referencePhotos.push(String(data));
       }
-      saveState();
+      if (!saveState()) {
+        layout.referencePhotos.length = previousPhotoCount;
+        window.alert("That photo could not be saved. Try a screenshot or a smaller image.");
+      }
       render();
     });
     overlay.querySelectorAll("[data-remove-photo]").forEach(button => {
