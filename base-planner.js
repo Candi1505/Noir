@@ -948,8 +948,8 @@
     const style = document.createElement("style");
     style.id = "noirBasePlannerStyles";
     style.textContent = `
-      .nbp-launch{width:100%;margin:0;padding:22px;display:flex;justify-content:space-between;align-items:center;gap:16px;border:1px solid rgba(102,143,190,.45);border-radius:24px;background:linear-gradient(135deg,rgba(19,38,58,.72),rgba(5,7,9,.98) 74%);color:#eee9df;text-align:left;box-sizing:border-box}
-      .nbp-launch strong,.nbp-launch small{display:block}.nbp-launch strong{font-size:19px}.nbp-launch small{margin-top:7px;color:#aaa49b;line-height:1.45;font-size:13px}.nbp-launch-icon{color:#7fb2da;font-size:31px}
+      .nbp-launch{width:100%;margin:0;padding:22px;display:flex;justify-content:space-between;align-items:center;gap:16px;border:1px solid rgba(72,178,153,.46);border-radius:24px;background:linear-gradient(135deg,rgba(13,62,52,.7),rgba(4,9,8,.98) 74%);color:#eee9df;text-align:left;box-sizing:border-box}
+      .nbp-launch strong,.nbp-launch small{display:block}.nbp-launch strong{font-size:19px}.nbp-launch small{margin-top:7px;color:#aaa49b;line-height:1.45;font-size:13px}.nbp-launch-icon{color:#69d2b4;font-size:31px}
       .nct-home-tools .nbp-launch{min-height:138px}
       .nbp-overlay{position:fixed;inset:0;z-index:100000;display:none;overflow-y:auto;padding:max(12px,env(safe-area-inset-top)) 12px max(28px,env(safe-area-inset-bottom));box-sizing:border-box;background:#030405;color:#eeeae2}.nbp-overlay.open{display:block}
       .nbp-shell{width:min(1050px,100%);margin:0 auto}.nbp-topbar{position:sticky;top:0;z-index:5;display:flex;justify-content:space-between;align-items:center;gap:16px;padding:16px 18px;border:1px solid #282a2d;border-radius:22px;background:rgba(5,6,7,.96);backdrop-filter:blur(18px)}
