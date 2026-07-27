@@ -2,7 +2,7 @@
 
 /**
  * Noir Chest Companion
- * War Dragons live-event deck parser
+ * WD live-event deck parser
  *
  * Reads an about_v2 response and extracts:
  * - Event information
