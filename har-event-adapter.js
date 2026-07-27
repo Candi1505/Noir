@@ -2,7 +2,7 @@
    CHEST COMPANION BETA — SAFE HAR EVENT ADAPTER
 
    Purpose:
-   - Lets the existing event importer accept War Dragons .har files.
+   - Lets the existing event importer accept WD .har files.
    - Extracts the event/about_v2 response locally in the browser.
    - Decodes HAR response bodies marked as base64.
    - Passes only the extracted event JSON to the existing EventParser.
@@ -522,7 +522,7 @@
 
     if (!candidates.length) {
       throw new Error(
-        "No readable War Dragons event/about_v2 response was found in this HAR file."
+        "No readable WD event/about_v2 response was found in this HAR file."
       );
     }
 
