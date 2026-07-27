@@ -887,7 +887,6 @@
       render();
     });
     overlay.querySelector("#nbpMakeCurrent")?.addEventListener("click", () => {
-      if (!window.confirm("Make this proposed layout your new current-base baseline?")) return;
       layout.baselineSlots = clone(layout.slots);
       layout.baselinePerches = clone(layout.perches);
       history = [];
