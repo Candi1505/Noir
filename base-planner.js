@@ -39,12 +39,63 @@
     "Fire Totem",
     "Ice Totem",
     "Wind Totem",
-    "Farm",
+    "Sheep Farm",
     "Lumber Mill",
     "Perch",
     "Monument",
     "Other"
   ];
+
+  const BASE_IDENTIFIER_MAP = Object.freeze({
+    archerTower: "Archer Tower",
+    ballista: "Ballista",
+    ballistaTower: "Ballista",
+    cannonTower: "Cannon Tower",
+    trebuchet: "Trebuchet",
+    trebuchetTower: "Trebuchet",
+    lightningTower: "Lightning Tower",
+    lightningTowerSuper: "Charged Volt Tower",
+    stormTower: "Storm Tower",
+    mageTower: "Red Mage Tower",
+    mageRedTower: "Red Mage Tower",
+    mageBlueTower: "Blue Mage Tower",
+    mageTowerSuper: "Red Archmage Tower",
+    mageBlueTowerSuper: "Blue Archmage Tower",
+    fireTurret: "Fire Turret",
+    iceTurret: "Ice Turret",
+    elementalFlakDark: "Dark Flak Tower",
+    elementalFlakFire: "Fire Flak Tower",
+    elementalFlakIce: "Ice Flak Tower",
+    elementalFlakEarth: "Earth Flak Tower",
+    elementalFlakWind: "Electro-Flak Tower",
+    elementalFlakElectro: "Electro-Flak Tower",
+    howitzer: "Howitzer",
+    crystalHowitzer: "Crystal Howitzer",
+    soulDrainTower: "Soul Drain Tower",
+    drainTower: "Drakul Pylon",
+    drakulPylon: "Drakul Pylon",
+    E20Q4Tower: "Cosmic Orrery",
+    cosmicOrrery: "Cosmic Orrery",
+    chargedVoltTower: "Charged Volt Tower",
+    oculusTower: "Oculus Tower",
+    nexusTower: "Nexus Tower",
+    nullspireTower: "Nullspire Tower",
+    cmCrystaldark: "Dark Totem",
+    cmCrystalearth: "Earth Totem",
+    cmCrystalfire: "Fire Totem",
+    cmCrystalice: "Ice Totem",
+    cmCrystalwind: "Wind Totem",
+    darkTotem: "Dark Totem",
+    earthTotem: "Earth Totem",
+    fireTotem: "Fire Totem",
+    iceTotem: "Ice Totem",
+    windTotem: "Wind Totem",
+    hogFarm: "Sheep Farm",
+    sheepFarm: "Sheep Farm",
+    woodFarm: "Lumber Mill",
+    lumberMill: "Lumber Mill",
+    monument: "Monument"
+  });
 
   const OFFENCE_TYPES = new Set([
     "Archer Tower",
@@ -87,6 +138,9 @@
       currentDp: "",
       notes: "",
       slots: blankSlots(),
+      perches: Array.from({ length: 3 }, () => null),
+      storedTowers: [],
+      snapshotImportedAt: "",
       updatedAt: new Date().toISOString()
     };
   }
@@ -114,6 +168,19 @@
         { length: TOTAL_SLOTS },
         (_, index) => normaliseTower(Array.isArray(safe.slots) ? safe.slots[index] : null)
       ),
+      perches: Array.from({ length: 3 }, (_, index) => {
+        const perch = Array.isArray(safe.perches) ? safe.perches[index] : null;
+        if (!perch || typeof perch !== "object") return null;
+        return {
+          name: ["Autumn Perch", "Grass Perch", "Volcano Perch"][index],
+          level: Math.max(0, Number.parseInt(perch.level, 10) || 0),
+          dragonAssigned: Boolean(perch.dragonAssigned)
+        };
+      }),
+      storedTowers: Array.isArray(safe.storedTowers)
+        ? safe.storedTowers.map(normaliseTower).filter(Boolean)
+        : [],
+      snapshotImportedAt: String(safe.snapshotImportedAt || ""),
       updatedAt: String(safe.updatedAt || new Date().toISOString())
     };
   }
@@ -276,6 +343,168 @@
     return inserted;
   }
 
+  function tolerantDecode(value) {
+    let current = String(value || "");
+    for (let round = 0; round < 5; round += 1) {
+      const decoded = current.replace(/%([0-9a-fA-F]{2})/g, (_, hex) =>
+        String.fromCharCode(Number.parseInt(hex, 16))
+      );
+      if (decoded === current) break;
+      current = decoded;
+    }
+    return current
+      .replace(/\\"/g, '"')
+      .replace(/\\u0022/gi, '"')
+      .replace(/\\\//g, "/");
+  }
+
+  function objectValue(fragment, key) {
+    const match = String(fragment).match(
+      new RegExp(`"${key}"\\s*:\\s*(?:"([^"]*)"|(-?\\d+)|(true|false))`, "i")
+    );
+    if (!match) return null;
+    if (match[1] !== undefined) return match[1];
+    if (match[2] !== undefined) return Number.parseInt(match[2], 10);
+    return match[3].toLowerCase() === "true";
+  }
+
+  function parseBaseSnapshot(text) {
+    const decoded = tolerantDecode(text);
+    const fragments = decoded.match(/\{[^{}]{0,6000}\}/g) || [];
+    const slots = blankSlots();
+    const perches = Array.from({ length: 3 }, () => null);
+    const storedTowers = [];
+    const perchLocations = {
+      loc_perchAutumn: [0, "Autumn Perch"],
+      loc_perchGrass: [1, "Grass Perch"],
+      loc_perchVolcano: [2, "Volcano Perch"]
+    };
+    let skippedCount = 0;
+
+    fragments.forEach((fragment, fragmentIndex) => {
+      const identifier = objectValue(fragment, "identifier");
+      if (!identifier) return;
+      const level = Math.max(0, Number.parseInt(objectValue(fragment, "level"), 10) || 0);
+      const expansion = objectValue(fragment, "expansionIdentifier");
+      const location = objectValue(fragment, "locationIdentifier");
+      const stored = objectValue(fragment, "stored") === true;
+
+      if (location && perchLocations[location]) {
+        const [index, name] = perchLocations[location];
+        perches[index] = {
+          name,
+          level,
+          dragonAssigned: Boolean(objectValue(fragment, "dragonIdentifier"))
+        };
+        return;
+      }
+
+      const mappedType = BASE_IDENTIFIER_MAP[identifier];
+      if (!mappedType) {
+        if (expansion || stored) skippedCount += 1;
+        return;
+      }
+
+      const tower = normaliseTower({
+        id: `snapshot-${fragmentIndex}-${identifier}`,
+        type: mappedType,
+        level
+      });
+
+      const slotMatch = String(expansion || "").match(/^expansion_(\d{3})$/);
+      if (!stored && slotMatch) {
+        const slot = Number.parseInt(slotMatch[1], 10) - 1;
+        if (slot >= 0 && slot < TOTAL_SLOTS) slots[slot] = tower;
+        return;
+      }
+
+      if (stored) storedTowers.push(tower);
+    });
+
+    Object.entries(perchLocations).forEach(([location, [index, name]]) => {
+      const locationIndex = decoded.indexOf(`"expansionIdentifier":"${location}"`);
+      if (locationIndex < 0) return;
+      const objectStart = decoded.lastIndexOf("{", locationIndex);
+      const context = decoded.slice(Math.max(0, objectStart), locationIndex + 700);
+      const identifier = objectValue(context, "identifier");
+      if (!/^perchIsland\d+$/i.test(String(identifier || ""))) return;
+      perches[index] = {
+        name,
+        level: Math.max(0, Number.parseInt(objectValue(context, "level"), 10) || 0),
+        dragonAssigned: Boolean(objectValue(context, "dragonIdentifier"))
+      };
+    });
+
+    const dedupedStored = [];
+    const seenStored = new Set();
+    storedTowers.forEach(tower => {
+      const key = `${tower.type}|${tower.level}|${tower.id}`;
+      if (seenStored.has(key)) return;
+      seenStored.add(key);
+      dedupedStored.push(tower);
+    });
+
+    return {
+      slots,
+      perches,
+      storedTowers: dedupedStored,
+      importedCount: slots.filter(Boolean).length,
+      perchCount: perches.filter(Boolean).length,
+      storedCount: dedupedStored.length,
+      skippedCount
+    };
+  }
+
+  function importBaseSnapshot(text, layout = activeLayout()) {
+    const parsed = parseBaseSnapshot(text);
+    if (!parsed.importedCount) return parsed;
+    layout.slots = parsed.slots;
+    layout.perches = parsed.perches;
+    layout.storedTowers = parsed.storedTowers;
+    layout.snapshotImportedAt = new Date().toISOString();
+    saveState();
+    return parsed;
+  }
+
+  function renderPerches(layout) {
+    const perches = Array.isArray(layout.perches) ? layout.perches : [];
+    return `
+      <div class="nbp-support-grid">
+        ${perches.map((perch, index) => `
+          <div>
+            <span>${escapeHtml(perch?.name || ["Autumn Perch", "Grass Perch", "Volcano Perch"][index])}</span>
+            <strong>${perch ? `Level ${perch.level || "not recorded"}` : "Not found"}</strong>
+            <small>${perch?.dragonAssigned ? "Dragon assigned" : "No assigned dragon found"}</small>
+          </div>
+        `).join("")}
+      </div>
+    `;
+  }
+
+  function renderStoredTowers(layout) {
+    const stored = Array.isArray(layout.storedTowers) ? layout.storedTowers : [];
+    if (!stored.length) return "<p class=\"nbp-empty-copy\">No stored buildable towers were found in the imported snapshot.</p>";
+    const grouped = new Map();
+    stored.forEach(tower => {
+      const key = `${tower.type}|${tower.level}`;
+      grouped.set(key, {
+        type: tower.type,
+        level: tower.level,
+        count: (grouped.get(key)?.count || 0) + 1
+      });
+    });
+    return `
+      <div class="nbp-stored-list">
+        ${[...grouped.values()].map(item => `
+          <div>
+            <strong>${escapeHtml(item.type)}</strong>
+            <span>${item.count} stored · Level ${item.level || "not recorded"}</span>
+          </div>
+        `).join("")}
+      </div>
+    `;
+  }
+
   function renderSlot(tower, index) {
     const selected = selectedSlot === index ? " selected" : "";
     if (!tower) {
@@ -394,6 +623,28 @@
           </label>
         </section>
 
+        <section class="nbp-panel nbp-snapshot">
+          <span class="nbp-kicker">FORTIFICATION SETUP</span>
+          <h3>Import your current base</h3>
+          <p>
+            Choose your captured base file to fill all 40 positions, tower levels,
+            perches and stored towers automatically. The file is read only on this
+            device and is never uploaded.
+          </p>
+          <input id="nbpSnapshotFile" type="file" accept=".har,.json,application/json">
+          <button id="nbpSnapshotImport" class="nbp-primary" type="button">Import base snapshot</button>
+          <p id="nbpSnapshotStatus" class="nbp-import-status">
+            ${layout.snapshotImportedAt
+              ? `A base snapshot is saved in this layout: ${layout.slots.filter(Boolean).length}/40 positions, ${layout.perches.filter(Boolean).length}/3 perches and ${layout.storedTowers.length} stored towers.`
+              : "No base snapshot has been imported into this layout yet."}
+          </p>
+          <small>
+            This capture proves positions, levels, perches and stored structures.
+            Exact upgrade costs, build times and a complete rune, glyph and relic
+            catalogue are not present, so Noir will not guess them.
+          </small>
+        </section>
+
         <section class="nbp-panel">
           <span class="nbp-kicker">ADD A TOWER</span>
           <div class="nbp-add-grid">
@@ -423,6 +674,14 @@
             <textarea id="nbpBulkInput" rows="6" placeholder="Dark Flak Tower, 160&#10;Storm Tower, 158&#10;Red Mage Tower, 160"></textarea>
             <button id="nbpBulkAdd" type="button">Add list to empty slots</button>
           </details>
+        </section>
+
+        <section class="nbp-panel">
+          <span class="nbp-kicker">BASE SUPPORT</span>
+          <h3>Perches</h3>
+          ${renderPerches(layout)}
+          <h3 class="nbp-subheading">Stored towers for Fortification</h3>
+          ${renderStoredTowers(layout)}
         </section>
 
         <section class="nbp-panel">
@@ -538,6 +797,29 @@
       renderEditor();
     });
 
+    overlay.querySelector("#nbpSnapshotImport")?.addEventListener("click", async () => {
+      const input = overlay.querySelector("#nbpSnapshotFile");
+      const file = input?.files?.[0];
+      if (!file) {
+        window.alert("Choose your captured base file first.");
+        return;
+      }
+      if (!window.confirm("Replace this layout's 40 base positions with the imported snapshot?")) return;
+      const status = overlay.querySelector("#nbpSnapshotStatus");
+      if (status) status.textContent = "Reading your base snapshot…";
+      try {
+        const result = importBaseSnapshot(await file.text());
+        if (!result.importedCount) {
+          window.alert("No supported base positions were found in that file.");
+          return;
+        }
+        renderEditor();
+      } catch (error) {
+        console.warn("Noir could not import the base snapshot.", error);
+        window.alert("Noir could not read that base snapshot. Your existing layout was not changed.");
+      }
+    });
+
     overlay.querySelectorAll("[data-slot]").forEach(button => {
       const index = Number(button.dataset.slot);
       button.addEventListener("click", () => {
@@ -633,7 +915,7 @@
       }
       .nbp-intro { display: grid; grid-template-columns: 1fr auto; gap: 20px; align-items: end; }
       .nbp-intro h3, .nbp-section-heading h3 { margin: 7px 0; font-size: 22px; }
-      .nbp-intro p, .nbp-privacy p, .nbp-bulk p { margin: 0; color: #a39d94; line-height: 1.55; }
+      .nbp-intro p, .nbp-privacy p, .nbp-bulk p, .nbp-snapshot p { margin: 0; color: #a39d94; line-height: 1.55; }
       .nbp-layout-actions { display: flex; flex-wrap: wrap; gap: 8px; }
       .nbp-layout-actions select, .nbp-layout-actions button, .nbp-panel input,
       .nbp-panel select, .nbp-panel textarea, .nbp-panel button {
@@ -656,6 +938,25 @@
       .nbp-bulk summary { color: #d8bc69; font-weight: 850; cursor: pointer; }
       .nbp-bulk p { margin-top: 10px; font-size: 13px; }
       .nbp-bulk button { margin-top: 10px; }
+      .nbp-snapshot h3 { margin: 8px 0; }
+      .nbp-snapshot input { margin: 15px 0 10px; }
+      .nbp-snapshot .nbp-import-status {
+        margin-top: 13px; padding: 12px; border: 1px solid rgba(106,190,160,.32);
+        border-radius: 13px; background: rgba(25,83,64,.2); color: #91d8bd;
+      }
+      .nbp-snapshot > small { display: block; margin-top: 12px; color: #8e8981; line-height: 1.5; }
+      .nbp-support-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 13px; }
+      .nbp-support-grid > div, .nbp-stored-list > div {
+        padding: 14px; border: 1px solid #303237; border-radius: 15px; background: #0d0e10;
+      }
+      .nbp-support-grid span, .nbp-support-grid strong, .nbp-support-grid small { display: block; }
+      .nbp-support-grid span, .nbp-stored-list span { color: #8f8b85; font-size: 12px; }
+      .nbp-support-grid strong { margin-top: 7px; color: #dcc16e; }
+      .nbp-support-grid small { margin-top: 6px; color: #8fa69e; }
+      .nbp-subheading { margin: 22px 0 10px; }
+      .nbp-stored-list { display: grid; grid-template-columns: repeat(2, 1fr); gap: 9px; }
+      .nbp-stored-list > div { display: flex; justify-content: space-between; gap: 12px; }
+      .nbp-empty-copy { color: #99938a; }
       .nbp-section-heading { display: flex; justify-content: space-between; align-items: center; gap: 13px; }
       .nbp-move-hint {
         margin: 12px 0 18px; padding: 12px 14px; border: 1px solid rgba(117,172,211,.35);
@@ -711,7 +1012,7 @@
         .nbp-layout-actions select { flex: 1 1 100%; }
         .nbp-island-path { grid-template-columns: repeat(5, minmax(82px, 1fr)); overflow-x: auto; padding-bottom: 5px; }
         .nbp-slot { min-width: 82px; }
-        .nbp-summary-grid { grid-template-columns: repeat(2, 1fr); }
+        .nbp-summary-grid, .nbp-support-grid, .nbp-stored-list { grid-template-columns: repeat(2, 1fr); }
       }
     `;
     document.head.appendChild(style);
@@ -770,12 +1071,20 @@
     calculateSummary,
     parseTowerLines,
     importTowerLines,
+    parseBaseSnapshot,
+    importBaseSnapshot,
     addTower,
     moveTower,
     removeTower,
     getState: () => JSON.parse(JSON.stringify(state)),
     getActiveLayout: () => JSON.parse(JSON.stringify(activeLayout())),
-    constants: Object.freeze({ ISLAND_COUNT, SLOTS_PER_ISLAND, TOTAL_SLOTS, TOWER_TYPES })
+    constants: Object.freeze({
+      ISLAND_COUNT,
+      SLOTS_PER_ISLAND,
+      TOTAL_SLOTS,
+      TOWER_TYPES,
+      BASE_IDENTIFIER_MAP
+    })
   });
 
   if (document.readyState === "loading") {
