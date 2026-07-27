@@ -7,7 +7,7 @@
    - event-import.js
 
    Responsibilities:
-   - Reads published War Dragons event data
+   - Reads published WD event data
    - Supports Gold, Platinum, Draconic and Freedom decks
    - Creates a searchable reward catalogue
    - Records each player's observations locally
