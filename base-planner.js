@@ -464,7 +464,7 @@
                       <div class="nbp-two">
                         <label>Rarity<select data-gear="${index}" data-gear-slot="${slot}" data-gear-field="rarity">
                           <option value="">Choose…</option>
-                          ${["Common", "Uncommon", "Rare", "Epic", "Legendary", "Mythic", "Exotic", "Super Exotic"].map(rarity => `<option ${perch.riderGear[slot]?.rarity === rarity ? "selected" : ""}>${rarity}</option>`).join("")}
+                          ${["Common", "Uncommon", "Rare", "Epic", "Legendary", "Mythic", "Exotic", "Ascendant"].map(rarity => `<option ${perch.riderGear[slot]?.rarity === rarity ? "selected" : ""}>${rarity}</option>`).join("")}
                         </select></label>
                         <label>Level<input type="number" min="0" data-gear="${index}" data-gear-slot="${slot}" data-gear-field="level" value="${perch.riderGear[slot]?.level || ""}"></label>
                       </div>
