@@ -44,6 +44,16 @@
     ["Nullspire Tower", "Blue Archmage Tower"],
     ["Drakul Pylon", "Soul Drain Tower"]
   ];
+  const GEAR_SLOTS = [
+    ["head", "Head"],
+    ["chest", "Chest"],
+    ["gloves", "Gloves"],
+    ["pants", "Pants"],
+    ["boots", "Boots"],
+    ["weapons", "Weapon"],
+    ["shield", "Shield"],
+    ["rings", "Rings"]
+  ];
 
   let state = loadState();
   let selectedSlot = null;
@@ -68,8 +78,8 @@
       dragonLevel: 0,
       riderName: "",
       riderLevel: 0,
-      riderSkills: "",
-      riderGear: ""
+      riderSkills: [],
+      riderGear: Object.fromEntries(GEAR_SLOTS.map(([slot]) => [slot, ""]))
     }));
   }
 
@@ -101,8 +111,15 @@
       dragonClass: String(safe.dragonClass || ""),
       dragonTier: String(safe.dragonTier || ""),
       riderName: String(safe.riderName || ""),
-      riderSkills: String(safe.riderSkills || ""),
-      riderGear: String(safe.riderGear || "")
+      riderSkills: Array.isArray(safe.riderSkills)
+        ? safe.riderSkills.map(String).filter(Boolean)
+        : String(safe.riderSkills || "").split(/[,|]/).map(value => value.trim()).filter(Boolean),
+      riderGear: safe.riderGear && typeof safe.riderGear === "object"
+        ? Object.fromEntries(GEAR_SLOTS.map(([slot]) => [slot, String(safe.riderGear[slot] || "")]))
+        : Object.fromEntries(GEAR_SLOTS.map(([slot], index) => [
+            slot,
+            index === 0 && typeof safe.riderGear === "string" ? safe.riderGear : ""
+          ]))
     };
   }
 
@@ -243,6 +260,8 @@
       </datalist>
     `;
     const riders = Array.isArray(CATALOG.riders) ? CATALOG.riders : [];
+    const skills = Array.isArray(CATALOG.riderSkills) ? CATALOG.riderSkills : [];
+    const gear = Array.isArray(CATALOG.riderGear) ? CATALOG.riderGear : [];
     return `
       ${list("Rune")}
       ${list("Glyph")}
@@ -250,6 +269,16 @@
       <datalist id="nbpRiderList">
         ${riders.map(rider => `<option value="${escapeHtml(rider.name)}" label="${rider.defensive ? "Defensive rider" : "Rider"}"></option>`).join("")}
       </datalist>
+      <datalist id="nbpRiderSkillList">
+        ${skills.map(skill => `<option value="${escapeHtml(skill.name)}"></option>`).join("")}
+      </datalist>
+      ${GEAR_SLOTS.map(([slot, label]) => `
+        <datalist id="nbpGear${slot}List">
+          ${gear.filter(item => item.slot === slot).map(item => `
+            <option value="${escapeHtml(item.name)}" label="${escapeHtml(`${item.element ? `${item.element} · ` : ""}${label}`)}"></option>
+          `).join("")}
+        </datalist>
+      `).join("")}
     `;
   }
 
@@ -392,7 +421,7 @@
       <section class="nbp-panel">
         <p class="nbp-kicker">BASE SUPPORT</p>
         <h3>Perches, dragons and riders</h3>
-        <p class="nbp-muted">Enter the real assignments so Noir can include their island coverage. Search the complete rider list instead of typing names from memory.</p>
+        <p class="nbp-muted">Enter the real assignments so Noir can include their island coverage. Riders, skills and every gear slot use the game catalogues.</p>
         <div class="nbp-perch-grid">
           ${layout.perches.map((perch, index) => `
             <fieldset class="nbp-perch-card">
@@ -409,8 +438,26 @@
               <label>Tier / rarity<input data-perch="${index}" data-field="dragonTier" value="${escapeHtml(perch.dragonTier)}" placeholder="e.g. Mythic · Obsidian"></label>
               <label>Rider<input list="nbpRiderList" data-perch="${index}" data-field="riderName" value="${escapeHtml(perch.riderName)}" placeholder="Search riders"></label>
               <label>Rider level<input data-perch="${index}" data-field="riderLevel" type="number" min="0" value="${perch.riderLevel || ""}"></label>
-              <label>Skills<input data-perch="${index}" data-field="riderSkills" value="${escapeHtml(perch.riderSkills)}" placeholder="Skill build"></label>
-              <label>Gear<input data-perch="${index}" data-field="riderGear" value="${escapeHtml(perch.riderGear)}" placeholder="Rider gear"></label>
+              <details class="nbp-perch-details">
+                <summary>Rider skills ${perch.riderSkills.length ? `(${perch.riderSkills.length})` : ""}</summary>
+                <div class="nbp-add-row">
+                  <input list="nbpRiderSkillList" data-skill-search="${index}" placeholder="Search ${Array.isArray(CATALOG.riderSkills) ? CATALOG.riderSkills.length : 100} skills">
+                  <button type="button" data-add-skill="${index}">Add</button>
+                </div>
+                <div class="nbp-chip-list">
+                  ${perch.riderSkills.map((skill, skillIndex) => `
+                    <button type="button" data-remove-skill="${index}:${skillIndex}">${escapeHtml(skill)} <span>×</span></button>
+                  `).join("") || `<small>No skills selected.</small>`}
+                </div>
+              </details>
+              <details class="nbp-perch-details">
+                <summary>Rider gear ${Object.values(perch.riderGear).filter(Boolean).length ? `(${Object.values(perch.riderGear).filter(Boolean).length}/8)` : ""}</summary>
+                <div class="nbp-gear-grid">
+                  ${GEAR_SLOTS.map(([slot, label]) => `
+                    <label>${label}<input list="nbpGear${slot}List" data-gear="${index}" data-gear-slot="${slot}" value="${escapeHtml(perch.riderGear[slot] || "")}" placeholder="Search ${label.toLowerCase()}"></label>
+                  `).join("")}
+                </div>
+              </details>
             </fieldset>
           `).join("")}
         </div>
@@ -650,6 +697,37 @@
         render();
       });
     });
+    overlay.querySelectorAll("[data-add-skill]").forEach(button => {
+      button.addEventListener("click", () => {
+        const index = Number(button.dataset.addSkill);
+        const input = overlay.querySelector(`[data-skill-search="${index}"]`);
+        const skill = input?.value.trim();
+        if (!skill || layout.perches[index].riderSkills.includes(skill)) return;
+        pushHistory();
+        layout.perches[index].riderSkills.push(skill);
+        saveState();
+        render();
+      });
+    });
+    overlay.querySelectorAll("[data-remove-skill]").forEach(button => {
+      button.addEventListener("click", () => {
+        const [perchIndex, skillIndex] = button.dataset.removeSkill.split(":").map(Number);
+        pushHistory();
+        layout.perches[perchIndex].riderSkills.splice(skillIndex, 1);
+        saveState();
+        render();
+      });
+    });
+    overlay.querySelectorAll("[data-gear]").forEach(field => {
+      field.addEventListener("change", event => {
+        const index = Number(event.target.dataset.gear);
+        const slot = event.target.dataset.gearSlot;
+        pushHistory();
+        layout.perches[index].riderGear[slot] = event.target.value.trim();
+        saveState();
+        render();
+      });
+    });
 
     overlay.querySelector("#nbpUndo")?.addEventListener("click", () => {
       const previous = history.pop();
@@ -718,6 +796,7 @@
       .nbp-meter-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}.nbp-meter-grid article{padding:16px;border:1px solid #303237;border-radius:16px;background:#0d0e10}.nbp-meter-grid span,.nbp-meter-grid strong,.nbp-meter-grid b{display:block}.nbp-meter-grid span{color:#8f8b85;font-size:12px}.nbp-meter-grid strong{margin-top:7px;color:#dcc16e;font-size:24px}.nbp-meter-grid b{margin-top:5px;color:#a8a39b;font-size:12px}.nbp-meter{height:8px;margin-top:13px;overflow:hidden;border-radius:99px;background:#222}.nbp-meter i{display:block;height:100%;border-radius:99px;background:#d9bd68}.nbp-meter-grid .up strong,.nbp-meter-grid .up b{color:#72d6b2}.nbp-meter-grid .up .nbp-meter i{background:#61cda7}.nbp-meter-grid .down strong,.nbp-meter-grid .down b{color:#e18a98}.nbp-meter-grid .down .nbp-meter i{background:#d77384}
       .nbp-toolbar,.nbp-editor-actions{display:flex;flex-wrap:wrap;gap:8px}.nbp-toolbar button:disabled,.nbp-panel button:disabled{opacity:.4}.nbp-islands{display:grid;gap:12px;margin-top:16px}.nbp-island{padding:14px;border:1px solid #303338;border-radius:19px;background:linear-gradient(90deg,rgba(25,30,35,.95),rgba(10,11,12,.98))}.nbp-island header{display:flex;justify-content:space-between;margin-bottom:12px}.nbp-island header span{color:#8e99a4;font-size:12px}.nbp-island-slots{display:grid;grid-template-columns:repeat(5,1fr);gap:9px}.nbp-slot{position:relative;min-height:102px;padding:25px 9px 10px!important;text-align:left;overflow:hidden}.nbp-slot>span{position:absolute;top:7px;right:8px;color:#7d8288;font-size:10px}.nbp-slot strong,.nbp-slot small{display:block}.nbp-slot strong{font-size:13px}.nbp-slot small{margin-top:6px;color:#d6b968;font-size:11px}.nbp-slot.empty{border-style:dashed;color:#777c82}.nbp-slot.occupied{border-color:rgba(215,186,100,.4);background:rgba(47,38,14,.32)}.nbp-slot.selected{outline:2px solid #79c5ef;border-color:#79c5ef}
       .nbp-form-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.nbp-editor-actions{margin-top:14px}.nbp-perch-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}.nbp-perch-card{min-width:0;padding:15px;border:1px solid #303236;border-radius:16px;background:#0a0b0c}.nbp-perch-card legend{padding:0 7px;color:#d8bc69;font-weight:900}.nbp-perch-card label{display:block;margin-top:10px}.nbp-two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+      .nbp-perch-details{margin-top:13px;padding-top:11px;border-top:1px solid #292b2e}.nbp-perch-details summary{color:#d8bc69;font-weight:850;cursor:pointer}.nbp-add-row{display:grid;grid-template-columns:1fr auto;gap:7px;align-items:end}.nbp-add-row button{margin-top:7px}.nbp-chip-list{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}.nbp-chip-list button{padding:7px 9px;border-radius:999px;color:#b9dcca;background:rgba(34,81,65,.25)}.nbp-chip-list span{color:#e5a3ae}.nbp-chip-list small{color:#8f8b85}.nbp-gear-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.nbp-gear-grid label{font-size:11px}
       .nbp-findings{display:grid;gap:10px;margin-top:14px}.nbp-finding{padding:14px 15px;border:1px solid #303030;border-left-width:4px;border-radius:15px;background:#0b0b0b}.nbp-finding strong{display:block}.nbp-finding p{margin:5px 0 0;color:#aaa49b;line-height:1.45}.nbp-finding.error{border-left-color:#e08089}.nbp-finding.warning{border-left-color:#dcc16e}.nbp-finding.good{border-left-color:#69dab0}.nbp-empty-copy{color:#99938a}.nbp-danger-zone{text-align:center}.nbp-danger-zone button{color:#dda2ad;border-color:rgba(190,105,121,.45)}.hidden{display:none!important}
       @media(max-width:720px){.nct-home-tools .nbp-launch{min-height:0}.nbp-base-details,.nbp-meter-grid,.nbp-form-grid,.nbp-perch-grid,.nbp-photo-grid{grid-template-columns:1fr}.nbp-section-heading{align-items:flex-start;flex-wrap:wrap}.nbp-island-slots{grid-template-columns:repeat(5,minmax(82px,1fr));overflow-x:auto;padding-bottom:5px}.nbp-slot{min-width:82px}.nbp-photo-grid img{height:auto;max-height:360px}}
     `;
