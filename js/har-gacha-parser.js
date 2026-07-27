@@ -2,7 +2,7 @@
    CHEST COMPANION BETA — HAR GACHA PARSER
 
    Purpose:
-   - Reads War Dragons use_gacha requests from a HAR file.
+   - Reads WD use_gacha requests from a HAR file.
    - Extracts chest-opening history.
    - Identifies Gold, Platinum, Draconic and Freedom chests.
    - Detects bonus claims.
@@ -20,7 +20,7 @@
 
   /*
    * Spin-type mappings confirmed from the captured
-   * War Dragons event traffic.
+   * WD event traffic.
    */
   const CHEST_TYPES = {
     "2": {
@@ -194,7 +194,7 @@
     }
 
     /*
-     * Most War Dragons use_gacha requests use
+     * Most WD use_gacha requests use
      * application/x-www-form-urlencoded data.
      */
     try {
