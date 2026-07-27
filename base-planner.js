@@ -407,7 +407,7 @@
       <section class="nbp-panel">
         <p class="nbp-kicker">PHOTO REFERENCE</p>
         <h3>Your real WD base</h3>
-        <p class="nbp-muted">Use screenshots only as a reference while you recreate the islands below. Noir does not analyse, mark or redraw them.</p>
+        <p class="nbp-muted">Keep screenshots here as a visual reference while you recreate each island below.</p>
         <label class="nbp-photo-button">
           Add base photos
           <input id="nbpPhotoInput" type="file" accept="image/*" multiple>
@@ -439,7 +439,7 @@
               <div class="nbp-two">
                 <label>Class<select data-perch="${index}" data-field="dragonClass">
                   <option value="">Choose…</option>
-                  ${["Hunter", "Sorcerer", "Warrior"].map(value => `<option ${perch.dragonClass === value ? "selected" : ""}>${value}</option>`).join("")}
+                  ${["Hunter", "Sorcerer", "Warrior", "Invoker"].map(value => `<option ${perch.dragonClass === value ? "selected" : ""}>${value}</option>`).join("")}
                 </select></label>
                 <label>Dragon level<input data-perch="${index}" data-field="dragonLevel" type="number" min="0" value="${perch.dragonLevel || ""}"></label>
               </div>
@@ -633,7 +633,11 @@
           : `<p>No matching names found.</p>`;
         results.hidden = false;
         results.querySelectorAll("[data-choice]").forEach(button => {
-          button.addEventListener("click", () => {
+          let chosen = false;
+          const choose = event => {
+            event?.preventDefault();
+            if (chosen) return;
+            chosen = true;
             const item = matches[Number(button.dataset.choice)];
             if (!item) return;
             input.value = item.name;
@@ -659,7 +663,10 @@
               return;
             }
             if (kind !== "skill") input.dispatchEvent(new Event("change", { bubbles: true }));
-          });
+          };
+          button.addEventListener("pointerdown", choose);
+          button.addEventListener("touchstart", choose, { passive: false });
+          button.addEventListener("click", choose);
         });
       };
 
