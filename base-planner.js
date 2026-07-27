@@ -475,13 +475,20 @@
   function compressReferencePhoto(file) {
     return new Promise((resolve, reject) => {
       if (!file || !String(file.type || "").startsWith("image/")) {
-        reject(new Error("Not an image"));
+        reject(new Error("Only image files can be used as base references."));
+        return;
+      }
+      if (Number(file.size || 0) > 15 * 1024 * 1024) {
+        reject(new Error("That screenshot is larger than 15 MB."));
         return;
       }
       const url = URL.createObjectURL(file);
       const image = new Image();
       image.onload = () => {
         try {
+          if (image.width < 500 || image.height < 300) {
+            throw new Error("That image is too small to be a readable base screenshot.");
+          }
           const maxDimension = 1100;
           const scale = Math.min(1, maxDimension / Math.max(image.width, image.height));
           const canvas = document.createElement("canvas");
@@ -709,9 +716,12 @@
             Add up to four screenshots of your base and keep them beside the planner
             while you arrange towers. Noir resizes and saves them only on this device.
           </p>
-          <input id="nbpPhotoFiles" type="file" accept="image/*" multiple>
-          <button id="nbpAddPhotos" class="nbp-primary" type="button"
-            ${layout.referencePhotos.length >= 4 ? "disabled" : ""}>
+          <label class="nbp-photo-confirm">
+            <input id="nbpPhotoConfirm" type="checkbox">
+            <span>I confirm these are screenshots of a WD base for planning.</span>
+          </label>
+          <input id="nbpPhotoFiles" class="hidden" type="file" accept="image/*" multiple disabled>
+          <button id="nbpAddPhotos" class="nbp-primary" type="button" disabled>
             Choose from Photos
           </button>
           ${renderReferencePhotos(layout)}
@@ -933,8 +943,16 @@
         renderEditor();
       } catch (error) {
         console.warn("Noir could not save the selected screenshots.", error);
-        window.alert("Those screenshots could not be saved. Try choosing fewer images.");
+        window.alert(error?.message || "Those screenshots could not be saved. Try choosing fewer images.");
       }
+    });
+
+    overlay.querySelector("#nbpPhotoConfirm")?.addEventListener("change", event => {
+      const allowed = event.target.checked && activeLayout().referencePhotos.length < 4;
+      const input = overlay.querySelector("#nbpPhotoFiles");
+      const button = overlay.querySelector("#nbpAddPhotos");
+      if (input) input.disabled = !allowed;
+      if (button) button.disabled = !allowed;
     });
 
     overlay.querySelector("#nbpPhotoFiles")?.addEventListener("change", async event => {
@@ -944,7 +962,7 @@
         renderEditor();
       } catch (error) {
         console.warn("Noir could not save the selected screenshots.", error);
-        window.alert("Those screenshots could not be saved. Try choosing fewer images.");
+        window.alert(error?.message || "Those screenshots could not be saved. Try choosing fewer images.");
       }
     });
 
@@ -1081,8 +1099,13 @@
       }
       .nbp-snapshot > small { display: block; margin-top: 12px; color: #8e8981; line-height: 1.5; }
       .nbp-photos h3 { margin: 8px 0; }
-      .nbp-photos > input { margin: 15px 0 10px; }
       .nbp-photos > small { display: block; margin-top: 12px; color: #8e8981; line-height: 1.5; }
+      .nbp-photo-confirm {
+        display: flex; align-items: center; gap: 11px; margin: 15px 0 10px; padding: 13px;
+        border: 1px solid rgba(215,186,100,.35); border-radius: 14px;
+        background: rgba(48,39,15,.25); color: #d8c78d; line-height: 1.4;
+      }
+      .nbp-photo-confirm input { width: 22px; height: 22px; margin: 0; flex: 0 0 auto; }
       .nbp-photo-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 14px; }
       .nbp-photo-grid figure {
         position: relative; margin: 0; overflow: hidden; border: 1px solid #34363a;
