@@ -36,6 +36,7 @@
   ]);
   const CONFLICTS = [
     ["Nexus Tower", "Dark Flak Tower"],
+    ["Dark Flak Tower", "Earth Flak Tower"],
     ["Cosmic Orrery", "Earth Flak Tower"],
     ["Cosmic Orrery", "Storm Tower"],
     ["Nullspire Tower", "Red Mage Tower"],
