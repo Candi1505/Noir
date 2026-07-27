@@ -3,8 +3,8 @@
 
    Community Edition
 
-   Developed by a War Dragons player
-   for the War Dragons community.
+   Developed by a WD player
+   for the WD community.
 
    This file must load after app.js.
    ============================================================ */
