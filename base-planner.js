@@ -432,7 +432,7 @@
             <fieldset class="nbp-perch-card">
               <legend>${escapeHtml(perch.name)}</legend>
               <label>Perch level<input data-perch="${index}" data-field="level" type="number" min="0" value="${perch.level || ""}" placeholder="Level"></label>
-              <label>Dragon<input data-perch="${index}" data-field="dragonName" value="${escapeHtml(perch.dragonName)}" placeholder="Dragon name"></label>
+              <label>Dragon<input data-catalog-kind="dragon" data-perch="${index}" data-field="dragonName" value="${escapeHtml(perch.dragonName)}" placeholder="Tap to search dragons" autocomplete="off"></label>
               <div class="nbp-two">
                 <label>Class<select data-perch="${index}" data-field="dragonClass">
                   <option value="">Choose…</option>
@@ -441,12 +441,12 @@
                 <label>Dragon level<input data-perch="${index}" data-field="dragonLevel" type="number" min="0" value="${perch.dragonLevel || ""}"></label>
               </div>
               <label>Tier / rarity<input data-perch="${index}" data-field="dragonTier" value="${escapeHtml(perch.dragonTier)}" placeholder="e.g. Mythic · Obsidian"></label>
-              <label>Rider<input list="nbpRiderList" data-perch="${index}" data-field="riderName" value="${escapeHtml(perch.riderName)}" placeholder="Search riders"></label>
+              <label>Rider<input data-catalog-kind="rider" data-perch="${index}" data-field="riderName" value="${escapeHtml(perch.riderName)}" placeholder="Tap to search riders" autocomplete="off"></label>
               <label>Rider level<input data-perch="${index}" data-field="riderLevel" type="number" min="0" value="${perch.riderLevel || ""}"></label>
               <details class="nbp-perch-details">
                 <summary>Rider skills ${perch.riderSkills.length ? `(${perch.riderSkills.length})` : ""}</summary>
                 <div class="nbp-add-row">
-                  <input list="nbpRiderSkillList" data-skill-search="${index}" placeholder="Search ${Array.isArray(CATALOG.riderSkills) ? CATALOG.riderSkills.length : 100} skills">
+                  <input data-catalog-kind="skill" data-skill-search="${index}" placeholder="Tap to search ${Array.isArray(CATALOG.riderSkills) ? CATALOG.riderSkills.length : 100} skills" autocomplete="off">
                   <button type="button" data-add-skill="${index}">Add</button>
                 </div>
                 <div class="nbp-chip-list">
@@ -460,7 +460,7 @@
                 <div class="nbp-gear-grid">
                   ${GEAR_SLOTS.map(([slot, label]) => `
                     <div class="nbp-gear-piece">
-                      <label>${label}<input list="nbpGear${slot}List" data-gear="${index}" data-gear-slot="${slot}" data-gear-field="name" value="${escapeHtml(perch.riderGear[slot]?.name || "")}" placeholder="Search ${label.toLowerCase()}"></label>
+                      <label>${label}<input data-catalog-kind="gear:${slot}" data-gear="${index}" data-gear-slot="${slot}" data-gear-field="name" value="${escapeHtml(perch.riderGear[slot]?.name || "")}" placeholder="Tap to search ${label.toLowerCase()}" autocomplete="off"></label>
                       <div class="nbp-two">
                         <label>Rarity<select data-gear="${index}" data-gear-slot="${slot}" data-gear-field="rarity">
                           <option value="">Choose…</option>
@@ -496,9 +496,9 @@
           </select></label>
           <label>Level<input id="nbpTowerLevel" type="number" min="0" value="${tower?.level || ""}" placeholder="Tower level"></label>
           <label>Custom name<input id="nbpTowerCustom" value="${escapeHtml(tower?.customName || "")}" placeholder="Only for Other"></label>
-          <label>Rune<input list="nbpRuneList" id="nbpTowerRunes" value="${escapeHtml(tower?.runes || "")}" placeholder="Search 281 runes"></label>
-          <label>Glyph<input list="nbpGlyphList" id="nbpTowerGlyph" value="${escapeHtml(tower?.glyph || "")}" placeholder="Search 287 glyphs"></label>
-          <label>Relic<input list="nbpRelicList" id="nbpTowerRelic" value="${escapeHtml(tower?.relic || "")}" placeholder="Search 23 relics"></label>
+          <label>Rune<input data-catalog-kind="rune" id="nbpTowerRunes" value="${escapeHtml(tower?.runes || "")}" placeholder="Tap to search 281 runes" autocomplete="off"></label>
+          <label>Glyph<input data-catalog-kind="glyph" id="nbpTowerGlyph" value="${escapeHtml(tower?.glyph || "")}" placeholder="Tap to search 287 glyphs" autocomplete="off"></label>
+          <label>Relic<input data-catalog-kind="relic" id="nbpTowerRelic" value="${escapeHtml(tower?.relic || "")}" placeholder="Tap to search 23 relics" autocomplete="off"></label>
         </div>
         <div class="nbp-editor-actions">
           <button type="button" class="nbp-primary" id="nbpSaveTower">Save tower</button>
@@ -569,6 +569,99 @@
         </div>
       </section>
     `;
+  }
+
+  function catalogueChoices(kind) {
+    if (kind === "dragon") return Array.isArray(CATALOG.dragons) ? CATALOG.dragons : [];
+    if (kind === "rider") return Array.isArray(CATALOG.riders) ? CATALOG.riders : [];
+    if (kind === "skill") return Array.isArray(CATALOG.riderSkills) ? CATALOG.riderSkills : [];
+    if (["rune", "glyph", "relic"].includes(kind)) {
+      const expected = kind[0].toUpperCase() + kind.slice(1);
+      return (Array.isArray(CATALOG.monumentItems) ? CATALOG.monumentItems : [])
+        .filter(item => item.kind === expected);
+    }
+    if (kind.startsWith("gear:")) {
+      const slot = kind.split(":")[1];
+      return (Array.isArray(CATALOG.riderGear) ? CATALOG.riderGear : [])
+        .filter(item => item.slot === slot);
+    }
+    return [];
+  }
+
+  function choiceDescription(kind, item) {
+    if (kind === "dragon") {
+      return [item.dragonClass, item.element, item.type].filter(Boolean).join(" · ");
+    }
+    if (kind === "rider") return item.defensive ? "Defensive rider" : "Rider";
+    if (kind === "skill") return "Rider skill";
+    if (["rune", "glyph", "relic"].includes(kind)) {
+      return [item.rarity, catalogueEffect(item)].filter(Boolean).join(" · ");
+    }
+    if (kind.startsWith("gear:")) {
+      return [item.element, item.slotName].filter(Boolean).join(" · ");
+    }
+    return "";
+  }
+
+  function bindCatalogueSearch(overlay, layout) {
+    overlay.querySelectorAll("[data-catalog-kind]").forEach(input => {
+      const kind = input.dataset.catalogKind;
+      const choices = catalogueChoices(kind);
+      if (!choices.length) return;
+      const results = document.createElement("div");
+      results.className = "nbp-suggestions";
+      results.hidden = true;
+      input.insertAdjacentElement("afterend", results);
+
+      const show = () => {
+        const query = input.value.trim().toLowerCase();
+        const matches = choices
+          .filter(item => !query || item.name.toLowerCase().includes(query))
+          .slice(0, 30);
+        results.innerHTML = matches.length
+          ? matches.map((item, index) => `
+              <button type="button" data-choice="${index}">
+                <strong>${escapeHtml(item.name)}</strong>
+                <small>${escapeHtml(choiceDescription(kind, item))}</small>
+              </button>
+            `).join("")
+          : `<p>No matching names found.</p>`;
+        results.hidden = false;
+        results.querySelectorAll("[data-choice]").forEach(button => {
+          button.addEventListener("click", () => {
+            const item = matches[Number(button.dataset.choice)];
+            if (!item) return;
+            input.value = item.name;
+            results.hidden = true;
+            if (kind === "dragon") {
+              const perchIndex = Number(input.dataset.perch);
+              pushHistory();
+              layout.perches[perchIndex].dragonName = item.name;
+              layout.perches[perchIndex].dragonClass = item.dragonClass || "";
+              if (!layout.perches[perchIndex].dragonTier) {
+                layout.perches[perchIndex].dragonTier = [item.rarity, item.type].filter(Boolean).join(" · ");
+              }
+              saveState();
+              render();
+              return;
+            }
+            if (kind === "rider") {
+              const perchIndex = Number(input.dataset.perch);
+              pushHistory();
+              layout.perches[perchIndex].riderName = item.name;
+              saveState();
+              render();
+              return;
+            }
+            if (kind !== "skill") input.dispatchEvent(new Event("change", { bubbles: true }));
+          });
+        });
+      };
+
+      input.addEventListener("focus", show);
+      input.addEventListener("input", show);
+      input.addEventListener("blur", () => window.setTimeout(() => { results.hidden = true; }, 180));
+    });
   }
 
   function render() {
@@ -793,6 +886,7 @@
       saveState();
       render();
     });
+    bindCatalogueSearch(overlay, layout);
   }
 
   function installStyles() {
@@ -814,6 +908,7 @@
       .nbp-toolbar,.nbp-editor-actions{display:flex;flex-wrap:wrap;gap:8px}.nbp-toolbar button:disabled,.nbp-panel button:disabled{opacity:.4}.nbp-islands{display:grid;gap:12px;margin-top:16px}.nbp-island{padding:14px;border:1px solid #303338;border-radius:19px;background:linear-gradient(90deg,rgba(25,30,35,.95),rgba(10,11,12,.98))}.nbp-island header{display:flex;justify-content:space-between;margin-bottom:12px}.nbp-island header span{color:#8e99a4;font-size:12px}.nbp-island-slots{display:grid;grid-template-columns:repeat(5,1fr);gap:9px}.nbp-slot{position:relative;min-height:102px;padding:25px 9px 10px!important;text-align:left;overflow:hidden}.nbp-slot>span{position:absolute;top:7px;right:8px;color:#7d8288;font-size:10px}.nbp-slot strong,.nbp-slot small{display:block}.nbp-slot strong{font-size:13px}.nbp-slot small{margin-top:6px;color:#d6b968;font-size:11px}.nbp-slot.empty{border-style:dashed;color:#777c82}.nbp-slot.occupied{border-color:rgba(215,186,100,.4);background:rgba(47,38,14,.32)}.nbp-slot.selected{outline:2px solid #79c5ef;border-color:#79c5ef}
       .nbp-form-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.nbp-editor-actions{margin-top:14px}.nbp-perch-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}.nbp-perch-card{min-width:0;padding:15px;border:1px solid #303236;border-radius:16px;background:#0a0b0c}.nbp-perch-card legend{padding:0 7px;color:#d8bc69;font-weight:900}.nbp-perch-card label{display:block;margin-top:10px}.nbp-two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
       .nbp-perch-details{margin-top:13px;padding-top:11px;border-top:1px solid #292b2e}.nbp-perch-details summary{color:#d8bc69;font-weight:850;cursor:pointer}.nbp-add-row{display:grid;grid-template-columns:1fr auto;gap:7px;align-items:end}.nbp-add-row button{margin-top:7px}.nbp-chip-list{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}.nbp-chip-list button{padding:7px 9px;border-radius:999px;color:#b9dcca;background:rgba(34,81,65,.25)}.nbp-chip-list span{color:#e5a3ae}.nbp-chip-list small{color:#8f8b85}.nbp-gear-grid{display:grid;gap:9px}.nbp-gear-piece{padding:10px;border:1px solid #292b2e;border-radius:12px;background:#0d0e10}.nbp-gear-grid label{font-size:11px}
+      [data-catalog-kind]{position:relative}.nbp-suggestions{position:relative;z-index:8;max-height:280px;margin-top:6px;overflow-y:auto;border:1px solid #4a4c50;border-radius:13px;background:#090a0b;box-shadow:0 14px 32px rgba(0,0,0,.55)}.nbp-suggestions button{display:block;width:100%;padding:11px 12px;border:0!important;border-bottom:1px solid #242629!important;border-radius:0!important;text-align:left;background:#0d0e10!important}.nbp-suggestions button:last-child{border-bottom:0!important}.nbp-suggestions strong,.nbp-suggestions small{display:block}.nbp-suggestions strong{color:#eeeae2}.nbp-suggestions small{margin-top:4px;color:#a9a39a;font-size:11px}.nbp-suggestions p{margin:0;padding:13px;color:#99938a}
       .nbp-findings{display:grid;gap:10px;margin-top:14px}.nbp-finding{padding:14px 15px;border:1px solid #303030;border-left-width:4px;border-radius:15px;background:#0b0b0b}.nbp-finding strong{display:block}.nbp-finding p{margin:5px 0 0;color:#aaa49b;line-height:1.45}.nbp-finding.error{border-left-color:#e08089}.nbp-finding.warning{border-left-color:#dcc16e}.nbp-finding.good{border-left-color:#69dab0}.nbp-empty-copy{color:#99938a}.nbp-danger-zone{text-align:center}.nbp-danger-zone button{color:#dda2ad;border-color:rgba(190,105,121,.45)}.hidden{display:none!important}
       @media(max-width:720px){.nct-home-tools .nbp-launch{min-height:0}.nbp-base-details,.nbp-meter-grid,.nbp-form-grid,.nbp-perch-grid,.nbp-photo-grid{grid-template-columns:1fr}.nbp-section-heading{align-items:flex-start;flex-wrap:wrap}.nbp-island-slots{grid-template-columns:repeat(5,minmax(82px,1fr));overflow-x:auto;padding-bottom:5px}.nbp-slot{min-width:82px}.nbp-photo-grid img{height:auto;max-height:360px}}
     `;
