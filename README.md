@@ -2,7 +2,7 @@
 
 **Development & Testing Build**
 
-Welcome to the private testing version of **Chest Companion**, a free companion app for the War Dragons community.
+Welcome to the private testing version of **Chest Companion**, a free companion app for the WD community.
 
 This repository is used to trial new features, identify bugs, and improve the app before updates are released to the public beta.
 
@@ -72,7 +72,7 @@ Community testing helps make the app more accurate and reliable for everyone.
 
 This is an independent community project.
 
-Chest Companion is **not affiliated with Pocket Gems** or **War Dragons**.
+Chest Companion is **not affiliated with Pocket Gems** or **WD**.
 
 All game trademarks remain the property of their respective owners.
 
