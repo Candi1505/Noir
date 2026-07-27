@@ -358,7 +358,7 @@
       <span>
         <strong>Need help? Start here</strong>
         <small>
-          Learn how predictions, confidence, bonuses and every chest tool work.
+          Learn how predictions, bonuses, chest tools and the Base Adviser work.
         </small>
       </span>
       <span class="noir-help-launcher-arrow">›</span>
@@ -572,6 +572,38 @@
               <li><strong>Event check:</strong> confirm regular and bonus data is ready for players.</li>
               <li><strong>Result cards:</strong> create clean summaries suitable for Discord.</li>
             </ul>
+          </div>
+        </details>
+
+        <details class="noir-help-section">
+          <summary>
+            <span class="noir-help-section-icon">⚔</span>
+            Base Adviser
+          </summary>
+          <div class="noir-help-body">
+            <ol>
+              <li>Open <strong>Base Adviser</strong> from the Home screen.</li>
+              <li>Add up to four screenshots of your real WD base. They are visual references only and are saved on your device.</li>
+              <li>Enter a base name and the current DP displayed in WD.</li>
+              <li>Work through Islands 1–8. Tap an empty slot, choose the tower and enter its level, runes, glyph and relic.</li>
+              <li>Use <strong>Save &amp; next empty</strong> to enter the base quickly without returning to the map after every tower.</li>
+              <li>Enter each perch’s level, dragon, dragon level and perch rider. Rider skills and all eight gear slots are optional but improve the completed record.</li>
+              <li>When the entered layout matches your real base, tap <strong>Save proposal as current</strong>. This becomes the comparison baseline.</li>
+              <li>To test a move, tap one tower and then its destination. Noir moves it into an empty slot or swaps it with the tower already there.</li>
+              <li>Watch <strong>Projected defensive strength</strong>, <strong>Defensive effectiveness</strong> and the advice cards. Green is an improvement; red is a weaker or conflicting proposal.</li>
+              <li>Use Undo, Redo or Restore current layout while experimenting. Save the proposal as current only after making the same changes in WD.</li>
+            </ol>
+            <div class="noir-help-callout">
+              The current DP is the number shown in WD. Projected defensive
+              strength is Noir’s planning estimate—it can compare placements,
+              coverage and conflicts, but moving towers does not change WD’s
+              displayed DP by itself.
+            </div>
+            <div class="noir-help-callout noir-help-warning">
+              Base rules include no more than two Crystal Howitzers per base
+              and one Soul Drain per island. Noir also warns about recorded
+              tower conflicts, including Dark Flak with Earth Flak.
+            </div>
           </div>
         </details>
 
