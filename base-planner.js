@@ -140,6 +140,7 @@
       slots: blankSlots(),
       perches: Array.from({ length: 3 }, () => null),
       storedTowers: [],
+      referencePhotos: [],
       snapshotImportedAt: "",
       updatedAt: new Date().toISOString()
     };
@@ -179,6 +180,11 @@
       }),
       storedTowers: Array.isArray(safe.storedTowers)
         ? safe.storedTowers.map(normaliseTower).filter(Boolean)
+        : [],
+      referencePhotos: Array.isArray(safe.referencePhotos)
+        ? safe.referencePhotos
+            .filter(photo => typeof photo === "string" && photo.startsWith("data:image/"))
+            .slice(0, 4)
         : [],
       snapshotImportedAt: String(safe.snapshotImportedAt || ""),
       updatedAt: String(safe.updatedAt || new Date().toISOString())
@@ -466,6 +472,79 @@
     return parsed;
   }
 
+  function compressReferencePhoto(file) {
+    return new Promise((resolve, reject) => {
+      if (!file || !String(file.type || "").startsWith("image/")) {
+        reject(new Error("Not an image"));
+        return;
+      }
+      const url = URL.createObjectURL(file);
+      const image = new Image();
+      image.onload = () => {
+        try {
+          const maxDimension = 1100;
+          const scale = Math.min(1, maxDimension / Math.max(image.width, image.height));
+          const canvas = document.createElement("canvas");
+          canvas.width = Math.max(1, Math.round(image.width * scale));
+          canvas.height = Math.max(1, Math.round(image.height * scale));
+          canvas.getContext("2d").drawImage(image, 0, 0, canvas.width, canvas.height);
+          resolve(canvas.toDataURL("image/jpeg", 0.72));
+        } catch (error) {
+          reject(error);
+        } finally {
+          URL.revokeObjectURL(url);
+        }
+      };
+      image.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error("Image could not be read"));
+      };
+      image.src = url;
+    });
+  }
+
+  async function addReferencePhotos(files, layout = activeLayout()) {
+    const available = Math.max(0, 4 - layout.referencePhotos.length);
+    const selected = Array.from(files || []).slice(0, available);
+    if (!selected.length) return 0;
+    const previous = [...layout.referencePhotos];
+    const compressed = [];
+    for (const file of selected) {
+      compressed.push(await compressReferencePhoto(file));
+    }
+    layout.referencePhotos.push(...compressed);
+    try {
+      saveState();
+    } catch (error) {
+      layout.referencePhotos = previous;
+      throw error;
+    }
+    return compressed.length;
+  }
+
+  function removeReferencePhoto(index, layout = activeLayout()) {
+    if (!Number.isInteger(index) || index < 0 || index >= layout.referencePhotos.length) return false;
+    layout.referencePhotos.splice(index, 1);
+    saveState();
+    return true;
+  }
+
+  function renderReferencePhotos(layout) {
+    if (!layout.referencePhotos.length) {
+      return '<p class="nbp-empty-copy">No reference screenshots selected yet.</p>';
+    }
+    return `
+      <div class="nbp-photo-grid">
+        ${layout.referencePhotos.map((photo, index) => `
+          <figure>
+            <img src="${escapeHtml(photo)}" alt="Base reference screenshot ${index + 1}">
+            <button type="button" data-remove-photo="${index}" aria-label="Remove screenshot ${index + 1}">Remove</button>
+          </figure>
+        `).join("")}
+      </div>
+    `;
+  }
+
   function renderPerches(layout) {
     const perches = Array.isArray(layout.perches) ? layout.perches : [];
     return `
@@ -621,6 +700,25 @@
             Notes
             <input id="nbpNotes" value="${escapeHtml(layout.notes)}" placeholder="What are you testing?">
           </label>
+        </section>
+
+        <section class="nbp-panel nbp-photos">
+          <span class="nbp-kicker">PHOTO REFERENCES</span>
+          <h3>Choose screenshots from Photos</h3>
+          <p>
+            Add up to four screenshots of your base and keep them beside the planner
+            while you arrange towers. Noir resizes and saves them only on this device.
+          </p>
+          <input id="nbpPhotoFiles" type="file" accept="image/*" multiple>
+          <button id="nbpAddPhotos" class="nbp-primary" type="button"
+            ${layout.referencePhotos.length >= 4 ? "disabled" : ""}>
+            Choose from Photos
+          </button>
+          ${renderReferencePhotos(layout)}
+          <small>
+            Screenshots are visual references only. They cannot reliably reveal every
+            tower level or stored tower, so use the automatic option below when available.
+          </small>
         </section>
 
         <section class="nbp-panel nbp-snapshot">
@@ -820,6 +918,43 @@
       }
     });
 
+    overlay.querySelector("#nbpAddPhotos")?.addEventListener("click", async () => {
+      const input = overlay.querySelector("#nbpPhotoFiles");
+      if (!input?.files?.length) {
+        input?.click();
+        return;
+      }
+      try {
+        const added = await addReferencePhotos(input.files);
+        if (!added) {
+          window.alert("You can keep up to four base screenshots in each layout.");
+          return;
+        }
+        renderEditor();
+      } catch (error) {
+        console.warn("Noir could not save the selected screenshots.", error);
+        window.alert("Those screenshots could not be saved. Try choosing fewer images.");
+      }
+    });
+
+    overlay.querySelector("#nbpPhotoFiles")?.addEventListener("change", async event => {
+      if (!event.target.files?.length) return;
+      try {
+        await addReferencePhotos(event.target.files);
+        renderEditor();
+      } catch (error) {
+        console.warn("Noir could not save the selected screenshots.", error);
+        window.alert("Those screenshots could not be saved. Try choosing fewer images.");
+      }
+    });
+
+    overlay.querySelectorAll("[data-remove-photo]").forEach(button => {
+      button.addEventListener("click", () => {
+        removeReferencePhoto(Number(button.dataset.removePhoto));
+        renderEditor();
+      });
+    });
+
     overlay.querySelectorAll("[data-slot]").forEach(button => {
       const index = Number(button.dataset.slot);
       button.addEventListener("click", () => {
@@ -915,7 +1050,7 @@
       }
       .nbp-intro { display: grid; grid-template-columns: 1fr auto; gap: 20px; align-items: end; }
       .nbp-intro h3, .nbp-section-heading h3 { margin: 7px 0; font-size: 22px; }
-      .nbp-intro p, .nbp-privacy p, .nbp-bulk p, .nbp-snapshot p { margin: 0; color: #a39d94; line-height: 1.55; }
+      .nbp-intro p, .nbp-privacy p, .nbp-bulk p, .nbp-snapshot p, .nbp-photos p { margin: 0; color: #a39d94; line-height: 1.55; }
       .nbp-layout-actions { display: flex; flex-wrap: wrap; gap: 8px; }
       .nbp-layout-actions select, .nbp-layout-actions button, .nbp-panel input,
       .nbp-panel select, .nbp-panel textarea, .nbp-panel button {
@@ -945,6 +1080,19 @@
         border-radius: 13px; background: rgba(25,83,64,.2); color: #91d8bd;
       }
       .nbp-snapshot > small { display: block; margin-top: 12px; color: #8e8981; line-height: 1.5; }
+      .nbp-photos h3 { margin: 8px 0; }
+      .nbp-photos > input { margin: 15px 0 10px; }
+      .nbp-photos > small { display: block; margin-top: 12px; color: #8e8981; line-height: 1.5; }
+      .nbp-photo-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 14px; }
+      .nbp-photo-grid figure {
+        position: relative; margin: 0; overflow: hidden; border: 1px solid #34363a;
+        border-radius: 15px; background: #08090a;
+      }
+      .nbp-photo-grid img { display: block; width: 100%; height: 210px; object-fit: contain; }
+      .nbp-photo-grid button {
+        position: absolute; right: 8px; bottom: 8px; padding: 8px 10px;
+        background: rgba(6,7,8,.9); color: #dda2ad; border-color: rgba(190,105,121,.55);
+      }
       .nbp-support-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 13px; }
       .nbp-support-grid > div, .nbp-stored-list > div {
         padding: 14px; border: 1px solid #303237; border-radius: 15px; background: #0d0e10;
@@ -1012,7 +1160,7 @@
         .nbp-layout-actions select { flex: 1 1 100%; }
         .nbp-island-path { grid-template-columns: repeat(5, minmax(82px, 1fr)); overflow-x: auto; padding-bottom: 5px; }
         .nbp-slot { min-width: 82px; }
-        .nbp-summary-grid, .nbp-support-grid, .nbp-stored-list { grid-template-columns: repeat(2, 1fr); }
+        .nbp-summary-grid, .nbp-support-grid, .nbp-stored-list, .nbp-photo-grid { grid-template-columns: repeat(2, 1fr); }
       }
     `;
     document.head.appendChild(style);
@@ -1073,6 +1221,8 @@
     importTowerLines,
     parseBaseSnapshot,
     importBaseSnapshot,
+    addReferencePhotos,
+    removeReferencePhoto,
     addTower,
     moveTower,
     removeTower,
