@@ -696,7 +696,6 @@
         ${renderTowerForm(layout)}
         ${renderPerches(layout)}
         ${renderAdvice(layout)}
-        ${renderCatalogueLists()}
         <section class="nbp-panel nbp-danger-zone">
           <button type="button" id="nbpResetAll">Delete this saved base</button>
         </section>
