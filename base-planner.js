@@ -54,6 +54,7 @@
     ["shield", "Shield"],
     ["rings", "Rings"]
   ];
+  const PERCH_RIDER_EXCEPTIONS = new Set(["Freeda", "Vivian"]);
 
   let state = loadState();
   let selectedSlot = null;
@@ -264,7 +265,9 @@
         `).join("")}
       </datalist>
     `;
-    const riders = Array.isArray(CATALOG.riders) ? CATALOG.riders.filter(rider => rider.defensive) : [];
+    const riders = Array.isArray(CATALOG.riders)
+      ? CATALOG.riders.filter(rider => rider.defensive || PERCH_RIDER_EXCEPTIONS.has(rider.name))
+      : [];
     const skills = Array.isArray(CATALOG.riderSkills) ? CATALOG.riderSkills : [];
     const gear = Array.isArray(CATALOG.riderGear) ? CATALOG.riderGear : [];
     return `
@@ -441,7 +444,7 @@
                 <label>Dragon level<input data-perch="${index}" data-field="dragonLevel" type="number" min="0" value="${perch.dragonLevel || ""}"></label>
               </div>
               <label>Tier / rarity<input data-perch="${index}" data-field="dragonTier" value="${escapeHtml(perch.dragonTier)}" placeholder="e.g. Mythic · Obsidian"></label>
-              <label>Perch rider<input data-catalog-kind="rider" data-perch="${index}" data-field="riderName" value="${escapeHtml(perch.riderName)}" placeholder="Tap to search 11 perch riders" autocomplete="off"></label>
+              <label>Perch rider<input data-catalog-kind="rider" data-perch="${index}" data-field="riderName" value="${escapeHtml(perch.riderName)}" placeholder="Tap to search perch riders" autocomplete="off"></label>
               <label>Rider level<input data-perch="${index}" data-field="riderLevel" type="number" min="0" value="${perch.riderLevel || ""}"></label>
               <details class="nbp-perch-details">
                 <summary>Rider skills ${perch.riderSkills.length ? `(${perch.riderSkills.length})` : ""}</summary>
@@ -574,7 +577,7 @@
   function catalogueChoices(kind) {
     if (kind === "dragon") return Array.isArray(CATALOG.dragons) ? CATALOG.dragons : [];
     if (kind === "rider") return Array.isArray(CATALOG.riders)
-      ? CATALOG.riders.filter(rider => rider.defensive)
+      ? CATALOG.riders.filter(rider => rider.defensive || PERCH_RIDER_EXCEPTIONS.has(rider.name))
       : [];
     if (kind === "skill") return Array.isArray(CATALOG.riderSkills) ? CATALOG.riderSkills : [];
     if (["rune", "glyph", "relic"].includes(kind)) {
