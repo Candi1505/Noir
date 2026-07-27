@@ -81,6 +81,7 @@
       riderName: "",
       riderLevel: 0,
       riderSkills: [],
+      riderSkillLevels: {},
       riderGear: Object.fromEntries(GEAR_SLOTS.map(([slot]) => [slot, { name: "", rarity: "", level: 0 }]))
     }));
   }
@@ -93,8 +94,11 @@
       customName: String(tower.customName || ""),
       level: Math.max(0, Number.parseInt(tower.level, 10) || 0),
       runes: String(tower.runes || tower.rune || ""),
+      runeLevel: Math.max(0, Number.parseInt(tower.runeLevel, 10) || 0),
       glyph: String(tower.glyph || ""),
+      glyphLevel: Math.max(0, Number.parseInt(tower.glyphLevel, 10) || 0),
       relic: String(tower.relic || ""),
+      relicLevel: Math.max(0, Number.parseInt(tower.relicLevel, 10) || 0),
       notes: String(tower.notes || "")
     };
   }
@@ -116,6 +120,13 @@
       riderSkills: Array.isArray(safe.riderSkills)
         ? safe.riderSkills.map(String).filter(Boolean)
         : String(safe.riderSkills || "").split(/[,|]/).map(value => value.trim()).filter(Boolean),
+      riderSkillLevels: Object.fromEntries(
+        (Array.isArray(safe.riderSkills) ? safe.riderSkills : []).map(skill => {
+          const catalogueSkill = CATALOG.riderSkills?.find(item => item.name === skill);
+          const savedLevel = Number.parseInt(safe.riderSkillLevels?.[skill], 10);
+          return [String(skill), Math.max(1, savedLevel || catalogueSkill?.maximumLevel || 1)];
+        })
+      ),
       riderGear: safe.riderGear && typeof safe.riderGear === "object"
         ? Object.fromEntries(GEAR_SLOTS.map(([slot]) => {
             const gear = safe.riderGear[slot];
@@ -236,20 +247,147 @@
     return `${(value / unit[1]).toFixed(value / unit[1] >= 100 ? 0 : 1).replace(/\.0$/, "")}${unit[0]}`;
   }
 
-  function towerPower(tower) {
+  function normalKey(value) {
+    return String(value || "").toLowerCase().replace(/\btower\b/g, "").replace(/[^a-z0-9]/g, "");
+  }
+
+  function effectValue(effect, level, maximumLevel = 1) {
+    const values = Array.isArray(effect?.values) ? effect.values.map(Number).filter(Number.isFinite) : [];
+    if (values.length) {
+      const index = Math.max(0, Math.min(values.length - 1, (Number.parseInt(level, 10) || values.length) - 1));
+      return Number(values[index]) || 0;
+    }
+    const chosenLevel = Math.max(1, Math.min(Number(maximumLevel) || 1, Number.parseInt(level, 10) || Number(maximumLevel) || 1));
+    return (Number(effect?.base) || 0) + (Number(effect?.perLevel) || 0) * Math.max(0, chosenLevel - 1);
+  }
+
+  function modifierBucket(text) {
+    const value = String(text || "").toLowerCase();
+    if (/hp|health/.test(value)) return "hp";
+    if (/atk|attack|damage|super.?shot/.test(value)) return "attack";
+    return "";
+  }
+
+  function monumentEffectApplies(effect, tower) {
+    const text = normalKey(effect?.text);
+    if (!text) return false;
+    const towerKey = normalKey(tower?.type);
+    const namedTower = (Array.isArray(CATALOG.towers) ? CATALOG.towers : [])
+      .map(item => normalKey(item.name))
+      .filter(key => key.length >= 4)
+      .find(key => text.includes(key));
+    return !namedTower || text.includes(towerKey) || towerKey.includes(namedTower);
+  }
+
+  function monumentModifier(tower) {
+    const items = Array.isArray(CATALOG.monumentItems) ? CATALOG.monumentItems : [];
+    const selections = [
+      [tower?.runes, tower?.runeLevel],
+      [tower?.glyph, tower?.glyphLevel],
+      [tower?.relic, tower?.relicLevel]
+    ];
+    let hp = 0;
+    let attack = 0;
+    selections.forEach(([name, level]) => {
+      const item = items.find(entry => entry.name === name);
+      if (!item) return;
+      item.effects?.forEach(effect => {
+        if (!monumentEffectApplies(effect, tower)) return;
+        const bucket = modifierBucket(effect.text);
+        if (bucket) {
+          const value = effectValue(effect, level, item.maximumLevel);
+          if (bucket === "hp") hp += value;
+          if (bucket === "attack") attack += value;
+        }
+      });
+    });
+    return { hp, attack };
+  }
+
+  const RIDER_TOWER_KEYS = {
+    elementalflakdark: "darkflak",
+    elementalflakfire: "fireflak",
+    elementalflakice: "iceflak",
+    elementalflakwind: "electroflak",
+    elementalflakearth: "earthflak",
+    crystalhowitzer: "crystalhowitzer",
+    burntower: "fireturret",
+    draintower: "drakulpylon",
+    souldraintower: "souldrain",
+    nexustower: "nexus",
+    nullspire: "nullspire",
+    magetowersuper: "redarchmage",
+    magebluetowersuper: "bluearchmage",
+    magetower: "redmage",
+    magebluetower: "bluemage",
+    lightningtowersuper: "chargedvolt",
+    e20q4tower: "cosmicorrery"
+  };
+
+  function riderEffectApplies(type, tower) {
+    const value = String(type || "");
+    const specific = value.split("_")[1];
+    if (!specific) return true;
+    const expected = RIDER_TOWER_KEYS[normalKey(specific)] || normalKey(specific);
+    return normalKey(tower?.type).includes(expected);
+  }
+
+  function riderModifier(tower, perches) {
+    let hp = 0;
+    let attack = 0;
+    const skills = Array.isArray(CATALOG.riderSkills) ? CATALOG.riderSkills : [];
+    const gearItems = Array.isArray(CATALOG.riderGear) ? CATALOG.riderGear : [];
+    perches
+      .filter(perch => perch?.level && perch?.dragonName && perch?.riderName)
+      .forEach(perch => {
+        perch.riderSkills.forEach(name => {
+          const skill = skills.find(item => item.name === name);
+          const level = perch.riderSkillLevels?.[name] || skill?.maximumLevel || 1;
+          skill?.effects?.forEach(effect => {
+            if (!riderEffectApplies(effect.type, tower)) return;
+            const bucket = modifierBucket(effect.type);
+            const value = effectValue(effect, level, skill.maximumLevel);
+            if (bucket === "hp") hp += value;
+            if (bucket === "attack") attack += value;
+          });
+        });
+        Object.values(perch.riderGear || {}).forEach(gear => {
+          if (!gear?.name) return;
+          const item = gearItems.find(entry => entry.name === gear.name);
+          const variants = Array.isArray(item?.variants) ? item.variants : [];
+          const variant = variants.find(entry => entry.rarity === gear.rarity) || variants[variants.length - 1];
+          variant?.effects?.forEach(effect => {
+            if (!riderEffectApplies(effect.type, tower)) return;
+            const bucket = modifierBucket(effect.type);
+            const value = effectValue(effect, gear.level, variant.maximumLevel);
+            if (bucket === "hp") hp += value;
+            if (bucket === "attack") attack += value;
+          });
+        });
+      });
+    return { hp, attack };
+  }
+
+  function towerPower(tower, perches = []) {
     if (!tower) return 0;
     const level = Math.max(1, tower.level || 1);
     const officialLevels = CATALOG.towerLevels?.[tower.type];
+    let power = 0;
     if (Array.isArray(officialLevels) && officialLevels.length) {
       const exact = officialLevels.find(item => Number(item.level) === level);
-      if (exact?.power > 0) return exact.power;
+      if (exact?.power > 0) power = exact.power;
       const closest = officialLevels.reduce((best, item) =>
         Math.abs(Number(item.level) - level) < Math.abs(Number(best.level) - level) ? item : best
       );
-      if (closest?.power > 0) return closest.power;
+      if (!power && closest?.power > 0) power = closest.power;
     }
-    const typeWeight = MODERN.has(tower.type) ? 1.18 : MAGES.has(tower.type) ? 1.05 : 1;
-    return Math.pow(level, 2.28) * typeWeight;
+    if (!power) {
+      const typeWeight = MODERN.has(tower.type) ? 1.18 : MAGES.has(tower.type) ? 1.05 : 1;
+      power = Math.pow(level, 2.28) * typeWeight;
+    }
+    const monument = monumentModifier(tower);
+    const rider = riderModifier(tower, perches);
+    return power * (1 + (monument.hp + monument.attack + rider.hp + rider.attack) / 2);
   }
 
   function catalogueEffect(item) {
@@ -261,6 +399,10 @@
         : amount || "";
       return `${effect.text || ""}${value ? ` ${value}` : ""}`.trim();
     }).filter(Boolean).join(" · ");
+  }
+
+  function monumentMaximumLevel(name) {
+    return CATALOG.monumentItems?.find(item => item.name === name)?.maximumLevel || 1;
   }
 
   function renderCatalogueLists() {
@@ -298,7 +440,7 @@
   }
 
   function evaluate(slots, perches = []) {
-    let raw = slots.reduce((sum, tower) => sum + towerPower(tower), 0);
+    let raw = slots.reduce((sum, tower) => sum + towerPower(tower, perches), 0);
     let effectiveness = 50;
     let bonus = 0;
     let penalty = 0;
@@ -407,7 +549,7 @@
             <div class="nbp-meter"><i style="width:${result.proposed.effectiveness}%"></i></div>
           </article>
         </div>
-        <p class="nbp-trust-copy">Current DP is the number shown in game. Projected defensive strength is a planning estimate that combines recorded tower power with placement, conflicts, coverage and synergy; rearranging towers does not change the game's displayed DP by itself.</p>
+        <p class="nbp-trust-copy">Current DP is the number shown in game. Projected defensive strength includes entered tower levels, applicable runes, glyphs and relics, active perch rider skills and gear, plus placement, coverage and synergy. It is a planning estimate; rearranging towers does not change the game's displayed DP by itself.</p>
       </section>
     `;
   }
@@ -491,7 +633,11 @@
                 </div>
                 <div class="nbp-chip-list">
                   ${perch.riderSkills.map((skill, skillIndex) => `
-                    <button type="button" data-remove-skill="${index}:${skillIndex}">${escapeHtml(skill)} <span>×</span></button>
+                    <div class="nbp-skill-chip">
+                      <strong>${escapeHtml(skill)}</strong>
+                      <label>Level<input type="number" min="1" max="${CATALOG.riderSkills?.find(item => item.name === skill)?.maximumLevel || 1}" data-skill-level="${index}:${skillIndex}" value="${perch.riderSkillLevels?.[skill] || CATALOG.riderSkills?.find(item => item.name === skill)?.maximumLevel || 1}"></label>
+                      <button type="button" aria-label="Remove ${escapeHtml(skill)}" data-remove-skill="${index}:${skillIndex}">×</button>
+                    </div>
                   `).join("") || `<small>No skills selected.</small>`}
                 </div>
               </details>
@@ -536,9 +682,18 @@
           </select></label>
           <label>Level<input id="nbpTowerLevel" type="number" min="0" value="${tower?.level || ""}" placeholder="Tower level"></label>
           <label>Custom name<input id="nbpTowerCustom" value="${escapeHtml(tower?.customName || "")}" placeholder="Only for Other"></label>
-          <label>Rune<input data-catalog-kind="rune" id="nbpTowerRunes" value="${escapeHtml(tower?.runes || "")}" placeholder="Tap to search 281 runes" autocomplete="off"></label>
-          <label>Glyph<input data-catalog-kind="glyph" id="nbpTowerGlyph" value="${escapeHtml(tower?.glyph || "")}" placeholder="Tap to search 287 glyphs" autocomplete="off"></label>
-          <label>Relic<input data-catalog-kind="relic" id="nbpTowerRelic" value="${escapeHtml(tower?.relic || "")}" placeholder="Tap to search 23 relics" autocomplete="off"></label>
+          <div class="nbp-equipment-pair">
+            <label>Rune<input data-catalog-kind="rune" id="nbpTowerRunes" value="${escapeHtml(tower?.runes || "")}" placeholder="Tap to search 281 runes" autocomplete="off"></label>
+            <label>Level<input id="nbpTowerRuneLevel" type="number" min="1" max="${monumentMaximumLevel(tower?.runes)}" value="${tower?.runeLevel || ""}" placeholder="Max ${monumentMaximumLevel(tower?.runes)}"></label>
+          </div>
+          <div class="nbp-equipment-pair">
+            <label>Glyph<input data-catalog-kind="glyph" id="nbpTowerGlyph" value="${escapeHtml(tower?.glyph || "")}" placeholder="Tap to search 287 glyphs" autocomplete="off"></label>
+            <label>Level<input id="nbpTowerGlyphLevel" type="number" min="1" max="${monumentMaximumLevel(tower?.glyph)}" value="${tower?.glyphLevel || ""}" placeholder="Max ${monumentMaximumLevel(tower?.glyph)}"></label>
+          </div>
+          <div class="nbp-equipment-pair">
+            <label>Relic<input data-catalog-kind="relic" id="nbpTowerRelic" value="${escapeHtml(tower?.relic || "")}" placeholder="Tap to search 23 relics" autocomplete="off"></label>
+            <label>Level<input id="nbpTowerRelicLevel" type="number" min="1" max="${monumentMaximumLevel(tower?.relic)}" value="${tower?.relicLevel || ""}" placeholder="Max ${monumentMaximumLevel(tower?.relic)}"></label>
+          </div>
         </div>
         <div class="nbp-editor-actions">
           <button type="button" class="nbp-primary" id="nbpSaveTower">Save tower</button>
@@ -699,6 +854,32 @@
               render();
               return;
             }
+            if (["rune", "glyph", "relic"].includes(kind)) {
+              const levelInput = overlay.querySelector({
+                rune: "#nbpTowerRuneLevel",
+                glyph: "#nbpTowerGlyphLevel",
+                relic: "#nbpTowerRelicLevel"
+              }[kind]);
+              if (levelInput) {
+                levelInput.max = String(item.maximumLevel || 1);
+                levelInput.value = String(item.maximumLevel || 1);
+              }
+            }
+            if (kind.startsWith("gear:")) {
+              const perchIndex = Number(input.dataset.gear);
+              const slot = input.dataset.gearSlot;
+              const variants = Array.isArray(item.variants) ? item.variants : [];
+              const variant = variants[variants.length - 1];
+              pushHistory();
+              layout.perches[perchIndex].riderGear[slot] = {
+                name: item.name,
+                rarity: variant?.rarity || item.rarities?.[item.rarities.length - 1] || "",
+                level: variant?.maximumLevel || item.maximumLevel || 1
+              };
+              saveState();
+              render();
+              return;
+            }
             if (kind !== "skill") input.dispatchEvent(new Event("change", { bubbles: true }));
           };
           button.addEventListener("pointerdown", choose);
@@ -821,8 +1002,11 @@
         level: overlay.querySelector("#nbpTowerLevel")?.value,
         customName: overlay.querySelector("#nbpTowerCustom")?.value,
         runes: overlay.querySelector("#nbpTowerRunes")?.value,
+        runeLevel: overlay.querySelector("#nbpTowerRuneLevel")?.value,
         glyph: overlay.querySelector("#nbpTowerGlyph")?.value,
-        relic: overlay.querySelector("#nbpTowerRelic")?.value
+        glyphLevel: overlay.querySelector("#nbpTowerGlyphLevel")?.value,
+        relic: overlay.querySelector("#nbpTowerRelic")?.value,
+        relicLevel: overlay.querySelector("#nbpTowerRelicLevel")?.value
       }) : null;
       if (goNext) {
         const nextEmpty = layout.slots.findIndex((tower, index) => index > savedIndex && !tower);
@@ -867,6 +1051,19 @@
         if (!skill || layout.perches[index].riderSkills.includes(skill)) return;
         pushHistory();
         layout.perches[index].riderSkills.push(skill);
+        const catalogueSkill = CATALOG.riderSkills?.find(item => item.name === skill);
+        layout.perches[index].riderSkillLevels[skill] = catalogueSkill?.maximumLevel || 1;
+        saveState();
+        render();
+      });
+    });
+    overlay.querySelectorAll("[data-skill-level]").forEach(field => {
+      field.addEventListener("change", event => {
+        const [perchIndex, skillIndex] = event.target.dataset.skillLevel.split(":").map(Number);
+        const skill = layout.perches[perchIndex].riderSkills[skillIndex];
+        if (!skill) return;
+        pushHistory();
+        layout.perches[perchIndex].riderSkillLevels[skill] = Math.max(1, Number.parseInt(event.target.value, 10) || 1);
         saveState();
         render();
       });
@@ -875,7 +1072,8 @@
       button.addEventListener("click", () => {
         const [perchIndex, skillIndex] = button.dataset.removeSkill.split(":").map(Number);
         pushHistory();
-        layout.perches[perchIndex].riderSkills.splice(skillIndex, 1);
+        const [removed] = layout.perches[perchIndex].riderSkills.splice(skillIndex, 1);
+        if (removed) delete layout.perches[perchIndex].riderSkillLevels[removed];
         saveState();
         render();
       });
@@ -961,7 +1159,7 @@
       .nbp-meter-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}.nbp-meter-grid article{padding:16px;border:1px solid #303237;border-radius:16px;background:#0d0e10}.nbp-meter-grid span,.nbp-meter-grid strong,.nbp-meter-grid b{display:block}.nbp-meter-grid span{color:#8f8b85;font-size:12px}.nbp-meter-grid strong{margin-top:7px;color:#dcc16e;font-size:24px}.nbp-meter-grid b{margin-top:5px;color:#a8a39b;font-size:12px}.nbp-meter{height:8px;margin-top:13px;overflow:hidden;border-radius:99px;background:#222}.nbp-meter i{display:block;height:100%;border-radius:99px;background:#d9bd68}.nbp-meter-grid .up strong,.nbp-meter-grid .up b{color:#72d6b2}.nbp-meter-grid .up .nbp-meter i{background:#61cda7}.nbp-meter-grid .down strong,.nbp-meter-grid .down b{color:#e18a98}.nbp-meter-grid .down .nbp-meter i{background:#d77384}
       .nbp-toolbar,.nbp-editor-actions{display:flex;flex-wrap:wrap;gap:8px}.nbp-toolbar button:disabled,.nbp-panel button:disabled{opacity:.4}.nbp-islands{display:grid;gap:12px;margin-top:16px}.nbp-island{padding:14px;border:1px solid #303338;border-radius:19px;background:linear-gradient(90deg,rgba(25,30,35,.95),rgba(10,11,12,.98))}.nbp-island header{display:flex;justify-content:space-between;margin-bottom:12px}.nbp-island header span{color:#8e99a4;font-size:12px}.nbp-island-slots{display:grid;grid-template-columns:repeat(5,1fr);gap:9px}.nbp-slot{position:relative;min-height:102px;padding:25px 9px 10px!important;text-align:left;overflow:hidden}.nbp-slot>span{position:absolute;top:7px;right:8px;color:#7d8288;font-size:10px}.nbp-slot strong,.nbp-slot small{display:block}.nbp-slot strong{font-size:13px}.nbp-slot small{margin-top:6px;color:#d6b968;font-size:11px}.nbp-slot.empty{border-style:dashed;color:#777c82}.nbp-slot.occupied{border-color:rgba(215,186,100,.4);background:rgba(47,38,14,.32)}.nbp-slot.selected{outline:2px solid #79c5ef;border-color:#79c5ef}
       .nbp-form-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.nbp-editor-actions{margin-top:14px}.nbp-perch-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}.nbp-perch-card{min-width:0;padding:15px;border:1px solid #303236;border-radius:16px;background:#0a0b0c}.nbp-perch-card legend{padding:0 7px;color:#d8bc69;font-weight:900}.nbp-perch-card label{display:block;margin-top:10px}.nbp-two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-      .nbp-perch-details{margin-top:13px;padding-top:11px;border-top:1px solid #292b2e}.nbp-perch-details summary{color:#d8bc69;font-weight:850;cursor:pointer}.nbp-add-row{display:grid;grid-template-columns:1fr auto;gap:7px;align-items:end}.nbp-add-row button{margin-top:7px}.nbp-chip-list{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}.nbp-chip-list button{padding:7px 9px;border-radius:999px;color:#b9dcca;background:rgba(34,81,65,.25)}.nbp-chip-list span{color:#e5a3ae}.nbp-chip-list small{color:#8f8b85}.nbp-gear-grid{display:grid;gap:9px}.nbp-gear-piece{padding:10px;border:1px solid #292b2e;border-radius:12px;background:#0d0e10}.nbp-gear-grid label{font-size:11px}
+      .nbp-perch-details{margin-top:13px;padding-top:11px;border-top:1px solid #292b2e}.nbp-perch-details summary{color:#d8bc69;font-weight:850;cursor:pointer}.nbp-add-row{display:grid;grid-template-columns:1fr auto;gap:7px;align-items:end}.nbp-add-row button{margin-top:7px}.nbp-chip-list{display:grid;gap:7px;margin-top:9px}.nbp-skill-chip{display:grid;grid-template-columns:minmax(0,1fr) 76px 36px;gap:7px;align-items:center;padding:8px 9px;border:1px solid rgba(83,156,123,.35);border-radius:12px;background:rgba(34,81,65,.25);color:#b9dcca}.nbp-skill-chip strong{font-size:12px;overflow-wrap:anywhere}.nbp-skill-chip label{font-size:10px}.nbp-skill-chip input{min-height:34px;padding:6px}.nbp-skill-chip button{min-height:34px;padding:5px;border-radius:9px;color:#e5a3ae;background:rgba(110,37,54,.25)}.nbp-chip-list small{color:#8f8b85}.nbp-gear-grid{display:grid;gap:9px}.nbp-gear-piece{padding:10px;border:1px solid #292b2e;border-radius:12px;background:#0d0e10}.nbp-gear-grid label{font-size:11px}.nbp-equipment-pair{display:grid;grid-template-columns:minmax(0,1fr) 92px;gap:8px;align-items:end}
       [data-catalog-kind]{position:relative}.nbp-suggestions{position:relative;z-index:8;max-height:280px;margin-top:6px;overflow-y:auto;border:1px solid #4a4c50;border-radius:13px;background:#090a0b;box-shadow:0 14px 32px rgba(0,0,0,.55)}.nbp-suggestions button{display:block;width:100%;padding:11px 12px;border:0!important;border-bottom:1px solid #242629!important;border-radius:0!important;text-align:left;background:#0d0e10!important}.nbp-suggestions button:last-child{border-bottom:0!important}.nbp-suggestions strong,.nbp-suggestions small{display:block}.nbp-suggestions strong{color:#eeeae2}.nbp-suggestions small{margin-top:4px;color:#a9a39a;font-size:11px}.nbp-suggestions p{margin:0;padding:13px;color:#99938a}
       .nbp-findings{display:grid;gap:10px;margin-top:14px}.nbp-finding{padding:14px 15px;border:1px solid #303030;border-left-width:4px;border-radius:15px;background:#0b0b0b}.nbp-finding strong{display:block}.nbp-finding p{margin:5px 0 0;color:#aaa49b;line-height:1.45}.nbp-finding.error{border-left-color:#e08089}.nbp-finding.warning{border-left-color:#dcc16e}.nbp-finding.good{border-left-color:#69dab0}.nbp-empty-copy{color:#99938a}.nbp-danger-zone{text-align:center}.nbp-danger-zone button{color:#dda2ad;border-color:rgba(190,105,121,.45)}.hidden{display:none!important}
       @media(max-width:720px){.nct-home-tools .nbp-launch{min-height:0}.nbp-base-details,.nbp-meter-grid,.nbp-form-grid,.nbp-perch-grid,.nbp-photo-grid{grid-template-columns:1fr}.nbp-section-heading{align-items:flex-start;flex-wrap:wrap}.nbp-island-slots{grid-template-columns:repeat(5,minmax(82px,1fr));overflow-x:auto;padding-bottom:5px}.nbp-slot{min-width:82px}.nbp-photo-grid img{height:auto;max-height:360px}}
