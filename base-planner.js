@@ -121,6 +121,48 @@
     "Nullspire Tower"
   ]);
 
+  const MAGE_TYPES = new Set([
+    "Red Mage Tower",
+    "Blue Mage Tower",
+    "Red Archmage Tower",
+    "Blue Archmage Tower"
+  ]);
+
+  const SUPPORT_TYPES = new Set([
+    ...MAGE_TYPES,
+    "Nexus Tower",
+    "Nullspire Tower",
+    "Storm Tower"
+  ]);
+
+  const HIGH_VALUE_TYPES = new Set([
+    "Dark Flak Tower",
+    "Fire Flak Tower",
+    "Ice Flak Tower",
+    "Earth Flak Tower",
+    "Electro-Flak Tower",
+    "Crystal Howitzer",
+    "Soul Drain Tower",
+    "Drakul Pylon",
+    "Cosmic Orrery",
+    "Charged Volt Tower",
+    "Red Archmage Tower",
+    "Blue Archmage Tower",
+    "Oculus Tower",
+    "Nexus Tower",
+    "Nullspire Tower"
+  ]);
+
+  const LEGACY_TYPES = new Set([
+    "Archer Tower",
+    "Cannon Tower",
+    "Ballista",
+    "Trebuchet",
+    "Lightning Tower",
+    "Fire Turret",
+    "Ice Turret"
+  ]);
+
   let selectedSlot = null;
   let dragSlot = null;
   let recognitionDraft = null;
@@ -274,6 +316,174 @@
     }
 
     return { occupied, empty, averageLevel, activeIslands, highDamageByIsland, warnings };
+  }
+
+  function analyseLayout(layout = activeLayout()) {
+    const summary = calculateSummary(layout);
+    const findings = [];
+    const islands = [];
+    const placed = layout.slots.filter(Boolean);
+    const nexusSlots = [];
+
+    for (let island = 0; island < ISLAND_COUNT; island += 1) {
+      const start = island * SLOTS_PER_ISLAND;
+      const towers = layout.slots.slice(start, start + SLOTS_PER_ISLAND).filter(Boolean);
+      const types = towers.map(tower => tower.type);
+      const levels = towers.map(tower => tower.level).filter(level => level > 0);
+      const offence = towers.filter(tower => OFFENCE_TYPES.has(tower.type)).length;
+      const support = towers.filter(tower => SUPPORT_TYPES.has(tower.type)).length;
+      const mages = towers.filter(tower => MAGE_TYPES.has(tower.type)).length;
+      const highValue = towers.filter(tower => HIGH_VALUE_TYPES.has(tower.type)).length;
+      const legacy = towers.filter(tower => LEGACY_TYPES.has(tower.type)).length;
+      const nexusCount = types.filter(type => type === "Nexus Tower").length;
+      const soulDrainCount = types.filter(type => type === "Soul Drain Tower").length;
+      const hasDarkFlak = types.includes("Dark Flak Tower");
+      const hasEarthFlak = types.includes("Earth Flak Tower");
+      const hasCosmicOrrery = types.includes("Cosmic Orrery");
+      const averageLevel = levels.length
+        ? levels.reduce((sum, level) => sum + level, 0) / levels.length
+        : 0;
+      const levelSpread = levels.length > 1 ? Math.max(...levels) - Math.min(...levels) : 0;
+
+      if (nexusCount) nexusSlots.push(island);
+
+      const islandFindings = [];
+      if (nexusCount > 1) {
+        islandFindings.push({
+          severity: "error",
+          title: "Too many Nexus Towers",
+          detail: "Only one Nexus Tower can be placed on an island."
+        });
+      }
+      if (soulDrainCount > 1) {
+        islandFindings.push({
+          severity: "error",
+          title: "Too many Soul Drain Towers",
+          detail: "Only one Soul Drain Tower can be placed on an island."
+        });
+      }
+      if (nexusCount && hasDarkFlak) {
+        islandFindings.push({
+          severity: "error",
+          title: "Nexus and Dark Flak conflict",
+          detail: "A Nexus Tower cannot share an island with a Dark Flak Tower."
+        });
+      }
+      if (hasCosmicOrrery && hasEarthFlak) {
+        islandFindings.push({
+          severity: "error",
+          title: "Cosmic Orrery and Earth Flak conflict",
+          detail: "A Cosmic Orrery cannot share an island with an Earth Flak Tower."
+        });
+      }
+      if (hasDarkFlak && hasEarthFlak) {
+        islandFindings.push({
+          severity: "error",
+          title: "Dark Flak and Earth Flak conflict",
+          detail: "A Dark Flak Tower cannot share an island with an Earth Flak Tower."
+        });
+      }
+      if (towers.length >= 4 && offence >= 3 && mages === 0) {
+        islandFindings.push({
+          severity: "warning",
+          title: "No mage protection",
+          detail: "This busy island has no recorded Red, Blue or Archmage tower. Check whether its key damage towers are too easy to disable."
+        });
+      }
+      if (towers.length === SLOTS_PER_ISLAND && highValue < 2) {
+        islandFindings.push({
+          severity: "warning",
+          title: "Low pressure island",
+          detail: "This full island contains fewer than two modern high-value defensive towers."
+        });
+      }
+      if (levelSpread >= 35) {
+        islandFindings.push({
+          severity: "warning",
+          title: "Large level gap",
+          detail: `Its recorded tower levels span ${levelSpread} levels. A much weaker tower may be the easiest entry point.`
+        });
+      }
+      if (towers.length === SLOTS_PER_ISLAND && support >= 1 && highValue >= 2) {
+        islandFindings.push({
+          severity: "good",
+          title: "Layered island",
+          detail: "This island combines modern pressure with at least one supporting tower."
+        });
+      }
+      if (towers.length && legacy === towers.length) {
+        islandFindings.push({
+          severity: "info",
+          title: "Legacy-only island",
+          detail: "All recorded towers here are older types. That is not automatically wrong, but it is a useful Fortification review target."
+        });
+      }
+
+      islands.push({
+        island: island + 1,
+        occupied: towers.length,
+        offence,
+        support,
+        highValue,
+        averageLevel,
+        findings: islandFindings
+      });
+      islandFindings.forEach(finding => findings.push({ ...finding, island: island + 1 }));
+    }
+
+    if (nexusSlots.length > 8) {
+      findings.push({
+        severity: "error",
+        title: "Nexus limit exceeded",
+        detail: "A base can contain no more than eight Nexus Towers."
+      });
+    }
+    const crystalHowitzerCount = placed.filter(tower => tower.type === "Crystal Howitzer").length;
+    if (crystalHowitzerCount > 2) {
+      findings.push({
+        severity: "error",
+        title: "Crystal Howitzer limit exceeded",
+        detail: "A base can contain no more than two Crystal Howitzers."
+      });
+    }
+    if (summary.activeIslands > 2 && summary.occupied / Math.max(summary.activeIslands, 1) < 4) {
+      findings.push({
+        severity: "warning",
+        title: "Base is spread thin",
+        detail: `${summary.occupied} towers are spread across ${summary.activeIslands} active islands. Compare this layout with a more compact version.`
+      });
+    }
+    if (placed.length && placed.some(tower => !tower.level)) {
+      findings.push({
+        severity: "info",
+        title: "Levels still missing",
+        detail: "Add every tower level before using level-gap or Fortification priority advice."
+      });
+    }
+    if (placed.length && !layout.perches.some(perch => perch?.dragonAssigned)) {
+      findings.push({
+        severity: "info",
+        title: "No perched dragon recorded",
+        detail: "Perched-dragon buffs affect the real base. Add or import perch information before treating the review as complete."
+      });
+    }
+
+    const complete = placed.length > 0 && placed.every(tower => tower.level > 0);
+    const errors = findings.filter(finding => finding.severity === "error").length;
+    const warnings = findings.filter(finding => finding.severity === "warning").length;
+    const strengths = findings.filter(finding => finding.severity === "good").length;
+
+    return {
+      islands,
+      findings,
+      errors,
+      warnings,
+      strengths,
+      confidence: !placed.length ? "Not ready" : complete ? "Layout checked" : "Partial check",
+      dpNote: layout.currentDp
+        ? "Your displayed DP is saved as a baseline. Noir can compare future versions, but it will not invent an exact new DP without the game's hidden multipliers."
+        : "Enter the DP currently shown in game to create a comparison baseline. Exact future DP remains an estimate until more verified data is available."
+    };
   }
 
   function moveTower(fromIndex, toIndex, layout = activeLayout()) {
@@ -797,6 +1007,58 @@
     `;
   }
 
+  function renderAnalysis(layout) {
+    const analysis = analyseLayout(layout);
+    const occupiedIslands = analysis.islands.filter(island => island.occupied);
+    const status = analysis.errors
+      ? "Fix conflicts first"
+      : analysis.warnings
+        ? "Review suggested"
+        : occupiedIslands.length
+          ? "No major issues found"
+          : "Add towers to begin";
+    const visibleFindings = analysis.findings.filter(finding => finding.severity !== "good");
+
+    return `
+      <div class="nbp-review-status ${analysis.errors ? "has-errors" : analysis.warnings ? "has-warnings" : "is-clear"}">
+        <div>
+          <span class="nbp-kicker">BASE REVIEW</span>
+          <strong>${escapeHtml(status)}</strong>
+          <p>${escapeHtml(analysis.confidence)} · Advice improves when every tower and level has been reviewed.</p>
+        </div>
+      </div>
+      <div class="nbp-review-grid">
+        <div><span>Rule conflicts</span><strong>${analysis.errors}</strong></div>
+        <div><span>Review items</span><strong>${analysis.warnings}</strong></div>
+        <div><span>Strong islands</span><strong>${analysis.strengths}</strong></div>
+        <div><span>Islands in use</span><strong>${occupiedIslands.length}</strong></div>
+      </div>
+      <div class="nbp-trust-note">
+        <strong>What Noir can verify now</strong>
+        <p>Placement conflicts, island balance, protection, level gaps and whether your strength is spread too thin.</p>
+        <strong>What remains an estimate</strong>
+        <p>${escapeHtml(analysis.dpNote)}</p>
+      </div>
+      <div class="nbp-findings">
+        ${
+          visibleFindings.length
+            ? visibleFindings.map(finding => `
+                <article class="nbp-finding ${finding.severity}">
+                  <span>${finding.island ? `Island ${finding.island}` : "Whole base"}</span>
+                  <strong>${escapeHtml(finding.title)}</strong>
+                  <p>${escapeHtml(finding.detail)}</p>
+                </article>
+              `).join("")
+            : `<article class="nbp-finding good">
+                <span>Current layout</span>
+                <strong>No major rule or balance warnings</strong>
+                <p>Keep tower levels, riders, monuments and runes up to date as you refine the base.</p>
+              </article>`
+        }
+      </div>
+    `;
+  }
+
   function renderEditor() {
     const overlay = document.getElementById(OVERLAY_ID);
     if (!overlay) return;
@@ -961,7 +1223,17 @@
           <div class="nbp-section-heading">
             <div>
               <span class="nbp-kicker">CHECK &amp; COMPARE</span>
-              <h3>Layout summary</h3>
+              <h3>Base review</h3>
+            </div>
+          </div>
+          ${renderAnalysis(layout)}
+        </section>
+
+        <section class="nbp-panel">
+          <div class="nbp-section-heading">
+            <div>
+              <span class="nbp-kicker">LAYOUT TOTALS</span>
+              <h3>Recorded base</h3>
             </div>
           </div>
           ${renderSummary(layout)}
@@ -1446,6 +1718,42 @@
       }
       .nbp-advice strong { color: #91c8e5; }
       .nbp-advice p, .nbp-advice ul { margin-bottom: 0; color: #aaa49b; line-height: 1.5; }
+      .nbp-review-status {
+        margin-top: 14px; padding: 16px; border: 1px solid rgba(220,193,110,.28);
+        border-radius: 18px; background: rgba(220,193,110,.06);
+      }
+      .nbp-review-status.has-errors { border-color: rgba(224,128,137,.48); background: rgba(224,128,137,.08); }
+      .nbp-review-status.is-clear { border-color: rgba(105,218,176,.4); background: rgba(105,218,176,.07); }
+      .nbp-review-status strong { display: block; margin-top: 5px; color: #f0eee9; font-size: 21px; }
+      .nbp-review-status p { margin: 6px 0 0; color: #aaa49b; line-height: 1.45; }
+      .nbp-review-grid {
+        display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 12px;
+      }
+      .nbp-review-grid > div {
+        min-width: 0; padding: 13px; border: 1px solid #2b2b2b; border-radius: 15px; background: #0b0b0b;
+      }
+      .nbp-review-grid span, .nbp-review-grid strong { display: block; }
+      .nbp-review-grid span { color: #8f8b85; font-size: 11px; text-transform: uppercase; letter-spacing: .07em; }
+      .nbp-review-grid strong { margin-top: 7px; color: #dcc16e; font-size: 20px; }
+      .nbp-trust-note {
+        margin-top: 12px; padding: 15px; border: 1px solid rgba(145,200,229,.28);
+        border-radius: 16px; background: rgba(145,200,229,.055);
+      }
+      .nbp-trust-note strong { display: block; color: #91c8e5; }
+      .nbp-trust-note strong:not(:first-child) { margin-top: 13px; color: #dcc16e; }
+      .nbp-trust-note p { margin: 5px 0 0; color: #aaa49b; line-height: 1.5; }
+      .nbp-findings { display: grid; gap: 10px; margin-top: 12px; }
+      .nbp-finding {
+        padding: 14px 15px; border: 1px solid #303030; border-left-width: 4px;
+        border-radius: 15px; background: #0b0b0b;
+      }
+      .nbp-finding span { color: #8f8b85; font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+      .nbp-finding strong { display: block; margin-top: 4px; color: #f0eee9; }
+      .nbp-finding p { margin: 5px 0 0; color: #aaa49b; line-height: 1.45; }
+      .nbp-finding.error { border-left-color: #e08089; }
+      .nbp-finding.warning { border-left-color: #dcc16e; }
+      .nbp-finding.info { border-left-color: #91c8e5; }
+      .nbp-finding.good { border-left-color: #69dab0; }
       .nbp-privacy { border-color: rgba(163,86,101,.35); }
       .nbp-privacy strong { color: #d1919e; }
       .nbp-privacy button { color: #dda2ad; border-color: rgba(190,105,121,.45); }
@@ -1463,7 +1771,7 @@
         .nbp-layout-actions select { flex: 1 1 100%; }
         .nbp-island-path { grid-template-columns: repeat(5, minmax(82px, 1fr)); overflow-x: auto; padding-bottom: 5px; }
         .nbp-slot { min-width: 82px; }
-        .nbp-summary-grid, .nbp-support-grid, .nbp-stored-list, .nbp-photo-grid { grid-template-columns: repeat(2, 1fr); }
+        .nbp-summary-grid, .nbp-review-grid, .nbp-support-grid, .nbp-stored-list, .nbp-photo-grid { grid-template-columns: repeat(2, 1fr); }
         .nbp-recognition-row { grid-template-columns: 42px 1fr 1fr; }
         .nbp-recognition-row label:nth-of-type(2) { grid-column: 2 / -1; }
         .nbp-recognition-row button { grid-column: 2 / -1; }
@@ -1524,6 +1832,7 @@
     install,
     createLayout,
     calculateSummary,
+    analyseLayout,
     parseTowerLines,
     importTowerLines,
     parseBaseSnapshot,
