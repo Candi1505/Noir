@@ -713,6 +713,14 @@
       layout.name = event.target.value.trim() || "My Base";
       saveState();
     });
+    overlay.querySelector("#nbpLayoutName")?.addEventListener("input", event => {
+      layout.name = event.target.value;
+      saveState();
+    });
+    overlay.querySelector("#nbpCurrentDp")?.addEventListener("input", event => {
+      layout.currentDp = event.target.value.trim();
+      saveState();
+    });
     overlay.querySelector("#nbpCurrentDp")?.addEventListener("change", event => {
       layout.currentDp = event.target.value.trim();
       saveState();
