@@ -591,7 +591,7 @@
               <li>When the entered layout matches your real base, tap <strong>Save proposal as current</strong>. This becomes the comparison baseline.</li>
               <li>To test a move, tap one tower and then its destination. Noir moves it into an empty slot or swaps it with the tower already there.</li>
               <li>Watch <strong>Projected defensive strength</strong>, <strong>Defensive effectiveness</strong> and the advice cards. Green is an improvement; red is a weaker proposal.</li>
-              <li>Use Undo, Redo or Restore current layout while experimenting. Save the proposal as current only after making the same changes in WD.</li>
+              <li>Use Undo, Redo or Restore current layout while experimenting. Save the proposal as current only after making the same changes in WD.</li>\n              <li>For Fortification planning, enter your current player level, target level and any XP already earned toward the next level.</li>\n              <li>Add each stored tower with its current level and quantity. Noir uses the WD upgrade XP and level requirements to calculate whether the entered storage can reach the target and recommends an upgrade route.</li>
             </ol>
             <div class="noir-help-callout">
               The current DP is the number shown in WD. Projected defensive
