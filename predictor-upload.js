@@ -1233,7 +1233,7 @@
 
       if (eventStatus) {
         eventStatus.textContent =
-          "Select the event that is currently active in War Dragons.";
+          "Select the event that is currently active in WD.";
 
         eventStatus.style.color =
           "";
