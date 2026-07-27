@@ -179,7 +179,13 @@
       currentDp: "",
       notes: "",
       slots: blankSlots(),
-      perches: Array.from({ length: 3 }, () => null),
+      perches: ["Riverwatch Perch", "Seagazer Perch", "Stonespear Perch"].map(name => ({
+        name,
+        level: 0,
+        dragonName: "",
+        riderName: "",
+        dragonAssigned: false
+      })),
       storedTowers: [],
       referencePhotos: [],
       snapshotImportedAt: "",
@@ -212,11 +218,23 @@
       ),
       perches: Array.from({ length: 3 }, (_, index) => {
         const perch = Array.isArray(safe.perches) ? safe.perches[index] : null;
-        if (!perch || typeof perch !== "object") return null;
+        const names = ["Riverwatch Perch", "Seagazer Perch", "Stonespear Perch"];
+        if (!perch || typeof perch !== "object") {
+          return {
+            name: names[index],
+            level: 0,
+            dragonName: "",
+            riderName: "",
+            dragonAssigned: false
+          };
+        }
+        const dragonName = String(perch.dragonName || "");
         return {
-          name: ["Riverwatch Perch", "Seagazer Perch", "Stonespear Perch"][index],
+          name: names[index],
           level: Math.max(0, Number.parseInt(perch.level, 10) || 0),
-          dragonAssigned: Boolean(perch.dragonAssigned)
+          dragonName,
+          riderName: String(perch.riderName || ""),
+          dragonAssigned: Boolean(dragonName || perch.dragonAssigned)
         };
       }),
       storedTowers: Array.isArray(safe.storedTowers)
@@ -460,7 +478,7 @@
         detail: "Add every tower level before using level-gap or Fortification priority advice."
       });
     }
-    if (placed.length && !layout.perches.some(perch => perch?.dragonAssigned)) {
+    if (placed.length && !layout.perches.some(perch => perch?.dragonName || perch?.dragonAssigned)) {
       findings.push({
         severity: "info",
         title: "No perched dragon recorded",
@@ -905,13 +923,27 @@
   function renderPerches(layout) {
     const perches = Array.isArray(layout.perches) ? layout.perches : [];
     return `
-      <div class="nbp-support-grid">
+      <p class="nbp-perch-help">Enter the perch level, perched dragon and rider used on each section of your base.</p>
+      <div class="nbp-support-grid nbp-perch-grid">
         ${perches.map((perch, index) => `
-          <div>
-            <span>${escapeHtml(perch?.name || ["Riverwatch Perch", "Seagazer Perch", "Stonespear Perch"][index])}</span>
-            <strong>${perch ? `Level ${perch.level || "not recorded"}` : "Not found"}</strong>
-            <small>${perch?.dragonAssigned ? "Dragon assigned" : "No assigned dragon found"}</small>
-          </div>
+          <fieldset class="nbp-perch-card">
+            <legend>${escapeHtml(perch?.name || ["Riverwatch Perch", "Seagazer Perch", "Stonespear Perch"][index])}</legend>
+            <label>
+              Perch level
+              <input data-perch-index="${index}" data-perch-field="level" type="number" min="0"
+                inputmode="numeric" value="${perch?.level || ""}" placeholder="Level">
+            </label>
+            <label>
+              Dragon
+              <input data-perch-index="${index}" data-perch-field="dragonName"
+                value="${escapeHtml(perch?.dragonName || "")}" placeholder="Dragon name">
+            </label>
+            <label>
+              Rider
+              <input data-perch-index="${index}" data-perch-field="riderName"
+                value="${escapeHtml(perch?.riderName || "")}" placeholder="Rider name">
+            </label>
+          </fieldset>
         `).join("")}
       </div>
     `;
@@ -1135,28 +1167,6 @@
 
         ${renderRecognitionWorkbench()}
 
-        <section class="nbp-panel nbp-snapshot">
-          <span class="nbp-kicker">FORTIFICATION SETUP</span>
-          <h3>Import your current base</h3>
-          <p>
-            Choose your captured base file to fill all 40 positions, tower levels,
-            perches and stored towers automatically. The file is read only on this
-            device and is never uploaded.
-          </p>
-          <input id="nbpSnapshotFile" type="file" accept=".har,.json,application/json">
-          <button id="nbpSnapshotImport" class="nbp-primary" type="button">Import base snapshot</button>
-          <p id="nbpSnapshotStatus" class="nbp-import-status">
-            ${layout.snapshotImportedAt
-              ? `A base snapshot is saved in this layout: ${layout.slots.filter(Boolean).length}/40 positions, ${layout.perches.filter(Boolean).length}/3 perches and ${layout.storedTowers.length} stored towers.`
-              : "No base snapshot has been imported into this layout yet."}
-          </p>
-          <small>
-            This capture proves positions, levels, perches and stored structures.
-            Exact upgrade costs, build times and a complete rune, glyph and relic
-            catalogue are not present, so Noir will not guess them.
-          </small>
-        </section>
-
         <section class="nbp-panel">
           <span class="nbp-kicker">ADD A TOWER</span>
           <div class="nbp-add-grid">
@@ -1192,8 +1202,6 @@
           <span class="nbp-kicker">BASE SUPPORT</span>
           <h3>Perches</h3>
           ${renderPerches(layout)}
-          <h3 class="nbp-subheading">Stored towers for Fortification</h3>
-          ${renderStoredTowers(layout)}
         </section>
 
         <section class="nbp-panel">
@@ -1326,29 +1334,6 @@
       renderEditor();
     });
 
-    overlay.querySelector("#nbpSnapshotImport")?.addEventListener("click", async () => {
-      const input = overlay.querySelector("#nbpSnapshotFile");
-      const file = input?.files?.[0];
-      if (!file) {
-        window.alert("Choose your captured base file first.");
-        return;
-      }
-      if (!window.confirm("Replace this layout's 40 base positions with the imported snapshot?")) return;
-      const status = overlay.querySelector("#nbpSnapshotStatus");
-      if (status) status.textContent = "Reading your base snapshot…";
-      try {
-        const result = importBaseSnapshot(await file.text());
-        if (!result.importedCount) {
-          window.alert("No supported base positions were found in that file.");
-          return;
-        }
-        renderEditor();
-      } catch (error) {
-        console.warn("Noir could not import the base snapshot.", error);
-        window.alert("Noir could not read that base snapshot. Your existing layout was not changed.");
-      }
-    });
-
     overlay.querySelector("#nbpAddPhotos")?.addEventListener("click", async () => {
       const input = overlay.querySelector("#nbpPhotoFiles");
       if (!input?.files?.length) {
@@ -1399,6 +1384,20 @@
         if (!startRecognition(Number(button.dataset.analysePhoto))) return;
         renderEditor();
         overlay.querySelector(".nbp-recognition")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    });
+
+    overlay.querySelectorAll("[data-perch-field]").forEach(input => {
+      input.addEventListener("input", event => {
+        const index = Number(event.target.dataset.perchIndex);
+        const field = event.target.dataset.perchField;
+        const perch = activeLayout().perches[index];
+        if (!perch) return;
+        perch[field] = field === "level"
+          ? Math.max(0, Number.parseInt(event.target.value, 10) || 0)
+          : event.target.value;
+        perch.dragonAssigned = Boolean(perch.dragonName);
+        saveState();
       });
     });
 
@@ -1633,8 +1632,9 @@
       .nbp-recognition-pin {
         position: absolute; width: 26px; height: 26px; display: grid; place-items: center;
         transform: translate(-50%, -50%); border: 1.5px solid #f0d479; border-radius: 50%;
-        background: rgba(5,7,8,.9); color: #f0d479; font-size: 11px; font-weight: 950;
-        box-shadow: 0 0 0 2px rgba(5,7,8,.45); pointer-events: none;
+        background: rgba(5,7,8,.08); color: #ffe28a; font-size: 11px; font-weight: 950;
+        text-shadow: 0 1px 3px #000, 0 0 4px #000;
+        box-shadow: 0 0 0 1px rgba(5,7,8,.35); pointer-events: none;
       }
       .nbp-recognition-status {
         display: flex; justify-content: space-between; gap: 12px; margin: 12px 0;
@@ -1664,6 +1664,16 @@
       .nbp-support-grid span, .nbp-stored-list span { color: #8f8b85; font-size: 12px; }
       .nbp-support-grid strong { margin-top: 7px; color: #dcc16e; }
       .nbp-support-grid small { margin-top: 6px; color: #8fa69e; }
+      .nbp-perch-help { margin: 7px 0 14px; color: #a39d94; line-height: 1.5; }
+      .nbp-perch-card {
+        min-width: 0; margin: 0; padding: 15px; border: 1px solid #303236;
+        border-radius: 16px; background: #0a0b0c;
+      }
+      .nbp-perch-card legend { padding: 0 7px; color: #d8bc69; font-weight: 900; }
+      .nbp-perch-card label {
+        display: block; margin-top: 10px; color: #bcb6ac; font-size: 12px; font-weight: 800;
+      }
+      .nbp-perch-card input { margin-top: 6px; }
       .nbp-subheading { margin: 22px 0 10px; }
       .nbp-stored-list { display: grid; grid-template-columns: repeat(2, 1fr); gap: 9px; }
       .nbp-stored-list > div { display: flex; justify-content: space-between; gap: 12px; }
