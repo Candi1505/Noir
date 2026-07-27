@@ -8,189 +8,64 @@
   const TOTAL_SLOTS = ISLAND_COUNT * SLOTS_PER_ISLAND;
 
   const TOWER_TYPES = [
-    "Archer Tower",
-    "Cannon Tower",
-    "Ballista",
-    "Trebuchet",
-    "Lightning Tower",
-    "Storm Tower",
-    "Red Mage Tower",
-    "Blue Mage Tower",
-    "Fire Turret",
-    "Ice Turret",
-    "Dark Flak Tower",
-    "Fire Flak Tower",
-    "Ice Flak Tower",
-    "Earth Flak Tower",
-    "Electro-Flak Tower",
-    "Crystal Howitzer",
-    "Soul Drain Tower",
-    "Drakul Pylon",
-    "Cosmic Orrery",
-    "Charged Volt Tower",
-    "Red Archmage Tower",
-    "Blue Archmage Tower",
-    "Oculus Tower",
-    "Nexus Tower",
-    "Nullspire Tower",
-    "Dark Totem",
-    "Earth Totem",
-    "Fire Totem",
-    "Ice Totem",
-    "Wind Totem",
-    "Sheep Farm",
-    "Lumber Mill",
-    "Perch",
-    "Monument",
-    "Other"
+    "Archer Tower", "Cannon Tower", "Ballista", "Trebuchet", "Lightning Tower",
+    "Storm Tower", "Red Mage Tower", "Blue Mage Tower", "Fire Turret", "Ice Turret",
+    "Dark Flak Tower", "Fire Flak Tower", "Ice Flak Tower", "Earth Flak Tower",
+    "Electro-Flak Tower", "Crystal Howitzer", "Soul Drain Tower", "Drakul Pylon",
+    "Cosmic Orrery", "Charged Volt Tower", "Red Archmage Tower", "Blue Archmage Tower",
+    "Oculus Tower", "Nexus Tower", "Nullspire Tower", "Other"
   ];
 
-  const BASE_IDENTIFIER_MAP = Object.freeze({
-    archerTower: "Archer Tower",
-    ballista: "Ballista",
-    ballistaTower: "Ballista",
-    cannonTower: "Cannon Tower",
-    trebuchet: "Trebuchet",
-    trebuchetTower: "Trebuchet",
-    lightningTower: "Lightning Tower",
-    lightningTowerSuper: "Charged Volt Tower",
-    stormTower: "Storm Tower",
-    mageTower: "Red Mage Tower",
-    mageRedTower: "Red Mage Tower",
-    mageBlueTower: "Blue Mage Tower",
-    mageTowerSuper: "Red Archmage Tower",
-    mageBlueTowerSuper: "Blue Archmage Tower",
-    fireTurret: "Fire Turret",
-    iceTurret: "Ice Turret",
-    elementalFlakDark: "Dark Flak Tower",
-    elementalFlakFire: "Fire Flak Tower",
-    elementalFlakIce: "Ice Flak Tower",
-    elementalFlakEarth: "Earth Flak Tower",
-    elementalFlakWind: "Electro-Flak Tower",
-    elementalFlakElectro: "Electro-Flak Tower",
-    howitzer: "Crystal Howitzer",
-    crystalHowitzer: "Crystal Howitzer",
-    soulDrainTower: "Soul Drain Tower",
-    drainTower: "Drakul Pylon",
-    drakulPylon: "Drakul Pylon",
-    E20Q4Tower: "Cosmic Orrery",
-    cosmicOrrery: "Cosmic Orrery",
-    chargedVoltTower: "Charged Volt Tower",
-    oculusTower: "Oculus Tower",
-    nexusTower: "Nexus Tower",
-    nullspireTower: "Nullspire Tower",
-    cmCrystaldark: "Dark Totem",
-    cmCrystalearth: "Earth Totem",
-    cmCrystalfire: "Fire Totem",
-    cmCrystalice: "Ice Totem",
-    cmCrystalwind: "Wind Totem",
-    darkTotem: "Dark Totem",
-    earthTotem: "Earth Totem",
-    fireTotem: "Fire Totem",
-    iceTotem: "Ice Totem",
-    windTotem: "Wind Totem",
-    hogFarm: "Sheep Farm",
-    sheepFarm: "Sheep Farm",
-    woodFarm: "Lumber Mill",
-    lumberMill: "Lumber Mill",
-    monument: "Monument"
-  });
-
-  const OFFENCE_TYPES = new Set([
-    "Archer Tower",
-    "Cannon Tower",
-    "Ballista",
-    "Trebuchet",
-    "Lightning Tower",
-    "Fire Turret",
-    "Ice Turret",
-    "Dark Flak Tower",
-    "Fire Flak Tower",
-    "Ice Flak Tower",
-    "Earth Flak Tower",
-    "Electro-Flak Tower",
-    "Crystal Howitzer",
-    "Soul Drain Tower",
-    "Drakul Pylon",
-    "Cosmic Orrery",
-    "Charged Volt Tower",
-    "Red Archmage Tower",
-    "Blue Archmage Tower",
-    "Oculus Tower",
-    "Nexus Tower",
-    "Nullspire Tower"
+  const MODERN = new Set([
+    "Dark Flak Tower", "Fire Flak Tower", "Ice Flak Tower", "Earth Flak Tower",
+    "Electro-Flak Tower", "Crystal Howitzer", "Soul Drain Tower", "Drakul Pylon",
+    "Cosmic Orrery", "Charged Volt Tower", "Red Archmage Tower", "Blue Archmage Tower",
+    "Oculus Tower", "Nexus Tower", "Nullspire Tower"
   ]);
-
-  const MAGE_TYPES = new Set([
-    "Red Mage Tower",
-    "Blue Mage Tower",
-    "Red Archmage Tower",
-    "Blue Archmage Tower"
+  const MAGES = new Set([
+    "Red Mage Tower", "Blue Mage Tower", "Red Archmage Tower", "Blue Archmage Tower"
   ]);
-
-  const SUPPORT_TYPES = new Set([
-    ...MAGE_TYPES,
-    "Nexus Tower",
-    "Nullspire Tower",
-    "Storm Tower"
+  const FLACKS = new Set([
+    "Dark Flak Tower", "Fire Flak Tower", "Ice Flak Tower", "Earth Flak Tower",
+    "Electro-Flak Tower"
   ]);
+  const CONFLICTS = [
+    ["Nexus Tower", "Dark Flak Tower"],
+    ["Cosmic Orrery", "Earth Flak Tower"],
+    ["Cosmic Orrery", "Storm Tower"],
+    ["Nullspire Tower", "Red Mage Tower"],
+    ["Nullspire Tower", "Blue Mage Tower"],
+    ["Nullspire Tower", "Red Archmage Tower"],
+    ["Nullspire Tower", "Blue Archmage Tower"],
+    ["Drakul Pylon", "Soul Drain Tower"]
+  ];
 
-  const HIGH_VALUE_TYPES = new Set([
-    "Dark Flak Tower",
-    "Fire Flak Tower",
-    "Ice Flak Tower",
-    "Earth Flak Tower",
-    "Electro-Flak Tower",
-    "Crystal Howitzer",
-    "Soul Drain Tower",
-    "Drakul Pylon",
-    "Cosmic Orrery",
-    "Charged Volt Tower",
-    "Red Archmage Tower",
-    "Blue Archmage Tower",
-    "Oculus Tower",
-    "Nexus Tower",
-    "Nullspire Tower"
-  ]);
-
-  const LEGACY_TYPES = new Set([
-    "Archer Tower",
-    "Cannon Tower",
-    "Ballista",
-    "Trebuchet",
-    "Lightning Tower",
-    "Fire Turret",
-    "Ice Turret"
-  ]);
-
-  let selectedSlot = null;
-  let dragSlot = null;
-  let recognitionDraft = null;
   let state = loadState();
+  let selectedSlot = null;
+  let history = [];
+  let future = [];
+
+  function clone(value) {
+    return JSON.parse(JSON.stringify(value));
+  }
 
   function blankSlots() {
     return Array.from({ length: TOTAL_SLOTS }, () => null);
   }
 
-  function createLayout(name = "My Base") {
-    return {
-      id: `layout-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+  function blankPerches() {
+    return ["Riverwatch Perch", "Seagazer Perch", "Stonespear Perch"].map(name => ({
       name,
-      currentDp: "",
-      notes: "",
-      slots: blankSlots(),
-      perches: ["Riverwatch Perch", "Seagazer Perch", "Stonespear Perch"].map(name => ({
-        name,
-        level: 0,
-        dragonName: "",
-        riderName: "",
-        dragonAssigned: false
-      })),
-      storedTowers: [],
-      referencePhotos: [],
-      snapshotImportedAt: "",
-      updatedAt: new Date().toISOString()
-    };
+      level: 0,
+      dragonName: "",
+      dragonClass: "",
+      dragonTier: "",
+      dragonLevel: 0,
+      riderName: "",
+      riderLevel: 0,
+      riderSkills: "",
+      riderGear: ""
+    }));
   }
 
   function normaliseTower(tower) {
@@ -200,83 +75,100 @@
       type: String(tower.type || "Other"),
       customName: String(tower.customName || ""),
       level: Math.max(0, Number.parseInt(tower.level, 10) || 0),
-      runes: String(tower.runes || ""),
-      monument: Boolean(tower.monument)
+      runes: String(tower.runes || tower.rune || ""),
+      glyph: String(tower.glyph || ""),
+      relic: String(tower.relic || ""),
+      notes: String(tower.notes || "")
+    };
+  }
+
+  function normalisePerch(perch, index) {
+    const defaults = blankPerches()[index];
+    const safe = perch && typeof perch === "object" ? perch : {};
+    return {
+      ...defaults,
+      ...safe,
+      name: defaults.name,
+      level: Math.max(0, Number.parseInt(safe.level, 10) || 0),
+      dragonLevel: Math.max(0, Number.parseInt(safe.dragonLevel, 10) || 0),
+      riderLevel: Math.max(0, Number.parseInt(safe.riderLevel, 10) || 0),
+      dragonName: String(safe.dragonName || ""),
+      dragonClass: String(safe.dragonClass || ""),
+      dragonTier: String(safe.dragonTier || ""),
+      riderName: String(safe.riderName || ""),
+      riderSkills: String(safe.riderSkills || ""),
+      riderGear: String(safe.riderGear || "")
+    };
+  }
+
+  function createLayout(name = "My Base") {
+    const slots = blankSlots();
+    return {
+      id: `layout-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      name,
+      currentDp: "",
+      slots,
+      baselineSlots: clone(slots),
+      perches: blankPerches(),
+      baselinePerches: blankPerches(),
+      referencePhotos: [],
+      updatedAt: new Date().toISOString()
     };
   }
 
   function normaliseLayout(layout) {
     const safe = layout && typeof layout === "object" ? layout : {};
+    const slots = Array.from({ length: TOTAL_SLOTS }, (_, index) =>
+      normaliseTower(Array.isArray(safe.slots) ? safe.slots[index] : null)
+    );
+    const baselineSource = Array.isArray(safe.baselineSlots) ? safe.baselineSlots : slots;
+    const perches = Array.from({ length: 3 }, (_, index) =>
+      normalisePerch(Array.isArray(safe.perches) ? safe.perches[index] : null, index)
+    );
+    const baselinePerches = Array.from({ length: 3 }, (_, index) =>
+      normalisePerch(Array.isArray(safe.baselinePerches) ? safe.baselinePerches[index] : perches[index], index)
+    );
     return {
       id: String(safe.id || `layout-${Date.now()}`),
       name: String(safe.name || "My Base"),
       currentDp: String(safe.currentDp || ""),
-      notes: String(safe.notes || ""),
-      slots: Array.from(
-        { length: TOTAL_SLOTS },
-        (_, index) => normaliseTower(Array.isArray(safe.slots) ? safe.slots[index] : null)
+      slots,
+      baselineSlots: Array.from({ length: TOTAL_SLOTS }, (_, index) =>
+        normaliseTower(baselineSource[index])
       ),
-      perches: Array.from({ length: 3 }, (_, index) => {
-        const perch = Array.isArray(safe.perches) ? safe.perches[index] : null;
-        const names = ["Riverwatch Perch", "Seagazer Perch", "Stonespear Perch"];
-        if (!perch || typeof perch !== "object") {
-          return {
-            name: names[index],
-            level: 0,
-            dragonName: "",
-            riderName: "",
-            dragonAssigned: false
-          };
-        }
-        const dragonName = String(perch.dragonName || "");
-        return {
-          name: names[index],
-          level: Math.max(0, Number.parseInt(perch.level, 10) || 0),
-          dragonName,
-          riderName: String(perch.riderName || ""),
-          dragonAssigned: Boolean(dragonName || perch.dragonAssigned)
-        };
-      }),
-      storedTowers: Array.isArray(safe.storedTowers)
-        ? safe.storedTowers.map(normaliseTower).filter(Boolean)
-        : [],
+      perches,
+      baselinePerches,
       referencePhotos: Array.isArray(safe.referencePhotos)
-        ? safe.referencePhotos
-            .filter(photo => typeof photo === "string" && photo.startsWith("data:image/"))
-            .slice(0, 4)
+        ? safe.referencePhotos.filter(value => typeof value === "string" && value.startsWith("data:image/")).slice(0, 4)
         : [],
-      snapshotImportedAt: String(safe.snapshotImportedAt || ""),
       updatedAt: String(safe.updatedAt || new Date().toISOString())
     };
   }
 
   function loadState() {
     try {
-      const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
-      if (parsed && Array.isArray(parsed.layouts) && parsed.layouts.length) {
-        const layouts = parsed.layouts.map(normaliseLayout);
+      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
+      if (saved?.layouts?.length) {
+        const layouts = saved.layouts.map(normaliseLayout);
         return {
           layouts,
-          activeId: layouts.some(layout => layout.id === parsed.activeId)
-            ? parsed.activeId
-            : layouts[0].id
+          activeId: layouts.some(item => item.id === saved.activeId) ? saved.activeId : layouts[0].id
         };
       }
     } catch (error) {
-      console.warn("Noir Base Planner could not read saved data.", error);
+      console.warn("Noir could not read the saved base.", error);
     }
+    const first = createLayout();
+    return { layouts: [first], activeId: first.id };
+  }
 
-    const layout = createLayout();
-    return { layouts: [layout], activeId: layout.id };
+  function activeLayout() {
+    return state.layouts.find(item => item.id === state.activeId) || state.layouts[0];
   }
 
   function saveState() {
     activeLayout().updatedAt = new Date().toISOString();
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  }
-
-  function activeLayout() {
-    return state.layouts.find(layout => layout.id === state.activeId) || state.layouts[0];
   }
 
   function escapeHtml(value) {
@@ -288,1239 +180,464 @@
       .replaceAll("'", "&#039;");
   }
 
-  function towerLabel(tower) {
-    if (!tower) return "Empty";
-    return tower.type === "Other" && tower.customName
-      ? tower.customName
-      : tower.type;
+  function towerName(tower) {
+    if (!tower) return "Empty slot";
+    return tower.type === "Other" && tower.customName ? tower.customName : tower.type;
   }
 
-  function islandForSlot(index) {
-    return Math.floor(index / SLOTS_PER_ISLAND);
+  function parseDp(value) {
+    const match = String(value || "").trim().match(/^([\d,.]+)\s*([KMBTQ]?)$/i);
+    if (!match) return 0;
+    const number = Number(match[1].replaceAll(",", ""));
+    const multiplier = { K: 1e3, M: 1e6, B: 1e9, T: 1e12, Q: 1e15 }[match[2].toUpperCase()] || 1;
+    return Number.isFinite(number) ? number * multiplier : 0;
   }
 
-  function calculateSummary(layout = activeLayout()) {
-    const towers = layout.slots.filter(Boolean);
-    const occupied = towers.length;
-    const empty = TOTAL_SLOTS - occupied;
-    const levels = towers.map(tower => tower.level).filter(level => level > 0);
-    const averageLevel = levels.length
-      ? levels.reduce((sum, level) => sum + level, 0) / levels.length
-      : 0;
-    const activeIslands = new Set(
-      layout.slots
-        .map((tower, index) => (tower ? islandForSlot(index) : null))
-        .filter(index => index !== null)
-    ).size;
-    const highDamageByIsland = Array.from({ length: ISLAND_COUNT }, (_, island) => {
-      const start = island * SLOTS_PER_ISLAND;
-      return layout.slots
-        .slice(start, start + SLOTS_PER_ISLAND)
-        .filter(tower => tower && OFFENCE_TYPES.has(tower.type))
-        .length;
-    });
-    const warnings = [];
-
-    highDamageByIsland.forEach((count, island) => {
-      const start = island * SLOTS_PER_ISLAND;
-      const used = layout.slots.slice(start, start + SLOTS_PER_ISLAND).filter(Boolean).length;
-      if (used >= 3 && count < 3) {
-        warnings.push(`Island ${island + 1} has only ${count} high-damage tower${count === 1 ? "" : "s"}.`);
-      }
-    });
-
-    if (activeIslands > 2 && occupied / Math.max(activeIslands, 1) < 4) {
-      warnings.push("Your base is spread across several partly filled islands. Compare it with a more compact layout.");
-    }
-
-    return { occupied, empty, averageLevel, activeIslands, highDamageByIsland, warnings };
+  function formatDp(value) {
+    if (!Number.isFinite(value) || value <= 0) return "Add current DP";
+    const units = [["Q", 1e15], ["T", 1e12], ["B", 1e9], ["M", 1e6], ["K", 1e3]];
+    const unit = units.find(([, amount]) => value >= amount);
+    if (!unit) return Math.round(value).toLocaleString();
+    return `${(value / unit[1]).toFixed(value / unit[1] >= 100 ? 0 : 1).replace(/\.0$/, "")}${unit[0]}`;
   }
 
-  function analyseLayout(layout = activeLayout()) {
-    const summary = calculateSummary(layout);
+  function towerPower(tower) {
+    if (!tower) return 0;
+    const level = Math.max(1, tower.level || 1);
+    const typeWeight = MODERN.has(tower.type) ? 1.18 : MAGES.has(tower.type) ? 1.05 : 1;
+    return Math.pow(level, 2.28) * typeWeight;
+  }
+
+  function evaluate(slots, perches = []) {
+    let raw = slots.reduce((sum, tower) => sum + towerPower(tower), 0);
+    let effectiveness = 50;
+    let bonus = 0;
+    let penalty = 0;
     const findings = [];
-    const islands = [];
-    const placed = layout.slots.filter(Boolean);
-    const nexusSlots = [];
 
     for (let island = 0; island < ISLAND_COUNT; island += 1) {
-      const start = island * SLOTS_PER_ISLAND;
-      const towers = layout.slots.slice(start, start + SLOTS_PER_ISLAND).filter(Boolean);
+      const towers = slots.slice(island * SLOTS_PER_ISLAND, (island + 1) * SLOTS_PER_ISLAND).filter(Boolean);
+      if (!towers.length) continue;
       const types = towers.map(tower => tower.type);
-      const levels = towers.map(tower => tower.level).filter(level => level > 0);
-      const offence = towers.filter(tower => OFFENCE_TYPES.has(tower.type)).length;
-      const support = towers.filter(tower => SUPPORT_TYPES.has(tower.type)).length;
-      const mages = towers.filter(tower => MAGE_TYPES.has(tower.type)).length;
-      const highValue = towers.filter(tower => HIGH_VALUE_TYPES.has(tower.type)).length;
-      const legacy = towers.filter(tower => LEGACY_TYPES.has(tower.type)).length;
-      const nexusCount = types.filter(type => type === "Nexus Tower").length;
-      const soulDrainCount = types.filter(type => type === "Soul Drain Tower").length;
-      const hasDarkFlak = types.includes("Dark Flak Tower");
-      const hasEarthFlak = types.includes("Earth Flak Tower");
-      const hasCosmicOrrery = types.includes("Cosmic Orrery");
-      const averageLevel = levels.length
-        ? levels.reduce((sum, level) => sum + level, 0) / levels.length
-        : 0;
-      const levelSpread = levels.length > 1 ? Math.max(...levels) - Math.min(...levels) : 0;
+      const levels = towers.map(tower => tower.level).filter(Boolean);
+      const label = `Island ${island + 1}`;
 
-      if (nexusCount) nexusSlots.push(island);
-
-      const islandFindings = [];
-      if (nexusCount > 1) {
-        islandFindings.push({
-          severity: "error",
-          title: "Too many Nexus Towers",
-          detail: "Only one Nexus Tower can be placed on an island."
-        });
-      }
-      if (soulDrainCount > 1) {
-        islandFindings.push({
-          severity: "error",
-          title: "Too many Soul Drain Towers",
-          detail: "Only one Soul Drain Tower can be placed on an island."
-        });
-      }
-      if (nexusCount && hasDarkFlak) {
-        islandFindings.push({
-          severity: "error",
-          title: "Nexus and Dark Flak conflict",
-          detail: "A Nexus Tower cannot share an island with a Dark Flak Tower."
-        });
-      }
-      if (hasCosmicOrrery && hasEarthFlak) {
-        islandFindings.push({
-          severity: "error",
-          title: "Cosmic Orrery and Earth Flak conflict",
-          detail: "A Cosmic Orrery cannot share an island with an Earth Flak Tower."
-        });
-      }
-      if (hasDarkFlak && hasEarthFlak) {
-        islandFindings.push({
-          severity: "error",
-          title: "Dark Flak and Earth Flak conflict",
-          detail: "A Dark Flak Tower cannot share an island with an Earth Flak Tower."
-        });
-      }
-      if (towers.length >= 4 && offence >= 3 && mages === 0) {
-        islandFindings.push({
-          severity: "warning",
-          title: "No mage protection",
-          detail: "This busy island has no recorded Red, Blue or Archmage tower. Check whether its key damage towers are too easy to disable."
-        });
-      }
-      if (towers.length === SLOTS_PER_ISLAND && highValue < 2) {
-        islandFindings.push({
-          severity: "warning",
-          title: "Low pressure island",
-          detail: "This full island contains fewer than two modern high-value defensive towers."
-        });
-      }
-      if (levelSpread >= 35) {
-        islandFindings.push({
-          severity: "warning",
-          title: "Large level gap",
-          detail: `Its recorded tower levels span ${levelSpread} levels. A much weaker tower may be the easiest entry point.`
-        });
-      }
-      if (towers.length === SLOTS_PER_ISLAND && support >= 1 && highValue >= 2) {
-        islandFindings.push({
-          severity: "good",
-          title: "Layered island",
-          detail: "This island combines modern pressure with at least one supporting tower."
-        });
-      }
-      if (towers.length && legacy === towers.length) {
-        islandFindings.push({
-          severity: "info",
-          title: "Legacy-only island",
-          detail: "All recorded towers here are older types. That is not automatically wrong, but it is a useful Fortification review target."
-        });
-      }
-
-      islands.push({
-        island: island + 1,
-        occupied: towers.length,
-        offence,
-        support,
-        highValue,
-        averageLevel,
-        findings: islandFindings
-      });
-      islandFindings.forEach(finding => findings.push({ ...finding, island: island + 1 }));
-    }
-
-    if (nexusSlots.length > 8) {
-      findings.push({
-        severity: "error",
-        title: "Nexus limit exceeded",
-        detail: "A base can contain no more than eight Nexus Towers."
-      });
-    }
-    const crystalHowitzerCount = placed.filter(tower => tower.type === "Crystal Howitzer").length;
-    if (crystalHowitzerCount > 2) {
-      findings.push({
-        severity: "error",
-        title: "Crystal Howitzer limit exceeded",
-        detail: "A base can contain no more than two Crystal Howitzers."
-      });
-    }
-    if (summary.activeIslands > 2 && summary.occupied / Math.max(summary.activeIslands, 1) < 4) {
-      findings.push({
-        severity: "warning",
-        title: "Base is spread thin",
-        detail: `${summary.occupied} towers are spread across ${summary.activeIslands} active islands. Compare this layout with a more compact version.`
-      });
-    }
-    if (placed.length && placed.some(tower => !tower.level)) {
-      findings.push({
-        severity: "info",
-        title: "Levels still missing",
-        detail: "Add every tower level before using level-gap or Fortification priority advice."
-      });
-    }
-    if (placed.length && !layout.perches.some(perch => perch?.dragonName || perch?.dragonAssigned)) {
-      findings.push({
-        severity: "info",
-        title: "No perched dragon recorded",
-        detail: "Perched-dragon buffs affect the real base. Add or import perch information before treating the review as complete."
-      });
-    }
-
-    const complete = placed.length > 0 && placed.every(tower => tower.level > 0);
-    const errors = findings.filter(finding => finding.severity === "error").length;
-    const warnings = findings.filter(finding => finding.severity === "warning").length;
-    const strengths = findings.filter(finding => finding.severity === "good").length;
-
-    return {
-      islands,
-      findings,
-      errors,
-      warnings,
-      strengths,
-      confidence: !placed.length ? "Not ready" : complete ? "Layout checked" : "Partial check",
-      dpNote: layout.currentDp
-        ? "Your displayed DP is saved as a baseline. Noir can compare future versions, but it will not invent an exact new DP without the game's hidden multipliers."
-        : "Enter the DP currently shown in game to create a comparison baseline. Exact future DP remains an estimate until more verified data is available."
-    };
-  }
-
-  function moveTower(fromIndex, toIndex, layout = activeLayout()) {
-    const from = Number(fromIndex);
-    const to = Number(toIndex);
-    if (
-      !Number.isInteger(from) ||
-      !Number.isInteger(to) ||
-      from < 0 ||
-      to < 0 ||
-      from >= TOTAL_SLOTS ||
-      to >= TOTAL_SLOTS ||
-      from === to
-    ) return false;
-
-    [layout.slots[from], layout.slots[to]] = [layout.slots[to], layout.slots[from]];
-    saveState();
-    return true;
-  }
-
-  function addTower(tower, preferredSlot = null, layout = activeLayout()) {
-    const normalised = normaliseTower(tower);
-    if (!normalised) return -1;
-    const requested = Number(preferredSlot);
-    const slot = Number.isInteger(requested) && requested >= 0 && requested < TOTAL_SLOTS
-      ? requested
-      : layout.slots.findIndex(value => !value);
-    if (slot < 0) return -1;
-    layout.slots[slot] = normalised;
-    saveState();
-    return slot;
-  }
-
-  function removeTower(index, layout = activeLayout()) {
-    if (!Number.isInteger(index) || index < 0 || index >= TOTAL_SLOTS) return false;
-    layout.slots[index] = null;
-    saveState();
-    return true;
-  }
-
-  function parseTowerLines(text) {
-    return String(text || "")
-      .split(/\r?\n/)
-      .map(line => line.trim())
-      .filter(Boolean)
-      .map((line, index) => {
-        const match = line.match(/^(.*?)(?:\s*[,|\-]\s*|\s+level\s+)(\d+)$/i);
-        const rawType = (match ? match[1] : line).trim();
-        const level = match ? Number.parseInt(match[2], 10) : 0;
-        const known = TOWER_TYPES.find(
-          type => type.toLowerCase() === rawType.toLowerCase()
-        );
-        return normaliseTower({
-          id: `bulk-${Date.now()}-${index}`,
-          type: known || "Other",
-          customName: known ? "" : rawType,
-          level
-        });
-      });
-  }
-
-  function importTowerLines(text, layout = activeLayout()) {
-    const towers = parseTowerLines(text);
-    let inserted = 0;
-    towers.forEach(tower => {
-      const slot = layout.slots.findIndex(value => !value);
-      if (slot < 0) return;
-      layout.slots[slot] = tower;
-      inserted += 1;
-    });
-    if (inserted) saveState();
-    return inserted;
-  }
-
-  function tolerantDecode(value) {
-    let current = String(value || "");
-    for (let round = 0; round < 5; round += 1) {
-      const decoded = current.replace(/%([0-9a-fA-F]{2})/g, (_, hex) =>
-        String.fromCharCode(Number.parseInt(hex, 16))
-      );
-      if (decoded === current) break;
-      current = decoded;
-    }
-    return current
-      .replace(/\\"/g, '"')
-      .replace(/\\u0022/gi, '"')
-      .replace(/\\\//g, "/");
-  }
-
-  function objectValue(fragment, key) {
-    const match = String(fragment).match(
-      new RegExp(`"${key}"\\s*:\\s*(?:"([^"]*)"|(-?\\d+)|(true|false))`, "i")
-    );
-    if (!match) return null;
-    if (match[1] !== undefined) return match[1];
-    if (match[2] !== undefined) return Number.parseInt(match[2], 10);
-    return match[3].toLowerCase() === "true";
-  }
-
-  function parseBaseSnapshot(text) {
-    const decoded = tolerantDecode(text);
-    const fragments = decoded.match(/\{[^{}]{0,6000}\}/g) || [];
-    const slots = blankSlots();
-    const perches = Array.from({ length: 3 }, () => null);
-    const storedTowers = [];
-    const perchLocations = {
-      loc_perchAutumn: [0, "Riverwatch Perch"],
-      loc_perchGrass: [1, "Seagazer Perch"],
-      loc_perchVolcano: [2, "Stonespear Perch"]
-    };
-    let skippedCount = 0;
-
-    fragments.forEach((fragment, fragmentIndex) => {
-      const identifier = objectValue(fragment, "identifier");
-      if (!identifier) return;
-      const level = Math.max(0, Number.parseInt(objectValue(fragment, "level"), 10) || 0);
-      const expansion = objectValue(fragment, "expansionIdentifier");
-      const location = objectValue(fragment, "locationIdentifier");
-      const stored = objectValue(fragment, "stored") === true;
-
-      if (location && perchLocations[location]) {
-        const [index, name] = perchLocations[location];
-        perches[index] = {
-          name,
-          level,
-          dragonAssigned: Boolean(objectValue(fragment, "dragonIdentifier"))
-        };
-        return;
-      }
-
-      const mappedType = BASE_IDENTIFIER_MAP[identifier];
-      if (!mappedType) {
-        if (expansion || stored) skippedCount += 1;
-        return;
-      }
-
-      const tower = normaliseTower({
-        id: `snapshot-${fragmentIndex}-${identifier}`,
-        type: mappedType,
-        level
-      });
-
-      const slotMatch = String(expansion || "").match(/^expansion_(\d{3})$/);
-      if (!stored && slotMatch) {
-        const slot = Number.parseInt(slotMatch[1], 10) - 1;
-        if (slot >= 0 && slot < TOTAL_SLOTS) slots[slot] = tower;
-        return;
-      }
-
-      if (stored) storedTowers.push(tower);
-    });
-
-    Object.entries(perchLocations).forEach(([location, [index, name]]) => {
-      const locationIndex = decoded.indexOf(`"expansionIdentifier":"${location}"`);
-      if (locationIndex < 0) return;
-      const objectStart = decoded.lastIndexOf("{", locationIndex);
-      const context = decoded.slice(Math.max(0, objectStart), locationIndex + 700);
-      const identifier = objectValue(context, "identifier");
-      if (!/^perchIsland\d+$/i.test(String(identifier || ""))) return;
-      perches[index] = {
-        name,
-        level: Math.max(0, Number.parseInt(objectValue(context, "level"), 10) || 0),
-        dragonAssigned: Boolean(objectValue(context, "dragonIdentifier"))
-      };
-    });
-
-    const dedupedStored = [];
-    const seenStored = new Set();
-    storedTowers.forEach(tower => {
-      const key = `${tower.type}|${tower.level}|${tower.id}`;
-      if (seenStored.has(key)) return;
-      seenStored.add(key);
-      dedupedStored.push(tower);
-    });
-
-    return {
-      slots,
-      perches,
-      storedTowers: dedupedStored,
-      importedCount: slots.filter(Boolean).length,
-      perchCount: perches.filter(Boolean).length,
-      storedCount: dedupedStored.length,
-      skippedCount
-    };
-  }
-
-  function importBaseSnapshot(text, layout = activeLayout()) {
-    const parsed = parseBaseSnapshot(text);
-    if (!parsed.importedCount) return parsed;
-    layout.slots = parsed.slots;
-    layout.perches = parsed.perches;
-    layout.storedTowers = parsed.storedTowers;
-    layout.snapshotImportedAt = new Date().toISOString();
-    saveState();
-    return parsed;
-  }
-
-  function compressReferencePhoto(file) {
-    return new Promise((resolve, reject) => {
-      if (!file || !String(file.type || "").startsWith("image/")) {
-        reject(new Error("Only image files can be used as base references."));
-        return;
-      }
-      if (Number(file.size || 0) > 15 * 1024 * 1024) {
-        reject(new Error("That screenshot is larger than 15 MB."));
-        return;
-      }
-      const url = URL.createObjectURL(file);
-      const image = new Image();
-      image.onload = () => {
-        try {
-          if (image.width < 500 || image.height < 300) {
-            throw new Error("That image is too small to be a readable base screenshot.");
-          }
-          if (image.width / image.height < 1.2) {
-            throw new Error("Choose a landscape WD base-map screenshot so the tower markers are readable.");
-          }
-          const maxDimension = 1100;
-          const scale = Math.min(1, maxDimension / Math.max(image.width, image.height));
-          const canvas = document.createElement("canvas");
-          canvas.width = Math.max(1, Math.round(image.width * scale));
-          canvas.height = Math.max(1, Math.round(image.height * scale));
-          canvas.getContext("2d").drawImage(image, 0, 0, canvas.width, canvas.height);
-          resolve(canvas.toDataURL("image/jpeg", 0.72));
-        } catch (error) {
-          reject(error);
-        } finally {
-          URL.revokeObjectURL(url);
+      CONFLICTS.forEach(([left, right]) => {
+        if (types.includes(left) && types.includes(right)) {
+          penalty += 8;
+          findings.push({ severity: "error", title: `${left} conflicts with ${right}`, detail: `${label} contains an illegal or ineffective tower pairing.` });
         }
-      };
-      image.onerror = () => {
-        URL.revokeObjectURL(url);
-        reject(new Error("Image could not be read"));
-      };
-      image.src = url;
-    });
+      });
+
+      if (types.filter(type => type === "Nexus Tower").length > 1) {
+        penalty += 10;
+        findings.push({ severity: "error", title: "Too many Nexus Towers", detail: `${label} may contain only one Nexus Tower.` });
+      }
+      if (types.filter(type => type === "Soul Drain Tower").length > 1) {
+        penalty += 10;
+        findings.push({ severity: "error", title: "Too many Soul Drain Towers", detail: `${label} may contain only one Soul Drain Tower.` });
+      }
+      if (towers.length >= 4 && !types.some(type => MAGES.has(type))) {
+        penalty += 4;
+        findings.push({ severity: "warning", title: "No mage protection", detail: `${label} has several towers but no recorded Mage or Archmage protection.` });
+      }
+      if (types.includes("Electro-Flak Tower")) {
+        const supportedFlaks = types.filter(type => FLACKS.has(type) && type !== "Electro-Flak Tower").length;
+        if (supportedFlaks) {
+          bonus += Math.min(6, supportedFlaks * 2);
+          findings.push({ severity: "good", title: "Electro-Flak coverage", detail: `${label} places ${supportedFlaks} other flak tower${supportedFlaks === 1 ? "" : "s"} with Electro-Flak support.` });
+        }
+      }
+      if (levels.length > 1 && Math.max(...levels) - Math.min(...levels) >= 35) {
+        penalty += 3;
+        findings.push({ severity: "warning", title: "Large tower-level gap", detail: `${label} spans ${Math.max(...levels) - Math.min(...levels)} levels.` });
+      }
+      if (towers.length === 5 && types.some(type => MAGES.has(type)) && towers.filter(tower => MODERN.has(tower.type)).length >= 2) {
+        bonus += 3;
+      }
+    }
+
+    const crystalCount = slots.filter(tower => tower?.type === "Crystal Howitzer").length;
+    if (crystalCount > 2) {
+      penalty += 12;
+      findings.push({ severity: "error", title: "Crystal Howitzer limit exceeded", detail: "A base may contain no more than two Crystal Howitzers." });
+    }
+
+    const activePerches = perches.filter(perch => perch?.level && perch?.dragonName).length;
+    bonus += activePerches * 2;
+    effectiveness = Math.max(0, Math.min(100, effectiveness + bonus - penalty));
+    return { raw, effectiveness, findings, bonus, penalty };
   }
 
-  async function addReferencePhotos(files, layout = activeLayout()) {
-    const available = Math.max(0, 4 - layout.referencePhotos.length);
-    const selected = Array.from(files || []).slice(0, available);
-    if (!selected.length) return 0;
-    const previous = [...layout.referencePhotos];
-    const compressed = [];
-    for (const file of selected) {
-      compressed.push(await compressReferencePhoto(file));
-    }
-    layout.referencePhotos.push(...compressed);
-    try {
-      saveState();
-    } catch (error) {
-      layout.referencePhotos = previous;
-      throw error;
-    }
-    return compressed.length;
+  function comparison(layout = activeLayout()) {
+    const current = evaluate(layout.baselineSlots, layout.baselinePerches);
+    const proposed = evaluate(layout.slots, layout.perches);
+    const currentDp = parseDp(layout.currentDp);
+    const ratio = current.raw > 0 ? proposed.raw / current.raw : 1;
+    const estimate = currentDp ? currentDp * ratio : 0;
+    const dpChange = estimate - currentDp;
+    return { current, proposed, currentDp, estimate, dpChange, ratio };
   }
 
-  function removeReferencePhoto(index, layout = activeLayout()) {
-    if (!Number.isInteger(index) || index < 0 || index >= layout.referencePhotos.length) return false;
-    layout.referencePhotos.splice(index, 1);
-    saveState();
-    return true;
+  function pushHistory() {
+    history.push({ slots: clone(activeLayout().slots), perches: clone(activeLayout().perches) });
+    if (history.length > 40) history.shift();
+    future = [];
   }
 
-  function renderReferencePhotos(layout) {
-    if (!layout.referencePhotos.length) {
-      return '<p class="nbp-empty-copy">No reference screenshots selected yet.</p>';
-    }
+  function renderMeters(layout) {
+    const result = comparison(layout);
+    const dpDirection = result.dpChange > 0 ? "up" : result.dpChange < 0 ? "down" : "same";
+    const effectivenessChange = result.proposed.effectiveness - result.current.effectiveness;
+    const percentage = result.currentDp ? (result.dpChange / result.currentDp) * 100 : 0;
     return `
-      <div class="nbp-photo-grid">
-        ${layout.referencePhotos.map((photo, index) => `
-          <figure>
-            <img src="${escapeHtml(photo)}" alt="Base reference screenshot ${index + 1}">
-            <div class="nbp-photo-actions">
-              <button type="button" data-analyse-photo="${index}">Map towers</button>
-              <button type="button" data-remove-photo="${index}" aria-label="Remove screenshot ${index + 1}">Remove</button>
-            </div>
-          </figure>
-        `).join("")}
-      </div>
+      <section class="nbp-panel nbp-comparison">
+        <div class="nbp-section-heading">
+          <div><p class="nbp-kicker">LIVE COMPARISON</p><h3>Current vs proposed</h3></div>
+          <span class="nbp-estimate-label">Estimated from confirmed entries</span>
+        </div>
+        <div class="nbp-meter-grid">
+          <article>
+            <span>Current DP</span>
+            <strong>${escapeHtml(formatDp(result.currentDp))}</strong>
+            <div class="nbp-meter"><i style="width:50%"></i></div>
+          </article>
+          <article class="${dpDirection}">
+            <span>Proposed DP estimate</span>
+            <strong>${escapeHtml(formatDp(result.estimate))}</strong>
+            <b>${result.currentDp ? `${result.dpChange >= 0 ? "+" : ""}${formatDp(Math.abs(result.dpChange))} (${percentage >= 0 ? "+" : ""}${percentage.toFixed(1)}%)` : "Enter current DP to calibrate"}</b>
+            <div class="nbp-meter"><i style="width:${Math.max(4, Math.min(100, 50 + percentage * 2))}%"></i></div>
+          </article>
+          <article class="${effectivenessChange > 0 ? "up" : effectivenessChange < 0 ? "down" : "same"}">
+            <span>Defensive effectiveness</span>
+            <strong>${result.proposed.effectiveness}/100</strong>
+            <b>${effectivenessChange >= 0 ? "+" : ""}${effectivenessChange} from current</b>
+            <div class="nbp-meter"><i style="width:${result.proposed.effectiveness}%"></i></div>
+          </article>
+        </div>
+        <p class="nbp-trust-copy">DP is a calibrated estimate from recorded tower power. Effectiveness separately scores placement, conflicts, coverage and synergy; Noir does not generate or hallucinate a replacement base image.</p>
+      </section>
     `;
   }
 
-  function startRecognition(index, layout = activeLayout()) {
-    const source = layout.referencePhotos[index];
-    if (!source) return false;
-    recognitionDraft = {
-      source,
-      sourceIndex: index,
-      markers: [],
-      nextSlot: 0
-    };
-    return true;
-  }
-
-  function addRecognitionMarker(x, y) {
-    if (!recognitionDraft || recognitionDraft.markers.length >= TOTAL_SLOTS) return false;
-    const slot = recognitionDraft.nextSlot;
-    recognitionDraft.markers.push({
-      id: `recognised-${Date.now()}-${recognitionDraft.markers.length}`,
-      x: Math.max(0, Math.min(100, Number(x) || 0)),
-      y: Math.max(0, Math.min(100, Number(y) || 0)),
-      slot,
-      type: "",
-      level: 0
-    });
-    recognitionDraft.nextSlot = Math.min(TOTAL_SLOTS - 1, slot + 1);
-    return true;
-  }
-
-  function updateRecognitionMarker(index, field, value) {
-    const marker = recognitionDraft?.markers?.[index];
-    if (!marker) return false;
-    if (field === "type") marker.type = TOWER_TYPES.includes(value) ? value : "";
-    if (field === "level") marker.level = Math.max(0, Number.parseInt(value, 10) || 0);
-    if (field === "slot") marker.slot = Math.max(0, Math.min(TOTAL_SLOTS - 1, (Number.parseInt(value, 10) || 1) - 1));
-    return true;
-  }
-
-  function applyRecognitionDraft(mode = "replace", layout = activeLayout()) {
-    const markers = recognitionDraft?.markers || [];
-    if (!markers.length) throw new Error("Mark at least one tower first.");
-    if (markers.some(marker => !marker.type || marker.level < 1)) {
-      throw new Error("Review every marker and enter its tower name and level first.");
-    }
-    const markedSlots = markers.map(marker => Number(marker.slot));
-    if (new Set(markedSlots).size !== markedSlots.length) {
-      throw new Error("Each marked tower needs a different base position.");
-    }
-    if (mode === "fill") {
-      const emptySlots = layout.slots.filter(slot => !slot).length;
-      if (markers.length > emptySlots) {
-        throw new Error(`This layout only has ${emptySlots} empty position(s). Remove some markers or replace the existing layout.`);
-      }
-    }
-    const target = mode === "fill" ? [...layout.slots] : blankSlots();
-    markers.forEach(marker => {
-      let slot = marker.slot;
-      if (mode === "fill" && target[slot]) slot = target.findIndex(item => !item);
-      if (slot < 0) return;
-      target[slot] = normaliseTower({
-        id: marker.id,
-        type: marker.type,
-        level: marker.level
-      });
-    });
-    layout.slots = target;
-    saveState();
-    recognitionDraft = null;
-    return markers.length;
-  }
-
-  function renderRecognitionWorkbench() {
-    if (!recognitionDraft) return "";
-    const reviewed = recognitionDraft.markers.filter(marker => marker.type && marker.level > 0).length;
+  function renderPhotos(layout) {
     return `
-      <section class="nbp-panel nbp-recognition">
-        <span class="nbp-kicker">PRIVATE SCREENSHOT MAPPER</span>
-        <h3>Tap each tower, then review it</h3>
-        <p>
-          Tap tower markers in path order from the front of the base. Noir records the
-          position and prepares the layout; you confirm the exact tower and level because
-          tiny overlapping map icons cannot be identified safely from every screenshot.
-        </p>
-        <div class="nbp-recognition-stage" id="nbpRecognitionStage">
-          <img src="${escapeHtml(recognitionDraft.source)}" alt="Base screenshot being mapped">
-          ${recognitionDraft.markers.map((marker, index) => `
-            <span class="nbp-recognition-pin" style="left:${marker.x}%;top:${marker.y}%">${index + 1}</span>
-          `).join("")}
-        </div>
-        <div class="nbp-recognition-status">
-          <strong>${recognitionDraft.markers.length}/40 marked</strong>
-          <span>${reviewed} fully reviewed</span>
-        </div>
-        <div class="nbp-recognition-list">
-          ${recognitionDraft.markers.map((marker, index) => `
-            <div class="nbp-recognition-row">
-              <strong>#${index + 1}</strong>
-              <label>
-                Base position
-                <input data-recognition-index="${index}" data-recognition-field="slot"
-                  type="number" min="1" max="40" value="${marker.slot + 1}">
-              </label>
-              <label>
-                Tower
-                <select data-recognition-index="${index}" data-recognition-field="type">
-                  <option value="">Choose tower…</option>
-                  ${TOWER_TYPES.map(type => `<option ${marker.type === type ? "selected" : ""}>${escapeHtml(type)}</option>`).join("")}
-                </select>
-              </label>
-              <label>
-                Level
-                <input data-recognition-index="${index}" data-recognition-field="level"
-                  type="number" min="1" inputmode="numeric" value="${marker.level || ""}" placeholder="Level">
-              </label>
-              <button type="button" data-remove-recognition="${index}" aria-label="Remove marker ${index + 1}">Remove</button>
-            </div>
-          `).join("")}
-        </div>
-        <div class="nbp-recognition-actions">
-          <button id="nbpUndoRecognition" type="button" ${recognitionDraft.markers.length ? "" : "disabled"}>Undo last</button>
-          <button id="nbpCancelRecognition" type="button">Cancel scan</button>
-          <button id="nbpApplyRecognition" class="nbp-primary" type="button">
-            Review &amp; create layout
-          </button>
-        </div>
-        <label class="nbp-recognition-mode">
-          <input id="nbpRecognitionFill" type="checkbox">
-          <span>Keep existing towers and use the first available empty positions.</span>
+      <section class="nbp-panel">
+        <p class="nbp-kicker">PHOTO REFERENCE</p>
+        <h3>Your real WD base</h3>
+        <p class="nbp-muted">Use screenshots only as a reference while you recreate the islands below. Noir does not analyse, mark or redraw them.</p>
+        <label class="nbp-photo-button">
+          Add base photos
+          <input id="nbpPhotoInput" type="file" accept="image/*" multiple>
         </label>
-        <small>
-          Nothing is uploaded. Noir does not change the saved layout until you press
-          “Review &amp; create layout” and confirm how it should be applied.
-        </small>
+        <div class="nbp-photo-grid">
+          ${layout.referencePhotos.map((photo, index) => `
+            <figure>
+              <img src="${photo}" alt="Base reference ${index + 1}">
+              <button type="button" data-remove-photo="${index}">Remove</button>
+            </figure>
+          `).join("") || `<p class="nbp-empty-copy">No reference photos added yet.</p>`}
+        </div>
       </section>
     `;
   }
 
   function renderPerches(layout) {
-    const perches = Array.isArray(layout.perches) ? layout.perches : [];
     return `
-      <p class="nbp-perch-help">Enter the perch level, perched dragon and rider used on each section of your base.</p>
-      <div class="nbp-support-grid nbp-perch-grid">
-        ${perches.map((perch, index) => `
-          <fieldset class="nbp-perch-card">
-            <legend>${escapeHtml(perch?.name || ["Riverwatch Perch", "Seagazer Perch", "Stonespear Perch"][index])}</legend>
-            <label>
-              Perch level
-              <input data-perch-index="${index}" data-perch-field="level" type="number" min="0"
-                inputmode="numeric" value="${perch?.level || ""}" placeholder="Level">
-            </label>
-            <label>
-              Dragon
-              <input data-perch-index="${index}" data-perch-field="dragonName"
-                value="${escapeHtml(perch?.dragonName || "")}" placeholder="Dragon name">
-            </label>
-            <label>
-              Rider
-              <input data-perch-index="${index}" data-perch-field="riderName"
-                value="${escapeHtml(perch?.riderName || "")}" placeholder="Rider name">
-            </label>
-          </fieldset>
-        `).join("")}
-      </div>
-    `;
-  }
-
-  function renderStoredTowers(layout) {
-    const stored = Array.isArray(layout.storedTowers) ? layout.storedTowers : [];
-    if (!stored.length) return "<p class=\"nbp-empty-copy\">No stored buildable towers were found in the imported snapshot.</p>";
-    const grouped = new Map();
-    stored.forEach(tower => {
-      const key = `${tower.type}|${tower.level}`;
-      grouped.set(key, {
-        type: tower.type,
-        level: tower.level,
-        count: (grouped.get(key)?.count || 0) + 1
-      });
-    });
-    return `
-      <div class="nbp-stored-list">
-        ${[...grouped.values()].map(item => `
-          <div>
-            <strong>${escapeHtml(item.type)}</strong>
-            <span>${item.count} stored · Level ${item.level || "not recorded"}</span>
-          </div>
-        `).join("")}
-      </div>
-    `;
-  }
-
-  function renderSlot(tower, index) {
-    const selected = selectedSlot === index ? " selected" : "";
-    if (!tower) {
-      return `
-        <button class="nbp-slot empty${selected}" type="button" data-slot="${index}">
-          <span class="nbp-slot-number">${(index % SLOTS_PER_ISLAND) + 1}</span>
-          <span>Empty slot</span>
-        </button>
-      `;
-    }
-
-    return `
-      <button
-        class="nbp-slot occupied${selected}"
-        type="button"
-        data-slot="${index}"
-        draggable="true"
-      >
-        <span class="nbp-slot-number">${(index % SLOTS_PER_ISLAND) + 1}</span>
-        <strong>${escapeHtml(towerLabel(tower))}</strong>
-        <small>${tower.level ? `Level ${tower.level}` : "Level not entered"}</small>
-        ${tower.runes ? `<em>${escapeHtml(tower.runes)}</em>` : ""}
-      </button>
-    `;
-  }
-
-  function renderIsland(layout, island) {
-    const start = island * SLOTS_PER_ISLAND;
-    const slots = layout.slots.slice(start, start + SLOTS_PER_ISLAND);
-    const occupied = slots.filter(Boolean).length;
-    return `
-      <section class="nbp-island">
-        <header>
-          <div>
-            <span class="nbp-kicker">${island === 0 ? "FRONT" : island === ISLAND_COUNT - 1 ? "HOME" : `SECTION ${island + 1}`}</span>
-            <h3>Island ${island + 1}</h3>
-          </div>
-          <span>${occupied}/5</span>
-        </header>
-        <div class="nbp-island-path">
-          ${slots.map((tower, offset) => renderSlot(tower, start + offset)).join("")}
+      <section class="nbp-panel">
+        <p class="nbp-kicker">BASE SUPPORT</p>
+        <h3>Perches, dragons and riders</h3>
+        <p class="nbp-muted">Enter the real assignments so Noir can include their island coverage in later comparisons.</p>
+        <div class="nbp-perch-grid">
+          ${layout.perches.map((perch, index) => `
+            <fieldset class="nbp-perch-card">
+              <legend>${escapeHtml(perch.name)}</legend>
+              <label>Perch level<input data-perch="${index}" data-field="level" type="number" min="0" value="${perch.level || ""}" placeholder="Level"></label>
+              <label>Dragon<input data-perch="${index}" data-field="dragonName" value="${escapeHtml(perch.dragonName)}" placeholder="Dragon name"></label>
+              <div class="nbp-two">
+                <label>Class<select data-perch="${index}" data-field="dragonClass">
+                  <option value="">Choose…</option>
+                  ${["Hunter", "Sorcerer", "Warrior"].map(value => `<option ${perch.dragonClass === value ? "selected" : ""}>${value}</option>`).join("")}
+                </select></label>
+                <label>Dragon level<input data-perch="${index}" data-field="dragonLevel" type="number" min="0" value="${perch.dragonLevel || ""}"></label>
+              </div>
+              <label>Tier / rarity<input data-perch="${index}" data-field="dragonTier" value="${escapeHtml(perch.dragonTier)}" placeholder="e.g. Mythic · Obsidian"></label>
+              <label>Rider<input data-perch="${index}" data-field="riderName" value="${escapeHtml(perch.riderName)}" placeholder="Rider name"></label>
+              <label>Rider level<input data-perch="${index}" data-field="riderLevel" type="number" min="0" value="${perch.riderLevel || ""}"></label>
+              <label>Skills<input data-perch="${index}" data-field="riderSkills" value="${escapeHtml(perch.riderSkills)}" placeholder="Skill build"></label>
+              <label>Gear<input data-perch="${index}" data-field="riderGear" value="${escapeHtml(perch.riderGear)}" placeholder="Rider gear"></label>
+            </fieldset>
+          `).join("")}
         </div>
       </section>
     `;
   }
 
-  function renderSummary(layout) {
-    const summary = calculateSummary(layout);
+  function renderTowerForm(layout) {
+    const tower = selectedSlot === null ? null : layout.slots[selectedSlot];
+    const island = selectedSlot === null ? 0 : Math.floor(selectedSlot / SLOTS_PER_ISLAND) + 1;
+    const position = selectedSlot === null ? 0 : selectedSlot % SLOTS_PER_ISLAND + 1;
     return `
-      <div class="nbp-summary-grid">
-        <div><span>Towers placed</span><strong>${summary.occupied}</strong></div>
-        <div><span>Active islands</span><strong>${summary.activeIslands}</strong></div>
-        <div><span>Average level</span><strong>${summary.averageLevel.toFixed(1)}</strong></div>
-        <div><span>Recorded DP</span><strong>${escapeHtml(layout.currentDp || "Not entered")}</strong></div>
-      </div>
-      <div class="nbp-advice">
-        <strong>${summary.warnings.length ? "Layout checks" : "No layout warnings yet"}</strong>
-        ${
-          summary.warnings.length
-            ? `<ul>${summary.warnings.map(warning => `<li>${escapeHtml(warning)}</li>`).join("")}</ul>`
-            : "<p>Add your real towers to begin checking island balance and compactness.</p>"
-        }
-      </div>
-    `;
-  }
-
-  function renderAnalysis(layout) {
-    const analysis = analyseLayout(layout);
-    const occupiedIslands = analysis.islands.filter(island => island.occupied);
-    const status = analysis.errors
-      ? "Fix conflicts first"
-      : analysis.warnings
-        ? "Review suggested"
-        : occupiedIslands.length
-          ? "No major issues found"
-          : "Add towers to begin";
-    const visibleFindings = analysis.findings.filter(finding => finding.severity !== "good");
-
-    return `
-      <div class="nbp-review-status ${analysis.errors ? "has-errors" : analysis.warnings ? "has-warnings" : "is-clear"}">
-        <div>
-          <span class="nbp-kicker">BASE REVIEW</span>
-          <strong>${escapeHtml(status)}</strong>
-          <p>${escapeHtml(analysis.confidence)} · Advice improves when every tower and level has been reviewed.</p>
+      <section class="nbp-panel ${selectedSlot === null ? "hidden" : ""}" id="nbpTowerEditor">
+        <div class="nbp-section-heading">
+          <div><p class="nbp-kicker">SELECTED SLOT</p><h3>Island ${island} · position ${position}</h3></div>
+          <button type="button" id="nbpCloseEditor">Done</button>
         </div>
-      </div>
-      <div class="nbp-review-grid">
-        <div><span>Rule conflicts</span><strong>${analysis.errors}</strong></div>
-        <div><span>Review items</span><strong>${analysis.warnings}</strong></div>
-        <div><span>Strong islands</span><strong>${analysis.strengths}</strong></div>
-        <div><span>Islands in use</span><strong>${occupiedIslands.length}</strong></div>
-      </div>
-      <div class="nbp-trust-note">
-        <strong>What Noir can verify now</strong>
-        <p>Placement conflicts, island balance, protection, level gaps and whether your strength is spread too thin.</p>
-        <strong>What remains an estimate</strong>
-        <p>${escapeHtml(analysis.dpNote)}</p>
-      </div>
-      <div class="nbp-findings">
-        ${
-          visibleFindings.length
-            ? visibleFindings.map(finding => `
-                <article class="nbp-finding ${finding.severity}">
-                  <span>${finding.island ? `Island ${finding.island}` : "Whole base"}</span>
-                  <strong>${escapeHtml(finding.title)}</strong>
-                  <p>${escapeHtml(finding.detail)}</p>
-                </article>
-              `).join("")
-            : `<article class="nbp-finding good">
-                <span>Current layout</span>
-                <strong>No major rule or balance warnings</strong>
-                <p>Keep tower levels, riders, monuments and runes up to date as you refine the base.</p>
-              </article>`
-        }
-      </div>
+        <div class="nbp-form-grid">
+          <label>Tower<select id="nbpTowerType">
+            <option value="">Empty slot</option>
+            ${TOWER_TYPES.map(type => `<option value="${escapeHtml(type)}" ${tower?.type === type ? "selected" : ""}>${escapeHtml(type)}</option>`).join("")}
+          </select></label>
+          <label>Level<input id="nbpTowerLevel" type="number" min="0" value="${tower?.level || ""}" placeholder="Tower level"></label>
+          <label>Custom name<input id="nbpTowerCustom" value="${escapeHtml(tower?.customName || "")}" placeholder="Only for Other"></label>
+          <label>Rune<input id="nbpTowerRunes" value="${escapeHtml(tower?.runes || "")}" placeholder="Equipped rune"></label>
+          <label>Glyph<input id="nbpTowerGlyph" value="${escapeHtml(tower?.glyph || "")}" placeholder="Equipped glyph"></label>
+          <label>Relic<input id="nbpTowerRelic" value="${escapeHtml(tower?.relic || "")}" placeholder="Equipped relic"></label>
+        </div>
+        <div class="nbp-editor-actions">
+          <button type="button" class="nbp-primary" id="nbpSaveTower">Save tower</button>
+          <button type="button" class="nbp-danger" id="nbpRemoveTower">Clear slot</button>
+        </div>
+      </section>
     `;
   }
 
-  function renderEditor() {
+  function renderIslands(layout) {
+    return `
+      <section class="nbp-panel">
+        <div class="nbp-section-heading">
+          <div><p class="nbp-kicker">TRY CHANGES</p><h3>Interactive island planner</h3></div>
+          <div class="nbp-toolbar">
+            <button id="nbpUndo" type="button" ${history.length ? "" : "disabled"}>Undo</button>
+            <button id="nbpRedo" type="button" ${future.length ? "" : "disabled"}>Redo</button>
+            <button id="nbpResetProposal" type="button">Restore current</button>
+          </div>
+        </div>
+        <p class="nbp-muted">Tap one tower and then another slot to move or swap them. Tap the selected tower again to edit its details.</p>
+        <div class="nbp-islands">
+          ${Array.from({ length: ISLAND_COUNT }, (_, island) => {
+            const start = island * SLOTS_PER_ISLAND;
+            return `
+              <article class="nbp-island">
+                <header><strong>Island ${island + 1}</strong><span>${layout.slots.slice(start, start + SLOTS_PER_ISLAND).filter(Boolean).length}/5 towers</span></header>
+                <div class="nbp-island-slots">
+                  ${Array.from({ length: SLOTS_PER_ISLAND }, (_, offset) => {
+                    const index = start + offset;
+                    const tower = layout.slots[index];
+                    return `
+                      <button type="button" class="nbp-slot ${tower ? "occupied" : "empty"} ${selectedSlot === index ? "selected" : ""}" data-slot="${index}">
+                        <span>${offset + 1}</span>
+                        <strong>${escapeHtml(towerName(tower))}</strong>
+                        <small>${tower?.level ? `Level ${tower.level}` : tower ? "Add level" : "Tap to add"}</small>
+                      </button>
+                    `;
+                  }).join("")}
+                </div>
+              </article>
+            `;
+          }).join("")}
+        </div>
+      </section>
+    `;
+  }
+
+  function renderAdvice(layout) {
+    const result = comparison(layout);
+    const changed = JSON.stringify(layout.slots) !== JSON.stringify(layout.baselineSlots) ||
+      JSON.stringify(layout.perches) !== JSON.stringify(layout.baselinePerches);
+    const findings = result.proposed.findings;
+    return `
+      <section class="nbp-panel">
+        <div class="nbp-section-heading">
+          <div><p class="nbp-kicker">NOIR ADVISER</p><h3>${findings.length ? "What this layout needs" : "No recorded conflicts"}</h3></div>
+          <button type="button" class="nbp-primary" id="nbpMakeCurrent" ${changed ? "" : "disabled"}>Save proposal as current</button>
+        </div>
+        <div class="nbp-findings">
+          ${findings.slice(0, 12).map(item => `
+            <article class="nbp-finding ${item.severity}">
+              <strong>${escapeHtml(item.title)}</strong>
+              <p>${escapeHtml(item.detail)}</p>
+            </article>
+          `).join("") || `<p class="nbp-empty-copy">Add tower levels, perches and equipment for a more complete review.</p>`}
+        </div>
+      </section>
+    `;
+  }
+
+  function render() {
     const overlay = document.getElementById(OVERLAY_ID);
     if (!overlay) return;
     const layout = activeLayout();
-
     overlay.innerHTML = `
       <div class="nbp-shell">
         <header class="nbp-topbar">
-          <div>
-            <p>NOIR BASE PLANNER</p>
-            <h2>Build your real WD base</h2>
-          </div>
-          <button class="nbp-close" type="button" aria-label="Close Base Planner">×</button>
+          <div><p>NOIR BASE ADVISER</p><h2>Build, compare and strengthen</h2></div>
+          <button class="nbp-close" id="nbpClose" type="button" aria-label="Close">×</button>
         </header>
-
-        <section class="nbp-panel nbp-intro">
-          <div>
-            <span class="nbp-kicker">YOUR LAYOUT</span>
-            <h3>Move towers safely before changing the game</h3>
-            <p>
-              Enter the towers you actually own, then tap two slots to swap them.
-              On larger screens you can drag towers between slots.
-            </p>
-          </div>
-          <div class="nbp-layout-actions">
-            <select id="nbpLayoutSelect" aria-label="Saved layout">
-              ${state.layouts.map(item => `
-                <option value="${escapeHtml(item.id)}" ${item.id === state.activeId ? "selected" : ""}>
-                  ${escapeHtml(item.name)}
-                </option>
-              `).join("")}
-            </select>
-            <button id="nbpDuplicateLayout" type="button">Duplicate</button>
-            <button id="nbpNewLayout" type="button">New</button>
-          </div>
+        <section class="nbp-panel nbp-base-details">
+          <label>Base name<input id="nbpLayoutName" value="${escapeHtml(layout.name)}"></label>
+          <label>Current in-game DP<input id="nbpCurrentDp" value="${escapeHtml(layout.currentDp)}" inputmode="decimal" placeholder="e.g. 370B"></label>
         </section>
-
-        <section class="nbp-panel nbp-details">
-          <label>
-            Layout name
-            <input id="nbpLayoutName" value="${escapeHtml(layout.name)}" maxlength="45">
-          </label>
-          <label>
-            Current displayed DP
-            <input id="nbpCurrentDp" value="${escapeHtml(layout.currentDp)}" placeholder="e.g. 370B">
-          </label>
-          <label class="wide">
-            Notes
-            <input id="nbpNotes" value="${escapeHtml(layout.notes)}" placeholder="What are you testing?">
-          </label>
-        </section>
-
-        <section class="nbp-panel nbp-photos">
-          <span class="nbp-kicker">PHOTO REFERENCES</span>
-          <h3>Choose screenshots from Photos</h3>
-          <p>
-            Add up to four screenshots of your base and keep them beside the planner
-            while you arrange towers. Noir resizes and saves them only on this device.
-          </p>
-          <label class="nbp-photo-confirm">
-            <input id="nbpPhotoConfirm" type="checkbox">
-            <span>I confirm these are screenshots of a WD base for planning.</span>
-          </label>
-          <input id="nbpPhotoFiles" class="hidden" type="file" accept="image/*" multiple disabled>
-          <button id="nbpAddPhotos" class="nbp-primary" type="button" disabled>
-            Choose from Photos
-          </button>
-          ${renderReferencePhotos(layout)}
-          <small>
-            Tap “Map towers” on a screenshot to create an editable layout from it.
-            Exact names and levels must be reviewed before Noir applies anything.
-          </small>
-        </section>
-
-        ${renderRecognitionWorkbench()}
-
-        <section class="nbp-panel">
-          <span class="nbp-kicker">ADD A TOWER</span>
-          <div class="nbp-add-grid">
-            <label>
-              Tower
-              <select id="nbpTowerType">
-                ${TOWER_TYPES.map(type => `<option>${escapeHtml(type)}</option>`).join("")}
-              </select>
-            </label>
-            <label>
-              Level
-              <input id="nbpTowerLevel" type="number" min="0" inputmode="numeric" placeholder="Level">
-            </label>
-            <label>
-              Runes, glyphs or relics
-              <input id="nbpTowerRunes" placeholder="Optional notes">
-            </label>
-            <label id="nbpCustomNameWrap" class="hidden">
-              Building name
-              <input id="nbpCustomName" placeholder="Custom name">
-            </label>
-            <button id="nbpAddTower" class="nbp-primary" type="button">Add to first empty slot</button>
-          </div>
-          <details class="nbp-bulk">
-            <summary>Quickly enter several towers</summary>
-            <p>Use one line per tower, for example: <strong>Dark Flak Tower, 160</strong></p>
-            <textarea id="nbpBulkInput" rows="6" placeholder="Dark Flak Tower, 160&#10;Storm Tower, 158&#10;Red Mage Tower, 160"></textarea>
-            <button id="nbpBulkAdd" type="button">Add list to empty slots</button>
-          </details>
-        </section>
-
-        <section class="nbp-panel">
-          <span class="nbp-kicker">BASE SUPPORT</span>
-          <h3>Perches</h3>
-          ${renderPerches(layout)}
-        </section>
-
-        <section class="nbp-panel">
-          <div class="nbp-section-heading">
-            <div>
-              <span class="nbp-kicker">BASE MAP</span>
-              <h3>40 real tower positions</h3>
-            </div>
-            <div class="nbp-map-actions">
-              <button id="nbpClearSelection" type="button" ${selectedSlot === null ? "disabled" : ""}>
-                Deselect
-              </button>
-              <button id="nbpRemoveSelected" class="nbp-danger" type="button" ${selectedSlot === null ? "disabled" : ""}>
-                Remove tower
-              </button>
-            </div>
-          </div>
-          <p id="nbpMoveHint" class="nbp-move-hint">
-            ${selectedSlot === null ? "Tap a tower, then tap its destination to swap." : `Slot ${selectedSlot + 1} selected. Choose its destination.`}
-          </p>
-          <div class="nbp-base-map">
-            ${Array.from({ length: ISLAND_COUNT }, (_, island) => renderIsland(layout, island)).join("")}
-          </div>
-        </section>
-
-        <section class="nbp-panel">
-          <div class="nbp-section-heading">
-            <div>
-              <span class="nbp-kicker">CHECK &amp; COMPARE</span>
-              <h3>Base review</h3>
-            </div>
-          </div>
-          ${renderAnalysis(layout)}
-        </section>
-
-        <section class="nbp-panel">
-          <div class="nbp-section-heading">
-            <div>
-              <span class="nbp-kicker">LAYOUT TOTALS</span>
-              <h3>Recorded base</h3>
-            </div>
-          </div>
-          ${renderSummary(layout)}
-        </section>
-
-        <section class="nbp-panel nbp-privacy">
-          <strong>Saved only on this device</strong>
-          <p>Your base layouts are separate from chest predictions and do not alter any predictor data.</p>
-          <button id="nbpResetPlanner" type="button">Reset Base Planner Data</button>
+        ${renderPhotos(layout)}
+        ${renderMeters(layout)}
+        ${renderIslands(layout)}
+        ${renderTowerForm(layout)}
+        ${renderPerches(layout)}
+        ${renderAdvice(layout)}
+        <section class="nbp-panel nbp-danger-zone">
+          <button type="button" id="nbpResetAll">Delete this saved base</button>
         </section>
       </div>
     `;
-
-    bindEditorEvents();
+    bindEvents();
   }
 
-  function bindEditorEvents() {
+  function bindEvents() {
     const overlay = document.getElementById(OVERLAY_ID);
-    if (!overlay) return;
+    const layout = activeLayout();
+    overlay.querySelector("#nbpClose")?.addEventListener("click", close);
 
-    overlay.querySelector(".nbp-close")?.addEventListener("click", close);
-    overlay.querySelector("#nbpLayoutSelect")?.addEventListener("change", event => {
-      state.activeId = event.target.value;
-      selectedSlot = null;
-      recognitionDraft = null;
+    overlay.querySelector("#nbpLayoutName")?.addEventListener("change", event => {
+      layout.name = event.target.value.trim() || "My Base";
       saveState();
-      renderEditor();
     });
-
-    ["Name", "CurrentDp", "Notes"].forEach(field => {
-      overlay.querySelector(`#nbpLayout${field}`)?.addEventListener("input", event => {
-        const key = field.charAt(0).toLowerCase() + field.slice(1);
-        activeLayout()[key] = event.target.value;
-        saveState();
-      });
-    });
-
-    overlay.querySelector("#nbpNewLayout")?.addEventListener("click", () => {
-      const layout = createLayout(`Layout ${state.layouts.length + 1}`);
-      state.layouts.push(layout);
-      state.activeId = layout.id;
-      selectedSlot = null;
-      recognitionDraft = null;
+    overlay.querySelector("#nbpCurrentDp")?.addEventListener("change", event => {
+      layout.currentDp = event.target.value.trim();
       saveState();
-      renderEditor();
+      render();
     });
 
-    overlay.querySelector("#nbpDuplicateLayout")?.addEventListener("click", () => {
-      const copy = normaliseLayout(JSON.parse(JSON.stringify(activeLayout())));
-      copy.id = `layout-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-      copy.name = `${activeLayout().name} Copy`;
-      state.layouts.push(copy);
-      state.activeId = copy.id;
-      selectedSlot = null;
-      recognitionDraft = null;
+    overlay.querySelector("#nbpPhotoInput")?.addEventListener("change", async event => {
+      const files = Array.from(event.target.files || []).filter(file => file.type.startsWith("image/"));
+      for (const file of files.slice(0, Math.max(0, 4 - layout.referencePhotos.length))) {
+        const data = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+        layout.referencePhotos.push(String(data));
+      }
       saveState();
-      renderEditor();
+      render();
     });
-
-    const towerType = overlay.querySelector("#nbpTowerType");
-    towerType?.addEventListener("change", () => {
-      overlay.querySelector("#nbpCustomNameWrap")?.classList.toggle(
-        "hidden",
-        towerType.value !== "Other"
-      );
-    });
-
-    overlay.querySelector("#nbpAddTower")?.addEventListener("click", () => {
-      const type = towerType?.value || "Other";
-      const slot = addTower({
-        type,
-        customName: overlay.querySelector("#nbpCustomName")?.value || "",
-        level: overlay.querySelector("#nbpTowerLevel")?.value || 0,
-        runes: overlay.querySelector("#nbpTowerRunes")?.value || ""
-      });
-      if (slot < 0) {
-        window.alert("All 40 positions are filled. Remove a tower or create another layout.");
-        return;
-      }
-      renderEditor();
-    });
-
-    overlay.querySelector("#nbpBulkAdd")?.addEventListener("click", () => {
-      const input = overlay.querySelector("#nbpBulkInput");
-      const inserted = importTowerLines(input?.value || "");
-      if (!inserted) {
-        window.alert("Enter at least one tower before adding the list.");
-        return;
-      }
-      renderEditor();
-    });
-
-    overlay.querySelector("#nbpAddPhotos")?.addEventListener("click", async () => {
-      const input = overlay.querySelector("#nbpPhotoFiles");
-      if (!input?.files?.length) {
-        input?.click();
-        return;
-      }
-      try {
-        const added = await addReferencePhotos(input.files);
-        if (!added) {
-          window.alert("You can keep up to four base screenshots in each layout.");
-          return;
-        }
-        renderEditor();
-      } catch (error) {
-        console.warn("Noir could not save the selected screenshots.", error);
-        window.alert(error?.message || "Those screenshots could not be saved. Try choosing fewer images.");
-      }
-    });
-
-    overlay.querySelector("#nbpPhotoConfirm")?.addEventListener("change", event => {
-      const allowed = event.target.checked && activeLayout().referencePhotos.length < 4;
-      const input = overlay.querySelector("#nbpPhotoFiles");
-      const button = overlay.querySelector("#nbpAddPhotos");
-      if (input) input.disabled = !allowed;
-      if (button) button.disabled = !allowed;
-    });
-
-    overlay.querySelector("#nbpPhotoFiles")?.addEventListener("change", async event => {
-      if (!event.target.files?.length) return;
-      try {
-        await addReferencePhotos(event.target.files);
-        renderEditor();
-      } catch (error) {
-        console.warn("Noir could not save the selected screenshots.", error);
-        window.alert(error?.message || "Those screenshots could not be saved. Try choosing fewer images.");
-      }
-    });
-
     overlay.querySelectorAll("[data-remove-photo]").forEach(button => {
       button.addEventListener("click", () => {
-        removeReferencePhoto(Number(button.dataset.removePhoto));
-        renderEditor();
-      });
-    });
-
-    overlay.querySelectorAll("[data-analyse-photo]").forEach(button => {
-      button.addEventListener("click", () => {
-        if (!startRecognition(Number(button.dataset.analysePhoto))) return;
-        renderEditor();
-        overlay.querySelector(".nbp-recognition")?.scrollIntoView({ behavior: "smooth", block: "start" });
-      });
-    });
-
-    overlay.querySelectorAll("[data-perch-field]").forEach(input => {
-      input.addEventListener("input", event => {
-        const index = Number(event.target.dataset.perchIndex);
-        const field = event.target.dataset.perchField;
-        const perch = activeLayout().perches[index];
-        if (!perch) return;
-        perch[field] = field === "level"
-          ? Math.max(0, Number.parseInt(event.target.value, 10) || 0)
-          : event.target.value;
-        perch.dragonAssigned = Boolean(perch.dragonName);
+        layout.referencePhotos.splice(Number(button.dataset.removePhoto), 1);
         saveState();
+        render();
       });
-    });
-
-    overlay.querySelector("#nbpRecognitionStage")?.addEventListener("click", event => {
-      const stage = event.currentTarget;
-      const rect = stage.getBoundingClientRect();
-      if (!rect.width || !rect.height) return;
-      addRecognitionMarker(
-        ((event.clientX - rect.left) / rect.width) * 100,
-        ((event.clientY - rect.top) / rect.height) * 100
-      );
-      renderEditor();
-      overlay.querySelector(".nbp-recognition")?.scrollIntoView({ block: "start" });
-    });
-
-    overlay.querySelectorAll("[data-recognition-field]").forEach(input => {
-      input.addEventListener("input", event => {
-        updateRecognitionMarker(
-          Number(event.target.dataset.recognitionIndex),
-          event.target.dataset.recognitionField,
-          event.target.value
-        );
-      });
-    });
-
-    overlay.querySelectorAll("[data-remove-recognition]").forEach(button => {
-      button.addEventListener("click", () => {
-        recognitionDraft?.markers.splice(Number(button.dataset.removeRecognition), 1);
-        renderEditor();
-      });
-    });
-
-    overlay.querySelector("#nbpUndoRecognition")?.addEventListener("click", () => {
-      const removed = recognitionDraft?.markers.pop();
-      if (recognitionDraft && Number.isFinite(Number(removed?.slot))) {
-        recognitionDraft.nextSlot = Number(removed.slot);
-      }
-      renderEditor();
-    });
-
-    overlay.querySelector("#nbpCancelRecognition")?.addEventListener("click", () => {
-      recognitionDraft = null;
-      renderEditor();
-    });
-
-    overlay.querySelector("#nbpApplyRecognition")?.addEventListener("click", () => {
-      const fill = Boolean(overlay.querySelector("#nbpRecognitionFill")?.checked);
-      const occupied = activeLayout().slots.filter(Boolean).length;
-      const action = fill
-        ? "add these reviewed towers to empty positions"
-        : `replace the current ${occupied} recorded tower position${occupied === 1 ? "" : "s"}`;
-      try {
-        if (!window.confirm(`Use this screenshot draft to ${action}?`)) return;
-        applyRecognitionDraft(fill ? "fill" : "replace");
-        renderEditor();
-        overlay.querySelector(".nbp-base-map")?.scrollIntoView({ behavior: "smooth", block: "start" });
-      } catch (error) {
-        window.alert(error?.message || "The screenshot draft is not ready yet.");
-      }
     });
 
     overlay.querySelectorAll("[data-slot]").forEach(button => {
-      const index = Number(button.dataset.slot);
       button.addEventListener("click", () => {
+        const target = Number(button.dataset.slot);
         if (selectedSlot === null) {
-          if (!activeLayout().slots[index]) return;
-          selectedSlot = index;
-        } else if (selectedSlot === index) {
-          selectedSlot = null;
-        } else {
-          moveTower(selectedSlot, index);
-          selectedSlot = null;
-        }
-        renderEditor();
-      });
-
-      button.addEventListener("dragstart", event => {
-        if (!activeLayout().slots[index]) {
-          event.preventDefault();
+          selectedSlot = target;
+          render();
+          document.getElementById("nbpTowerEditor")?.scrollIntoView({ behavior: "smooth", block: "center" });
           return;
         }
-        dragSlot = index;
-        event.dataTransfer?.setData("text/plain", String(index));
-      });
-      button.addEventListener("dragover", event => event.preventDefault());
-      button.addEventListener("drop", event => {
-        event.preventDefault();
-        const from = Number(event.dataTransfer?.getData("text/plain") || dragSlot);
-        if (moveTower(from, index)) renderEditor();
-        dragSlot = null;
+        if (selectedSlot === target) {
+          document.getElementById("nbpTowerEditor")?.scrollIntoView({ behavior: "smooth", block: "center" });
+          return;
+        }
+        pushHistory();
+        [layout.slots[selectedSlot], layout.slots[target]] = [layout.slots[target], layout.slots[selectedSlot]];
+        selectedSlot = target;
+        saveState();
+        render();
       });
     });
 
-    overlay.querySelector("#nbpClearSelection")?.addEventListener("click", (event) => {
-      event.preventDefault();
-      event.stopPropagation();
+    overlay.querySelector("#nbpCloseEditor")?.addEventListener("click", () => {
       selectedSlot = null;
-      renderEditor();
+      render();
     });
-
-    overlay.querySelector("#nbpRemoveSelected")?.addEventListener("click", (event) => {
-      event.preventDefault();
-      event.stopPropagation();
+    overlay.querySelector("#nbpSaveTower")?.addEventListener("click", () => {
       if (selectedSlot === null) return;
-      const tower = activeLayout().slots[selectedSlot];
-      if (!tower) return;
-      const island = islandForSlot(selectedSlot) + 1;
-      const position = (selectedSlot % SLOTS_PER_ISLAND) + 1;
-      const confirmed = window.confirm(
-        `Remove ${towerLabel(tower)} from Island ${island}, position ${position}?`
-      );
-      if (!confirmed) return;
-      removeTower(selectedSlot);
+      const type = overlay.querySelector("#nbpTowerType")?.value;
+      pushHistory();
+      layout.slots[selectedSlot] = type ? normaliseTower({
+        ...layout.slots[selectedSlot],
+        type,
+        level: overlay.querySelector("#nbpTowerLevel")?.value,
+        customName: overlay.querySelector("#nbpTowerCustom")?.value,
+        runes: overlay.querySelector("#nbpTowerRunes")?.value,
+        glyph: overlay.querySelector("#nbpTowerGlyph")?.value,
+        relic: overlay.querySelector("#nbpTowerRelic")?.value
+      }) : null;
+      saveState();
+      render();
+    });
+    overlay.querySelector("#nbpRemoveTower")?.addEventListener("click", () => {
+      if (selectedSlot === null) return;
+      pushHistory();
+      layout.slots[selectedSlot] = null;
       selectedSlot = null;
-      renderEditor();
+      saveState();
+      render();
     });
 
-    overlay.querySelector("#nbpResetPlanner")?.addEventListener("click", () => {
-      if (!window.confirm("Delete every Base Planner layout saved on this device?")) return;
-      localStorage.removeItem(STORAGE_KEY);
-      state = loadState();
+    overlay.querySelectorAll("[data-perch]").forEach(field => {
+      field.addEventListener("change", event => {
+        const index = Number(event.target.dataset.perch);
+        const key = event.target.dataset.field;
+        pushHistory();
+        layout.perches[index][key] = ["level", "dragonLevel", "riderLevel"].includes(key)
+          ? Math.max(0, Number.parseInt(event.target.value, 10) || 0)
+          : event.target.value;
+        saveState();
+        render();
+      });
+    });
+
+    overlay.querySelector("#nbpUndo")?.addEventListener("click", () => {
+      const previous = history.pop();
+      if (!previous) return;
+      future.push({ slots: clone(layout.slots), perches: clone(layout.perches) });
+      layout.slots = previous.slots;
+      layout.perches = previous.perches;
       selectedSlot = null;
-      renderEditor();
+      saveState();
+      render();
+    });
+    overlay.querySelector("#nbpRedo")?.addEventListener("click", () => {
+      const next = future.pop();
+      if (!next) return;
+      history.push({ slots: clone(layout.slots), perches: clone(layout.perches) });
+      layout.slots = next.slots;
+      layout.perches = next.perches;
+      selectedSlot = null;
+      saveState();
+      render();
+    });
+    overlay.querySelector("#nbpResetProposal")?.addEventListener("click", () => {
+      pushHistory();
+      layout.slots = clone(layout.baselineSlots);
+      layout.perches = clone(layout.baselinePerches);
+      selectedSlot = null;
+      saveState();
+      render();
+    });
+    overlay.querySelector("#nbpMakeCurrent")?.addEventListener("click", () => {
+      if (!window.confirm("Make this proposed layout your new current-base baseline?")) return;
+      layout.baselineSlots = clone(layout.slots);
+      layout.baselinePerches = clone(layout.perches);
+      history = [];
+      future = [];
+      saveState();
+      render();
+    });
+    overlay.querySelector("#nbpResetAll")?.addEventListener("click", () => {
+      if (!window.confirm("Delete this Base Adviser record and start again?")) return;
+      const fresh = createLayout();
+      state = { layouts: [fresh], activeId: fresh.id };
+      history = [];
+      future = [];
+      selectedSlot = null;
+      saveState();
+      render();
     });
   }
 
@@ -1529,263 +646,21 @@
     const style = document.createElement("style");
     style.id = "noirBasePlannerStyles";
     style.textContent = `
-      .nbp-launch {
-        width: 100%; margin: 20px 0 0; padding: 22px; display: flex;
-        justify-content: space-between; align-items: center; gap: 16px;
-        border: 1px solid rgba(102,143,190,.45); border-radius: 24px;
-        background: linear-gradient(135deg, rgba(19,38,58,.72), rgba(5,7,9,.98) 74%);
-        color: #eee9df; text-align: left;
-      }
-      .nbp-launch strong, .nbp-launch small { display: block; }
-      .nbp-launch strong { font-size: 21px; }
-      .nbp-launch small { margin-top: 7px; color: #aaa49b; line-height: 1.45; }
-      .nbp-launch-icon { color: #7fb2da; font-size: 31px; }
-      .nbp-overlay {
-        position: fixed; inset: 0; z-index: 100000; display: none; overflow-y: auto;
-        padding: max(12px, env(safe-area-inset-top)) 12px max(28px, env(safe-area-inset-bottom));
-        box-sizing: border-box; background: #030405; color: #eeeae2;
-      }
-      .nbp-overlay.open { display: block; }
-      .nbp-shell { width: min(1050px, 100%); margin: 0 auto; }
-      .nbp-topbar {
-        position: sticky; top: 0; z-index: 5; display: flex; justify-content: space-between;
-        align-items: center; gap: 16px; padding: 16px 18px; border: 1px solid #282a2d;
-        border-radius: 22px; background: rgba(5,6,7,.95); backdrop-filter: blur(18px);
-      }
-      .nbp-topbar p, .nbp-kicker {
-        margin: 0; color: #d5b85f; font-size: 10px; font-weight: 950; letter-spacing: .18em;
-      }
-      .nbp-topbar h2 { margin: 5px 0 0; font-size: clamp(21px, 5vw, 31px); }
-      .nbp-close {
-        flex: 0 0 auto; width: 48px; height: 48px; border: 1px solid #3c3d40;
-        border-radius: 50%; background: #111214; color: white; font-size: 30px;
-      }
-      .nbp-panel {
-        margin-top: 14px; padding: 20px; border: 1px solid #292b2e; border-radius: 22px;
-        background: linear-gradient(145deg, rgba(19,20,22,.98), rgba(7,8,9,.98));
-      }
-      .nbp-intro { display: grid; grid-template-columns: 1fr auto; gap: 20px; align-items: end; }
-      .nbp-intro h3, .nbp-section-heading h3 { margin: 7px 0; font-size: 22px; }
-      .nbp-intro p, .nbp-privacy p, .nbp-bulk p, .nbp-snapshot p, .nbp-photos p { margin: 0; color: #a39d94; line-height: 1.55; }
-      .nbp-layout-actions { display: flex; flex-wrap: wrap; gap: 8px; }
-      .nbp-layout-actions select, .nbp-layout-actions button, .nbp-panel input,
-      .nbp-panel select, .nbp-panel textarea, .nbp-panel button {
-        box-sizing: border-box; border: 1px solid #383a3d; border-radius: 13px;
-        background: #101113; color: #eeeae2; font: inherit;
-      }
-      .nbp-layout-actions select, .nbp-layout-actions button { padding: 11px 13px; }
-      .nbp-details, .nbp-add-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 13px; }
-      .nbp-details label, .nbp-add-grid label { color: #bcb6ac; font-size: 13px; font-weight: 800; }
-      .nbp-details label.wide { grid-column: 1 / -1; }
-      .nbp-panel input, .nbp-panel select, .nbp-panel textarea {
-        width: 100%; margin-top: 7px; padding: 13px;
-      }
-      .nbp-panel button { padding: 12px 14px; }
-      .nbp-panel .nbp-primary {
-        align-self: end; border-color: #d7ba64; background: #d7ba64;
-        color: #090909; font-weight: 950;
-      }
-      .nbp-bulk { margin-top: 17px; padding-top: 15px; border-top: 1px solid #292b2e; }
-      .nbp-bulk summary { color: #d8bc69; font-weight: 850; cursor: pointer; }
-      .nbp-bulk p { margin-top: 10px; font-size: 13px; }
-      .nbp-bulk button { margin-top: 10px; }
-      .nbp-snapshot h3 { margin: 8px 0; }
-      .nbp-snapshot input { margin: 15px 0 10px; }
-      .nbp-snapshot .nbp-import-status {
-        margin-top: 13px; padding: 12px; border: 1px solid rgba(106,190,160,.32);
-        border-radius: 13px; background: rgba(25,83,64,.2); color: #91d8bd;
-      }
-      .nbp-snapshot > small { display: block; margin-top: 12px; color: #8e8981; line-height: 1.5; }
-      .nbp-photos h3 { margin: 8px 0; }
-      .nbp-photos > small { display: block; margin-top: 12px; color: #8e8981; line-height: 1.5; }
-      .nbp-photo-confirm {
-        display: flex; align-items: center; gap: 11px; margin: 15px 0 10px; padding: 13px;
-        border: 1px solid rgba(215,186,100,.35); border-radius: 14px;
-        background: rgba(48,39,15,.25); color: #d8c78d; line-height: 1.4;
-      }
-      .nbp-photo-confirm input { width: 22px; height: 22px; margin: 0; flex: 0 0 auto; }
-      .nbp-photo-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 14px; }
-      .nbp-photo-grid figure {
-        position: relative; margin: 0; overflow: hidden; border: 1px solid #34363a;
-        border-radius: 15px; background: #08090a;
-      }
-      .nbp-photo-grid img { display: block; width: 100%; height: 210px; object-fit: contain; }
-      .nbp-photo-actions {
-        position: absolute; right: 8px; bottom: 8px; display: flex; gap: 7px;
-      }
-      .nbp-photo-grid button {
-        padding: 8px 10px;
-        background: rgba(6,7,8,.9); color: #dda2ad; border-color: rgba(190,105,121,.55);
-      }
-      .nbp-photo-grid [data-analyse-photo] {
-        color: #92dbc1; border-color: rgba(83,185,149,.55);
-      }
-      .nbp-recognition h3 { margin: 8px 0; }
-      .nbp-recognition > p, .nbp-recognition > small {
-        display: block; color: #a39d94; line-height: 1.55;
-      }
-      .nbp-recognition-stage {
-        position: relative; margin-top: 15px; overflow: hidden; cursor: crosshair;
-        border: 1px solid rgba(105,177,214,.5); border-radius: 16px; background: #050607;
-      }
-      .nbp-recognition-stage img { display: block; width: 100%; height: auto; }
-      .nbp-recognition-pin {
-        position: absolute; width: 26px; height: 26px; display: grid; place-items: center;
-        transform: translate(-50%, -50%); border: 1.5px solid #f0d479; border-radius: 50%;
-        background: rgba(5,7,8,.08); color: #ffe28a; font-size: 11px; font-weight: 950;
-        text-shadow: 0 1px 3px #000, 0 0 4px #000;
-        box-shadow: 0 0 0 1px rgba(5,7,8,.35); pointer-events: none;
-      }
-      .nbp-recognition-status {
-        display: flex; justify-content: space-between; gap: 12px; margin: 12px 0;
-        padding: 12px 14px; border: 1px solid rgba(84,185,150,.35); border-radius: 13px;
-        background: rgba(27,78,61,.2); color: #94ddc3;
-      }
-      .nbp-recognition-list { display: grid; gap: 9px; }
-      .nbp-recognition-row {
-        display: grid; grid-template-columns: auto 110px 1fr 110px auto; gap: 9px;
-        align-items: end; padding: 11px; border: 1px solid #303237; border-radius: 14px;
-        background: #0d0e10;
-      }
-      .nbp-recognition-row > strong { align-self: center; color: #d9be69; }
-      .nbp-recognition-row label { color: #99938a; font-size: 11px; font-weight: 800; }
-      .nbp-recognition-row input, .nbp-recognition-row select { margin-top: 5px; padding: 10px; }
-      .nbp-recognition-row button { color: #dda2ad; border-color: rgba(190,105,121,.45); }
-      .nbp-recognition-actions { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 13px; }
-      .nbp-recognition-mode {
-        display: flex; gap: 10px; align-items: center; margin: 12px 0; color: #b5afa6;
-      }
-      .nbp-recognition-mode input { width: 21px; margin: 0; flex: 0 0 auto; }
-      .nbp-support-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 13px; }
-      .nbp-support-grid > div, .nbp-stored-list > div {
-        padding: 14px; border: 1px solid #303237; border-radius: 15px; background: #0d0e10;
-      }
-      .nbp-support-grid span, .nbp-support-grid strong, .nbp-support-grid small { display: block; }
-      .nbp-support-grid span, .nbp-stored-list span { color: #8f8b85; font-size: 12px; }
-      .nbp-support-grid strong { margin-top: 7px; color: #dcc16e; }
-      .nbp-support-grid small { margin-top: 6px; color: #8fa69e; }
-      .nbp-perch-help { margin: 7px 0 14px; color: #a39d94; line-height: 1.5; }
-      .nbp-perch-card {
-        min-width: 0; margin: 0; padding: 15px; border: 1px solid #303236;
-        border-radius: 16px; background: #0a0b0c;
-      }
-      .nbp-perch-card legend { padding: 0 7px; color: #d8bc69; font-weight: 900; }
-      .nbp-perch-card label {
-        display: block; margin-top: 10px; color: #bcb6ac; font-size: 12px; font-weight: 800;
-      }
-      .nbp-perch-card input { margin-top: 6px; }
-      .nbp-subheading { margin: 22px 0 10px; }
-      .nbp-stored-list { display: grid; grid-template-columns: repeat(2, 1fr); gap: 9px; }
-      .nbp-stored-list > div { display: flex; justify-content: space-between; gap: 12px; }
-      .nbp-empty-copy { color: #99938a; }
-      .nbp-section-heading { display: flex; justify-content: space-between; align-items: center; gap: 13px; }
-      .nbp-map-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
-      .nbp-map-actions button:disabled { cursor: not-allowed; opacity: .42; }
-      .nbp-map-actions .nbp-danger {
-        border-color: rgba(204,112,129,.55);
-        color: #e1a5b0;
-      }
-      .nbp-move-hint {
-        margin: 12px 0 18px; padding: 12px 14px; border: 1px solid rgba(117,172,211,.35);
-        border-radius: 14px; background: rgba(35,77,105,.2); color: #9ac8e7;
-      }
-      .nbp-base-map { display: grid; gap: 12px; }
-      .nbp-island {
-        padding: 14px; border: 1px solid #303338; border-radius: 19px;
-        background: linear-gradient(90deg, rgba(25,30,35,.95), rgba(10,11,12,.98));
-      }
-      .nbp-island header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-      .nbp-island header h3 { margin: 4px 0 0; }
-      .nbp-island header > span { color: #8e99a4; }
-      .nbp-island-path { display: grid; grid-template-columns: repeat(5, 1fr); gap: 9px; }
-      .nbp-slot {
-        position: relative; min-height: 102px; padding: 24px 9px 10px !important;
-        border-radius: 15px !important; text-align: left; overflow: hidden;
-      }
-      .nbp-slot.empty { border-style: dashed; color: #777c82; }
-      .nbp-slot.occupied { border-color: rgba(215,186,100,.4); background: rgba(47,38,14,.32); }
-      .nbp-slot.selected { outline: 2px solid #79c5ef; border-color: #79c5ef; }
-      .nbp-slot-number {
-        position: absolute; top: 7px; right: 8px; color: #7d8288; font-size: 10px;
-      }
-      .nbp-slot strong, .nbp-slot small, .nbp-slot em { display: block; }
-      .nbp-slot strong { color: #eee9df; font-size: 13px; }
-      .nbp-slot small { margin-top: 6px; color: #d6b968; font-size: 11px; }
-      .nbp-slot em {
-        margin-top: 5px; color: #8f9ca6; font-size: 10px; font-style: normal;
-        white-space: nowrap; text-overflow: ellipsis; overflow: hidden;
-      }
-      .nbp-summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 14px; }
-      .nbp-summary-grid > div {
-        padding: 16px; border: 1px solid #303237; border-radius: 16px; background: #0d0e10;
-      }
-      .nbp-summary-grid span, .nbp-summary-grid strong { display: block; }
-      .nbp-summary-grid span { color: #8f8b85; font-size: 12px; }
-      .nbp-summary-grid strong { margin-top: 7px; color: #dcc16e; font-size: 20px; }
-      .nbp-advice {
-        margin-top: 12px; padding: 16px; border: 1px solid rgba(105,177,214,.3);
-        border-radius: 16px; background: rgba(29,64,83,.18);
-      }
-      .nbp-advice strong { color: #91c8e5; }
-      .nbp-advice p, .nbp-advice ul { margin-bottom: 0; color: #aaa49b; line-height: 1.5; }
-      .nbp-review-status {
-        margin-top: 14px; padding: 16px; border: 1px solid rgba(220,193,110,.28);
-        border-radius: 18px; background: rgba(220,193,110,.06);
-      }
-      .nbp-review-status.has-errors { border-color: rgba(224,128,137,.48); background: rgba(224,128,137,.08); }
-      .nbp-review-status.is-clear { border-color: rgba(105,218,176,.4); background: rgba(105,218,176,.07); }
-      .nbp-review-status strong { display: block; margin-top: 5px; color: #f0eee9; font-size: 21px; }
-      .nbp-review-status p { margin: 6px 0 0; color: #aaa49b; line-height: 1.45; }
-      .nbp-review-grid {
-        display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 12px;
-      }
-      .nbp-review-grid > div {
-        min-width: 0; padding: 13px; border: 1px solid #2b2b2b; border-radius: 15px; background: #0b0b0b;
-      }
-      .nbp-review-grid span, .nbp-review-grid strong { display: block; }
-      .nbp-review-grid span { color: #8f8b85; font-size: 11px; text-transform: uppercase; letter-spacing: .07em; }
-      .nbp-review-grid strong { margin-top: 7px; color: #dcc16e; font-size: 20px; }
-      .nbp-trust-note {
-        margin-top: 12px; padding: 15px; border: 1px solid rgba(145,200,229,.28);
-        border-radius: 16px; background: rgba(145,200,229,.055);
-      }
-      .nbp-trust-note strong { display: block; color: #91c8e5; }
-      .nbp-trust-note strong:not(:first-child) { margin-top: 13px; color: #dcc16e; }
-      .nbp-trust-note p { margin: 5px 0 0; color: #aaa49b; line-height: 1.5; }
-      .nbp-findings { display: grid; gap: 10px; margin-top: 12px; }
-      .nbp-finding {
-        padding: 14px 15px; border: 1px solid #303030; border-left-width: 4px;
-        border-radius: 15px; background: #0b0b0b;
-      }
-      .nbp-finding span { color: #8f8b85; font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
-      .nbp-finding strong { display: block; margin-top: 4px; color: #f0eee9; }
-      .nbp-finding p { margin: 5px 0 0; color: #aaa49b; line-height: 1.45; }
-      .nbp-finding.error { border-left-color: #e08089; }
-      .nbp-finding.warning { border-left-color: #dcc16e; }
-      .nbp-finding.info { border-left-color: #91c8e5; }
-      .nbp-finding.good { border-left-color: #69dab0; }
-      .nbp-privacy { border-color: rgba(163,86,101,.35); }
-      .nbp-privacy strong { color: #d1919e; }
-      .nbp-privacy button { color: #dda2ad; border-color: rgba(190,105,121,.45); }
-      .hidden { display: none !important; }
-      @media (max-width: 720px) {
-        .nbp-section-heading { align-items: flex-start; flex-wrap: wrap; }
-        .nbp-map-actions { justify-content: flex-start; width: 100%; }
-        .nbp-recognition-pin {
-          width: 22px; height: 22px; border-width: 1px; font-size: 10px;
-          box-shadow: 0 0 0 1px rgba(5,7,8,.5);
-        }
-        .nbp-intro, .nbp-details, .nbp-add-grid { grid-template-columns: 1fr; }
-        .nbp-details label.wide { grid-column: auto; }
-        .nbp-layout-actions { width: 100%; }
-        .nbp-layout-actions select { flex: 1 1 100%; }
-        .nbp-island-path { grid-template-columns: repeat(5, minmax(82px, 1fr)); overflow-x: auto; padding-bottom: 5px; }
-        .nbp-slot { min-width: 82px; }
-        .nbp-summary-grid, .nbp-review-grid, .nbp-support-grid, .nbp-stored-list, .nbp-photo-grid { grid-template-columns: repeat(2, 1fr); }
-        .nbp-recognition-row { grid-template-columns: 42px 1fr 1fr; }
-        .nbp-recognition-row label:nth-of-type(2) { grid-column: 2 / -1; }
-        .nbp-recognition-row button { grid-column: 2 / -1; }
-      }
+      .nbp-launch{width:100%;margin:0;padding:22px;display:flex;justify-content:space-between;align-items:center;gap:16px;border:1px solid rgba(102,143,190,.45);border-radius:24px;background:linear-gradient(135deg,rgba(19,38,58,.72),rgba(5,7,9,.98) 74%);color:#eee9df;text-align:left;box-sizing:border-box}
+      .nbp-launch strong,.nbp-launch small{display:block}.nbp-launch strong{font-size:19px}.nbp-launch small{margin-top:7px;color:#aaa49b;line-height:1.45;font-size:13px}.nbp-launch-icon{color:#7fb2da;font-size:31px}
+      .nct-home-tools .nbp-launch{min-height:138px}
+      .nbp-overlay{position:fixed;inset:0;z-index:100000;display:none;overflow-y:auto;padding:max(12px,env(safe-area-inset-top)) 12px max(28px,env(safe-area-inset-bottom));box-sizing:border-box;background:#030405;color:#eeeae2}.nbp-overlay.open{display:block}
+      .nbp-shell{width:min(1050px,100%);margin:0 auto}.nbp-topbar{position:sticky;top:0;z-index:5;display:flex;justify-content:space-between;align-items:center;gap:16px;padding:16px 18px;border:1px solid #282a2d;border-radius:22px;background:rgba(5,6,7,.96);backdrop-filter:blur(18px)}
+      .nbp-topbar p,.nbp-kicker{margin:0;color:#d5b85f;font-size:10px;font-weight:950;letter-spacing:.18em}.nbp-topbar h2{margin:5px 0 0;font-size:clamp(21px,5vw,31px)}.nbp-close{flex:0 0 auto;width:48px;height:48px;border:1px solid #3c3d40;border-radius:50%;background:#111214;color:#fff;font-size:30px}
+      .nbp-panel{margin-top:14px;padding:20px;border:1px solid #292b2e;border-radius:22px;background:linear-gradient(145deg,rgba(19,20,22,.98),rgba(7,8,9,.98))}.nbp-panel h3{margin:7px 0 10px;font-size:22px}.nbp-muted,.nbp-trust-copy{color:#a39d94;line-height:1.55}
+      .nbp-panel input,.nbp-panel select,.nbp-panel button{box-sizing:border-box;border:1px solid #383a3d;border-radius:13px;background:#101113;color:#eeeae2;font:inherit}.nbp-panel input,.nbp-panel select{width:100%;margin-top:7px;padding:13px}.nbp-panel button{padding:11px 14px}.nbp-panel label{color:#bcb6ac;font-size:13px;font-weight:800}.nbp-primary{border-color:#d7ba64!important;background:#d7ba64!important;color:#090909!important;font-weight:950}.nbp-danger{border-color:rgba(204,112,129,.55)!important;color:#e1a5b0!important}
+      .nbp-base-details{display:grid;grid-template-columns:1fr 1fr;gap:13px}.nbp-section-heading{display:flex;justify-content:space-between;align-items:center;gap:13px}.nbp-estimate-label{color:#8e99a4;font-size:12px}
+      .nbp-photo-button{display:inline-block;margin-top:15px;padding:12px 15px;border:1px solid #d7ba64;border-radius:13px;color:#0a0a0a!important;background:#d7ba64;cursor:pointer}.nbp-photo-button input{display:none}.nbp-photo-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:14px}.nbp-photo-grid figure{position:relative;margin:0;overflow:hidden;border:1px solid #34363a;border-radius:15px;background:#08090a}.nbp-photo-grid img{display:block;width:100%;height:240px;object-fit:contain}.nbp-photo-grid button{position:absolute;right:8px;bottom:8px;color:#dda2ad;background:rgba(6,7,8,.92)}
+      .nbp-meter-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}.nbp-meter-grid article{padding:16px;border:1px solid #303237;border-radius:16px;background:#0d0e10}.nbp-meter-grid span,.nbp-meter-grid strong,.nbp-meter-grid b{display:block}.nbp-meter-grid span{color:#8f8b85;font-size:12px}.nbp-meter-grid strong{margin-top:7px;color:#dcc16e;font-size:24px}.nbp-meter-grid b{margin-top:5px;color:#a8a39b;font-size:12px}.nbp-meter{height:8px;margin-top:13px;overflow:hidden;border-radius:99px;background:#222}.nbp-meter i{display:block;height:100%;border-radius:99px;background:#d9bd68}.nbp-meter-grid .up strong,.nbp-meter-grid .up b{color:#72d6b2}.nbp-meter-grid .up .nbp-meter i{background:#61cda7}.nbp-meter-grid .down strong,.nbp-meter-grid .down b{color:#e18a98}.nbp-meter-grid .down .nbp-meter i{background:#d77384}
+      .nbp-toolbar,.nbp-editor-actions{display:flex;flex-wrap:wrap;gap:8px}.nbp-toolbar button:disabled,.nbp-panel button:disabled{opacity:.4}.nbp-islands{display:grid;gap:12px;margin-top:16px}.nbp-island{padding:14px;border:1px solid #303338;border-radius:19px;background:linear-gradient(90deg,rgba(25,30,35,.95),rgba(10,11,12,.98))}.nbp-island header{display:flex;justify-content:space-between;margin-bottom:12px}.nbp-island header span{color:#8e99a4;font-size:12px}.nbp-island-slots{display:grid;grid-template-columns:repeat(5,1fr);gap:9px}.nbp-slot{position:relative;min-height:102px;padding:25px 9px 10px!important;text-align:left;overflow:hidden}.nbp-slot>span{position:absolute;top:7px;right:8px;color:#7d8288;font-size:10px}.nbp-slot strong,.nbp-slot small{display:block}.nbp-slot strong{font-size:13px}.nbp-slot small{margin-top:6px;color:#d6b968;font-size:11px}.nbp-slot.empty{border-style:dashed;color:#777c82}.nbp-slot.occupied{border-color:rgba(215,186,100,.4);background:rgba(47,38,14,.32)}.nbp-slot.selected{outline:2px solid #79c5ef;border-color:#79c5ef}
+      .nbp-form-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.nbp-editor-actions{margin-top:14px}.nbp-perch-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}.nbp-perch-card{min-width:0;padding:15px;border:1px solid #303236;border-radius:16px;background:#0a0b0c}.nbp-perch-card legend{padding:0 7px;color:#d8bc69;font-weight:900}.nbp-perch-card label{display:block;margin-top:10px}.nbp-two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+      .nbp-findings{display:grid;gap:10px;margin-top:14px}.nbp-finding{padding:14px 15px;border:1px solid #303030;border-left-width:4px;border-radius:15px;background:#0b0b0b}.nbp-finding strong{display:block}.nbp-finding p{margin:5px 0 0;color:#aaa49b;line-height:1.45}.nbp-finding.error{border-left-color:#e08089}.nbp-finding.warning{border-left-color:#dcc16e}.nbp-finding.good{border-left-color:#69dab0}.nbp-empty-copy{color:#99938a}.nbp-danger-zone{text-align:center}.nbp-danger-zone button{color:#dda2ad;border-color:rgba(190,105,121,.45)}.hidden{display:none!important}
+      @media(max-width:720px){.nct-home-tools .nbp-launch{min-height:0}.nbp-base-details,.nbp-meter-grid,.nbp-form-grid,.nbp-perch-grid,.nbp-photo-grid{grid-template-columns:1fr}.nbp-section-heading{align-items:flex-start;flex-wrap:wrap}.nbp-island-slots{grid-template-columns:repeat(5,minmax(82px,1fr));overflow-x:auto;padding-bottom:5px}.nbp-slot{min-width:82px}.nbp-photo-grid img{height:auto;max-height:360px}}
     `;
     document.head.appendChild(style);
   }
@@ -1793,24 +668,22 @@
   function install() {
     if (document.getElementById(OVERLAY_ID)) return;
     installStyles();
-
     const launch = document.createElement("button");
     launch.type = "button";
     launch.className = "nbp-launch";
-    launch.innerHTML = `
-      <span>
-        <strong>Base Planner</strong>
-        <small>Map your real towers, test moves and compare layouts before changing your WD base.</small>
-      </span>
-      <span class="nbp-launch-icon" aria-hidden="true">⚔</span>
-    `;
+    launch.innerHTML = `<span><strong>Base Adviser</strong><small>Build your real base, test tower moves and compare the result.</small></span><span class="nbp-launch-icon" aria-hidden="true">⚔</span>`;
     launch.addEventListener("click", open);
 
     const tools = document.querySelector(".nct-home-tools");
-    const planner = document.querySelector(".cp-launch");
-    const rates = document.querySelector(".cdr-launch");
-    const progress = document.querySelector("#activeSessionTitle")?.closest(".content-panel");
-    (tools || planner || rates || progress)?.insertAdjacentElement("afterend", launch);
+    const share = tools?.querySelector(".nct-share");
+    if (share) {
+      tools.insertBefore(launch, share);
+    } else if (tools) {
+      tools.prepend(launch);
+    } else {
+      const progress = document.querySelector("#activeSessionTitle")?.closest(".content-panel");
+      progress?.insertAdjacentElement("afterend", launch);
+    }
 
     const overlay = document.createElement("section");
     overlay.id = OVERLAY_ID;
@@ -1820,7 +693,7 @@
   }
 
   function open() {
-    renderEditor();
+    render();
     const overlay = document.getElementById(OVERLAY_ID);
     overlay?.classList.add("open");
     overlay?.setAttribute("aria-hidden", "false");
@@ -1833,7 +706,6 @@
     overlay?.setAttribute("aria-hidden", "true");
     document.body.style.overflow = "";
     selectedSlot = null;
-    recognitionDraft = null;
   }
 
   window.NoirBasePlanner = Object.freeze({
@@ -1841,30 +713,11 @@
     close,
     install,
     createLayout,
-    calculateSummary,
-    analyseLayout,
-    parseTowerLines,
-    importTowerLines,
-    parseBaseSnapshot,
-    importBaseSnapshot,
-    addReferencePhotos,
-    removeReferencePhoto,
-    startRecognition,
-    addRecognitionMarker,
-    updateRecognitionMarker,
-    applyRecognitionDraft,
-    addTower,
-    moveTower,
-    removeTower,
-    getState: () => JSON.parse(JSON.stringify(state)),
-    getActiveLayout: () => JSON.parse(JSON.stringify(activeLayout())),
-    constants: Object.freeze({
-      ISLAND_COUNT,
-      SLOTS_PER_ISLAND,
-      TOTAL_SLOTS,
-      TOWER_TYPES,
-      BASE_IDENTIFIER_MAP
-    })
+    evaluate,
+    comparison,
+    getState: () => clone(state),
+    getActiveLayout: () => clone(activeLayout()),
+    constants: Object.freeze({ ISLAND_COUNT, SLOTS_PER_ISLAND, TOTAL_SLOTS, TOWER_TYPES })
   });
 
   if (document.readyState === "loading") {
