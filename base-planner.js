@@ -1343,10 +1343,10 @@
       }
       .nbp-recognition-stage img { display: block; width: 100%; height: auto; }
       .nbp-recognition-pin {
-        position: absolute; width: 30px; height: 30px; display: grid; place-items: center;
-        transform: translate(-50%, -50%); border: 2px solid #f0d479; border-radius: 50%;
-        background: rgba(5,7,8,.9); color: #f0d479; font-size: 12px; font-weight: 950;
-        box-shadow: 0 0 0 4px rgba(5,7,8,.45);
+        position: absolute; width: 26px; height: 26px; display: grid; place-items: center;
+        transform: translate(-50%, -50%); border: 1.5px solid #f0d479; border-radius: 50%;
+        background: rgba(5,7,8,.9); color: #f0d479; font-size: 11px; font-weight: 950;
+        box-shadow: 0 0 0 2px rgba(5,7,8,.45); pointer-events: none;
       }
       .nbp-recognition-status {
         display: flex; justify-content: space-between; gap: 12px; margin: 12px 0;
@@ -1429,6 +1429,10 @@
       .nbp-privacy button { color: #dda2ad; border-color: rgba(190,105,121,.45); }
       .hidden { display: none !important; }
       @media (max-width: 720px) {
+        .nbp-recognition-pin {
+          width: 22px; height: 22px; border-width: 1px; font-size: 10px;
+          box-shadow: 0 0 0 1px rgba(5,7,8,.5);
+        }
         .nbp-intro, .nbp-details, .nbp-add-grid { grid-template-columns: 1fr; }
         .nbp-details label.wide { grid-column: auto; }
         .nbp-layout-actions { width: 100%; }
