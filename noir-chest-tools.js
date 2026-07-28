@@ -1,5 +1,5 @@
 /* ============================================================
-   NOIR CHEST COMPANION — CHEST TOOLS
+   NOIR • I ZI — CHEST TOOLS
 
    Event readiness, reward finder, chest budget, share cards and
    private on-device verification summaries. Reads only the
@@ -512,7 +512,7 @@
           <strong>Want to see what you should actually receive?</strong>
           <p>
             Complete your ${meta.label} chest predictions first if you want
-            Noir to estimate the rewards you’ll receive when spending your rubies.
+            NOIR • I ZI to estimate the rewards you’ll receive when spending your rubies.
           </p>
         </article>
         <div class="nct-fields">
@@ -578,7 +578,7 @@
           ` : ""}
           ${prediction.limited ? `
             <p class="nct-budget-warning">
-              Noir displays the first 100 regular chest predictions at a time.
+              NOIR • I ZI displays the first 100 regular chest predictions at a time.
             </p>
           ` : ""}
           <div class="nct-predicted-list">
@@ -651,7 +651,7 @@
     const eventName = getEventName(context.eventData);
     const rewards = expectedRewards(state.chestType, openings, context).slice(0, 5);
     return [
-      `NOIR CHEST COMPANION`,
+      `NOIR • I ZI`,
       `${eventName} · ${meta.label} Chest`,
       `Estimate for ${openings} regular chests`,
       ...rewards.map(item => `• ${item.name}: about ${formatNumber(item.amount)}`),
@@ -720,7 +720,7 @@
         : null;
       try {
         if (file && navigator.share && navigator.canShare?.({ files: [file] })) {
-          await navigator.share({ title: "Noir Chest Summary", text, files: [file] });
+          await navigator.share({ title: "NOIR • I ZI Chest Summary", text, files: [file] });
           return;
         }
       } catch (error) {
@@ -781,7 +781,7 @@
     overlay.innerHTML = `
       <div class="nct-shell" role="dialog" aria-modal="true" aria-label="Chest Tools">
         <header class="nct-header">
-          <div><p class="eyebrow">NOIR CHEST TOOLS</p><h2>${labels[state.view]}</h2></div>
+          <div><p class="eyebrow">NOIR • I ZI CHEST TOOLS</p><h2>${labels[state.view]}</h2></div>
           <button id="nctClose" class="nct-close" type="button" aria-label="Close">×</button>
         </header>
         <nav class="nct-tabs">
@@ -998,7 +998,7 @@
       {
         view: "share",
         title: "Share Cards",
-        description: "Create clean Noir results ready to share with your team.",
+        description: "Create clean NOIR • I ZI results ready to share with your team.",
         icon: "↗"
       }
     ].forEach(tool => {

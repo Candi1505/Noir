@@ -1404,7 +1404,7 @@
         "loadingStatus"
       ),
 
-      "Connecting to Nexus..."
+      "Entering the dark..."
 
     );
 
@@ -1849,7 +1849,7 @@
 
           profileMessage,
 
-          "Profile saved to the Crystal Nexus."
+          "Profile saved."
 
         );
 

@@ -1,5 +1,5 @@
 /* ============================================================
-   NOIR CHEST COMPANION — CHEST PLANNER
+   NOIR • I ZI — CHEST PLANNER
 
    Plain-English planning tools powered by the current event's
    regular and bonus chest distributions.
@@ -295,7 +295,7 @@
         <div>
           <h3>What should I open?</h3>
           <p>
-            Choose what you want. Noir compares regular and bonus
+            Choose what you want. NOIR • I ZI compares regular and bonus
             rewards, then tells you the best chest.
           </p>
         </div>
@@ -319,7 +319,7 @@
         best.perChest > 0
           ? `
             <div class="cp-answer">
-              <span>NOIR RECOMMENDS</span>
+              <span>NOIR • I ZI RECOMMENDS</span>
               <strong>
                 ${bestMeta.icon} Open ${bestMeta.label} Chests
               </strong>
@@ -369,7 +369,7 @@
         <div>
           <h3>Reach a resource goal</h3>
           <p>
-            Tell Noir what you need and what you already have.
+            Tell NOIR • I ZI what you need and what you already have.
           </p>
         </div>
       </section>

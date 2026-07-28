@@ -117,7 +117,7 @@
       currentLevel: 0,
       targetLevel: 0,
       currentXp: 0,
-      maximumTowerLevel: 233,
+      maximumTowerLevel: 230,
       storedTowers: [],
       mergePlans: []
     };
@@ -129,15 +129,11 @@
     const parsedTargetLevel = Number.parseInt(safe.targetLevel, 10) || 0;
     const savedTowers = Array.isArray(safe.storedTowers) ? safe.storedTowers : [];
     const savedMerges = Array.isArray(safe.mergePlans) ? safe.mergePlans : [];
-    const wasEffDemoDefault = parsedCurrentLevel === 871 &&
-      parsedTargetLevel === 900 &&
-      !Number.parseInt(safe.currentXp, 10) &&
-      savedTowers.length === 0;
     return {
-      currentLevel: wasEffDemoDefault || parsedCurrentLevel === 0 ? 0 : Math.max(600, Math.min(998, parsedCurrentLevel)),
-      targetLevel: wasEffDemoDefault || parsedTargetLevel === 0 ? 0 : Math.max(601, Math.min(999, parsedTargetLevel)),
+      currentLevel: parsedCurrentLevel === 0 ? 0 : Math.max(600, Math.min(998, parsedCurrentLevel)),
+      targetLevel: parsedTargetLevel === 0 ? 0 : Math.max(601, Math.min(999, parsedTargetLevel)),
       currentXp: Math.max(0, Number.parseInt(safe.currentXp, 10) || 0),
-      maximumTowerLevel: Math.max(1, Math.min(250, Number.parseInt(safe.maximumTowerLevel, 10) || 233)),
+      maximumTowerLevel: Math.max(1, Math.min(250, Number.parseInt(safe.maximumTowerLevel, 10) || 230)),
       storedTowers: savedTowers.map(item => ({
         type: String(item?.type || ""),
         level: Math.max(0, Number.parseInt(item?.level, 10) || 0),
@@ -275,7 +271,7 @@
         };
       }
     } catch (error) {
-      console.warn("Noir could not read the saved base.", error);
+      console.warn("NOIR • I ZI could not read the saved base.", error);
     }
     const first = createLayout();
     return { layouts: [first], activeId: first.id };
@@ -291,7 +287,7 @@
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
       return true;
     } catch (error) {
-      console.warn("Noir could not save the base.", error);
+      console.warn("NOIR • I ZI could not save the base.", error);
       return false;
     }
   }
@@ -730,7 +726,7 @@
       <section class="nbp-panel">
         <p class="nbp-kicker">BASE SUPPORT</p>
         <h3>Perches, dragons and riders</h3>
-        <p class="nbp-muted">Enter the real assignments so Noir can include their island coverage. Riders, skills and every gear slot use the game catalogues.</p>
+        <p class="nbp-muted">Enter the real assignments so NOIR • I ZI can include their island coverage. Riders, skills and every gear slot use the game catalogues.</p>
         <div class="nbp-perch-grid">
           ${layout.perches.map((perch, index) => `
             <fieldset class="nbp-perch-card">
@@ -1122,7 +1118,7 @@
           <div><p class="nbp-kicker">FORTIFICATION PLANNER</p><h3>Plan a target player level</h3></div>
           <span class="nbp-estimate-label">Game XP values</span>
         </div>
-        <p class="nbp-muted">Enter the active or stored towers you can upgrade. Noir simulates legal upgrades and checks whether they contain enough building XP to reach your target.</p>
+        <p class="nbp-muted">Enter the active or stored towers you can upgrade. NOIR • I ZI simulates legal upgrades and checks whether they contain enough building XP to reach your target.</p>
         <div class="nbp-fort-targets">
           <label>Current player level<input data-fort-field="currentLevel" type="number" min="0" max="998" value="${result.planner.currentLevel}"></label>
           <label>Target player level<input data-fort-field="targetLevel" type="number" min="0" max="999" value="${result.planner.targetLevel}"></label>
@@ -1134,7 +1130,7 @@
             <div><p class="nbp-kicker">QUICK CALCULATOR</p><h4>Account XP requirements</h4></div>
             <span class="nbp-estimate-label">No tower entry needed</span>
           </div>
-          <p class="nbp-muted">Noir calculates these figures automatically from the current level, target level and visible XP progress entered above. Add towers below when you want Noir to calculate where the available upgrades will actually take the account.</p>
+          <p class="nbp-muted">NOIR • I ZI calculates these figures automatically from the current level, target level and visible XP progress entered above. Add towers below when you want NOIR • I ZI to calculate where the available upgrades will actually take the account.</p>
           <div class="nbp-fort-stats nbp-account-results">
             <article><small>Current player level</small><strong>${account.ready ? account.currentLevel : "—"}</strong></article>
             <article><small>Target player level</small><strong>${account.targetLevel > account.currentLevel ? account.targetLevel : "—"}</strong></article>
@@ -1163,27 +1159,28 @@
           `).join("") || `<p class="nbp-empty-copy">Add the active or stored towers available for Fort.</p>`}
         </div>
         <details class="nbp-merge-planner" ${result.merges.length ? "open" : ""}>
-          <summary>Merge strategy ${result.merges.length ? `(${result.merges.length})` : ""}</summary>
-          <p class="nbp-muted">Use this for towers strengthened by consuming another tower. Enter the resulting level WD shows before confirming the merge. Noir compares the XP held by both original towers with the XP held by the result; any loss is added to the XP required for your next player level.</p>
+          <summary>Tower merge &amp; XP debt ${result.merges.length ? `(${result.merges.length})` : ""}</summary>
+          <p class="nbp-muted"><strong>1.</strong> Choose the lower active tower you are keeping and improving. <strong>2.</strong> Choose the stored or active tower WD will consume. <strong>3.</strong> Copy the resulting level shown on WD's merge preview before confirming it in game.</p>
+          <p class="nbp-trust-copy">The resulting tower can be lower than the consumed tower because WD transfers only part of its time, shard and ember value. WD's preview is the authority; NOIR • I ZI uses that displayed result to calculate the player-XP debt.</p>
           <div class="nbp-merge-entry">
-            <label>Destination tower<select id="nbpMergeDestinationType">
+            <label>Tower being improved and kept<select id="nbpMergeDestinationType">
               ${fortTowerTypes.map(type => `<option>${escapeHtml(type)}</option>`).join("")}
             </select></label>
-            <label>Current level<input id="nbpMergeDestinationLevel" type="number" min="0" value="0"></label>
-            <label>Stored/source tower<select id="nbpMergeSourceType">
+            <label>Kept tower's current level<input id="nbpMergeDestinationLevel" type="number" min="1" max="${result.planner.maximumTowerLevel}" value="1"></label>
+            <label>Tower being consumed<select id="nbpMergeSourceType">
               ${fortTowerTypes.map(type => `<option>${escapeHtml(type)}</option>`).join("")}
             </select></label>
-            <label>Source level<input id="nbpMergeSourceLevel" type="number" min="0" value="0"></label>
-            <label>Resulting level<input id="nbpMergeResultLevel" type="number" min="1" max="${result.planner.maximumTowerLevel}" value="1"></label>
-            <label>Quantity<input id="nbpMergeQuantity" type="number" min="1" max="100" value="1"></label>
-            <button type="button" class="nbp-primary" id="nbpAddMergePlan">Add merge</button>
+            <label>Consumed tower's level<input id="nbpMergeSourceLevel" type="number" min="1" max="${result.planner.maximumTowerLevel}" value="1"></label>
+            <label>Resulting level shown by WD<input id="nbpMergeResultLevel" type="number" min="2" max="${result.planner.maximumTowerLevel}" value="2"></label>
+            <label>Number of identical merges<input id="nbpMergeQuantity" type="number" min="1" max="100" value="1"></label>
+            <button type="button" class="nbp-primary" id="nbpAddMergePlan">Calculate and add merge</button>
           </div>
           <div class="nbp-merge-list">
             ${result.merges.map(item => `
               <article>
                 <div>
-                  <strong>${item.quantity > 1 ? `${item.quantity} × ` : ""}${escapeHtml(item.destinationType)}: ${item.destinationLevel} → ${item.resultLevel}</strong>
-                  <small>Uses ${escapeHtml(item.sourceType)} level ${item.sourceLevel} · ${formatNumber(item.xpDeducted)} XP deducted${item.quantity > 1 ? ` (${formatNumber(item.xpDeductedEach)} each)` : ""}</small>
+                  <strong>${item.quantity > 1 ? `${item.quantity} × ` : ""}Keep ${escapeHtml(item.destinationType)} level ${item.destinationLevel} → ${item.resultLevel}</strong>
+                  <small>Consumes ${escapeHtml(item.sourceType)} level ${item.sourceLevel} · ${formatNumber(item.xpDeducted)} XP debt${item.quantity > 1 ? ` (${formatNumber(item.xpDeductedEach)} each)` : ""}</small>
                 </div>
                 <button type="button" data-remove-merge="${item.index}">Remove</button>
               </article>
@@ -1191,9 +1188,9 @@
           </div>
           ${result.merges.length ? `
             <div class="nbp-merge-summary">
-              <article><small>Tower levels gained by merging</small><strong>${formatNumber(mergeLevels)}</strong></article>
-              <article><small>Player XP from the merges</small><strong>0</strong></article>
-              <article><small>XP deducted by merging</small><strong>−${formatNumber(mergeXpDebt)}</strong></article>
+              <article><small>Levels added to kept towers</small><strong>${formatNumber(mergeLevels)}</strong></article>
+              <article><small>Player XP awarded by merging</small><strong>0</strong></article>
+              <article><small>Player XP debt created</small><strong>${formatNumber(mergeXpDebt)}</strong></article>
               <article><small>Added to next-level requirement</small><strong>${formatNumber(mergeXpDebt)}</strong></article>
             </div>
           ` : ""}
@@ -1247,7 +1244,7 @@
     return `
       <section class="nbp-panel">
         <div class="nbp-section-heading">
-          <div><p class="nbp-kicker">NOIR ADVISER</p><h3>${findings.length ? "What this layout needs" : "No recorded conflicts"}</h3></div>
+          <div><p class="nbp-kicker">NOIR • I ZI ADVISER</p><h3>${findings.length ? "What this layout needs" : "No recorded conflicts"}</h3></div>
           <button type="button" class="nbp-primary" id="nbpMakeCurrent" ${changed ? "" : "disabled"}>Save proposal as current</button>
         </div>
         <div class="nbp-findings">
@@ -1403,7 +1400,7 @@
     overlay.innerHTML = `
       <div class="nbp-shell">
         <header class="nbp-topbar">
-          <div><p>NOIR BASE ADVISER</p><h2>Build, compare and strengthen</h2></div>
+          <div><p>NOIR • I ZI BASE ADVISER</p><h2>Build, compare and strengthen</h2></div>
           <button class="nbp-close" id="nbpClose" type="button" aria-label="Close">×</button>
         </header>
         <section class="nbp-panel nbp-base-details">
@@ -1478,8 +1475,21 @@
       const sourceLevel = Math.max(0, Number.parseInt(overlay.querySelector("#nbpMergeSourceLevel")?.value, 10) || 0);
       const resultLevel = Math.max(0, Number.parseInt(overlay.querySelector("#nbpMergeResultLevel")?.value, 10) || 0);
       const quantity = Math.max(1, Math.min(100, Number.parseInt(overlay.querySelector("#nbpMergeQuantity")?.value, 10) || 1));
-      if (!destinationType || !sourceType || resultLevel <= destinationLevel) {
-        window.alert("Choose both towers and enter a resulting level higher than the destination's current level.");
+      const maximumTowerLevel = layout.fortPlanner.maximumTowerLevel;
+      if (!destinationType || !sourceType) {
+        window.alert("Choose both the tower being kept and the tower being consumed.");
+        return;
+      }
+      if (destinationLevel < 1 || sourceLevel < 1) {
+        window.alert("Enter the current level of both towers.");
+        return;
+      }
+      if (destinationLevel > maximumTowerLevel || sourceLevel > maximumTowerLevel || resultLevel > maximumTowerLevel) {
+        window.alert(`Tower levels cannot exceed the current level ${maximumTowerLevel} cap.`);
+        return;
+      }
+      if (resultLevel <= destinationLevel) {
+        window.alert("The resulting level shown by WD must be higher than the tower being kept.");
         return;
       }
       layout.fortPlanner.mergePlans.push({
