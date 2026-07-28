@@ -117,7 +117,7 @@
       currentLevel: 0,
       targetLevel: 0,
       currentXp: 0,
-      maximumTowerLevel: 233,
+      maximumTowerLevel: 230,
       storedTowers: [],
       mergePlans: []
     };
@@ -129,15 +129,11 @@
     const parsedTargetLevel = Number.parseInt(safe.targetLevel, 10) || 0;
     const savedTowers = Array.isArray(safe.storedTowers) ? safe.storedTowers : [];
     const savedMerges = Array.isArray(safe.mergePlans) ? safe.mergePlans : [];
-    const wasEffDemoDefault = parsedCurrentLevel === 871 &&
-      parsedTargetLevel === 900 &&
-      !Number.parseInt(safe.currentXp, 10) &&
-      savedTowers.length === 0;
     return {
-      currentLevel: wasEffDemoDefault || parsedCurrentLevel === 0 ? 0 : Math.max(600, Math.min(998, parsedCurrentLevel)),
-      targetLevel: wasEffDemoDefault || parsedTargetLevel === 0 ? 0 : Math.max(601, Math.min(999, parsedTargetLevel)),
+      currentLevel: parsedCurrentLevel === 0 ? 0 : Math.max(600, Math.min(998, parsedCurrentLevel)),
+      targetLevel: parsedTargetLevel === 0 ? 0 : Math.max(601, Math.min(999, parsedTargetLevel)),
       currentXp: Math.max(0, Number.parseInt(safe.currentXp, 10) || 0),
-      maximumTowerLevel: Math.max(1, Math.min(250, Number.parseInt(safe.maximumTowerLevel, 10) || 233)),
+      maximumTowerLevel: Math.max(1, Math.min(250, Number.parseInt(safe.maximumTowerLevel, 10) || 230)),
       storedTowers: savedTowers.map(item => ({
         type: String(item?.type || ""),
         level: Math.max(0, Number.parseInt(item?.level, 10) || 0),
@@ -1163,27 +1159,28 @@
           `).join("") || `<p class="nbp-empty-copy">Add the active or stored towers available for Fort.</p>`}
         </div>
         <details class="nbp-merge-planner" ${result.merges.length ? "open" : ""}>
-          <summary>Merge strategy ${result.merges.length ? `(${result.merges.length})` : ""}</summary>
-          <p class="nbp-muted">Use this for towers strengthened by consuming another tower. Enter the resulting level WD shows before confirming the merge. Noir compares the XP held by both original towers with the XP held by the result; any loss is added to the XP required for your next player level.</p>
+          <summary>Tower merge &amp; XP debt ${result.merges.length ? `(${result.merges.length})` : ""}</summary>
+          <p class="nbp-muted"><strong>1.</strong> Choose the lower active tower you are keeping and improving. <strong>2.</strong> Choose the stored or active tower WD will consume. <strong>3.</strong> Copy the resulting level shown on WD's merge preview before confirming it in game.</p>
+          <p class="nbp-trust-copy">The resulting tower can be lower than the consumed tower because WD transfers only part of its time, shard and ember value. WD's preview is the authority; Noir uses that displayed result to calculate the player-XP debt.</p>
           <div class="nbp-merge-entry">
-            <label>Destination tower<select id="nbpMergeDestinationType">
+            <label>Tower being improved and kept<select id="nbpMergeDestinationType">
               ${fortTowerTypes.map(type => `<option>${escapeHtml(type)}</option>`).join("")}
             </select></label>
-            <label>Current level<input id="nbpMergeDestinationLevel" type="number" min="0" value="0"></label>
-            <label>Stored/source tower<select id="nbpMergeSourceType">
+            <label>Kept tower's current level<input id="nbpMergeDestinationLevel" type="number" min="1" max="${result.planner.maximumTowerLevel}" value="1"></label>
+            <label>Tower being consumed<select id="nbpMergeSourceType">
               ${fortTowerTypes.map(type => `<option>${escapeHtml(type)}</option>`).join("")}
             </select></label>
-            <label>Source level<input id="nbpMergeSourceLevel" type="number" min="0" value="0"></label>
-            <label>Resulting level<input id="nbpMergeResultLevel" type="number" min="1" max="${result.planner.maximumTowerLevel}" value="1"></label>
-            <label>Quantity<input id="nbpMergeQuantity" type="number" min="1" max="100" value="1"></label>
-            <button type="button" class="nbp-primary" id="nbpAddMergePlan">Add merge</button>
+            <label>Consumed tower's level<input id="nbpMergeSourceLevel" type="number" min="1" max="${result.planner.maximumTowerLevel}" value="1"></label>
+            <label>Resulting level shown by WD<input id="nbpMergeResultLevel" type="number" min="2" max="${result.planner.maximumTowerLevel}" value="2"></label>
+            <label>Number of identical merges<input id="nbpMergeQuantity" type="number" min="1" max="100" value="1"></label>
+            <button type="button" class="nbp-primary" id="nbpAddMergePlan">Calculate and add merge</button>
           </div>
           <div class="nbp-merge-list">
             ${result.merges.map(item => `
               <article>
                 <div>
-                  <strong>${item.quantity > 1 ? `${item.quantity} × ` : ""}${escapeHtml(item.destinationType)}: ${item.destinationLevel} → ${item.resultLevel}</strong>
-                  <small>Uses ${escapeHtml(item.sourceType)} level ${item.sourceLevel} · ${formatNumber(item.xpDeducted)} XP deducted${item.quantity > 1 ? ` (${formatNumber(item.xpDeductedEach)} each)` : ""}</small>
+                  <strong>${item.quantity > 1 ? `${item.quantity} × ` : ""}Keep ${escapeHtml(item.destinationType)} level ${item.destinationLevel} → ${item.resultLevel}</strong>
+                  <small>Consumes ${escapeHtml(item.sourceType)} level ${item.sourceLevel} · ${formatNumber(item.xpDeducted)} XP debt${item.quantity > 1 ? ` (${formatNumber(item.xpDeductedEach)} each)` : ""}</small>
                 </div>
                 <button type="button" data-remove-merge="${item.index}">Remove</button>
               </article>
@@ -1191,9 +1188,9 @@
           </div>
           ${result.merges.length ? `
             <div class="nbp-merge-summary">
-              <article><small>Tower levels gained by merging</small><strong>${formatNumber(mergeLevels)}</strong></article>
-              <article><small>Player XP from the merges</small><strong>0</strong></article>
-              <article><small>XP deducted by merging</small><strong>−${formatNumber(mergeXpDebt)}</strong></article>
+              <article><small>Levels added to kept towers</small><strong>${formatNumber(mergeLevels)}</strong></article>
+              <article><small>Player XP awarded by merging</small><strong>0</strong></article>
+              <article><small>Player XP debt created</small><strong>${formatNumber(mergeXpDebt)}</strong></article>
               <article><small>Added to next-level requirement</small><strong>${formatNumber(mergeXpDebt)}</strong></article>
             </div>
           ` : ""}
@@ -1478,8 +1475,21 @@
       const sourceLevel = Math.max(0, Number.parseInt(overlay.querySelector("#nbpMergeSourceLevel")?.value, 10) || 0);
       const resultLevel = Math.max(0, Number.parseInt(overlay.querySelector("#nbpMergeResultLevel")?.value, 10) || 0);
       const quantity = Math.max(1, Math.min(100, Number.parseInt(overlay.querySelector("#nbpMergeQuantity")?.value, 10) || 1));
-      if (!destinationType || !sourceType || resultLevel <= destinationLevel) {
-        window.alert("Choose both towers and enter a resulting level higher than the destination's current level.");
+      const maximumTowerLevel = layout.fortPlanner.maximumTowerLevel;
+      if (!destinationType || !sourceType) {
+        window.alert("Choose both the tower being kept and the tower being consumed.");
+        return;
+      }
+      if (destinationLevel < 1 || sourceLevel < 1) {
+        window.alert("Enter the current level of both towers.");
+        return;
+      }
+      if (destinationLevel > maximumTowerLevel || sourceLevel > maximumTowerLevel || resultLevel > maximumTowerLevel) {
+        window.alert(`Tower levels cannot exceed the current level ${maximumTowerLevel} cap.`);
+        return;
+      }
+      if (resultLevel <= destinationLevel) {
+        window.alert("The resulting level shown by WD must be higher than the tower being kept.");
         return;
       }
       layout.fortPlanner.mergePlans.push({
