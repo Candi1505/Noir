@@ -72,6 +72,19 @@
   let history = [];
   let future = [];
 
+  function fortRowsForType(type) {
+    const exact = CATALOG.towerLevels?.[type];
+    if (Array.isArray(exact) && exact.length) return exact;
+    // Mage and Archmage towers use the same player-XP, unlock and build-time
+    // progression as the standard high-level tower curve.
+    if (MAGES.has(type)) {
+      return CATALOG.towerLevels?.["Drakul Pylon"] ||
+        Object.values(CATALOG.towerLevels || {}).find(rows => Array.isArray(rows) && rows.length) ||
+        [];
+    }
+    return [];
+  }
+
   function clone(value) {
     return JSON.parse(JSON.stringify(value));
   }
@@ -105,7 +118,8 @@
       targetLevel: 0,
       currentXp: 0,
       maximumTowerLevel: 233,
-      storedTowers: []
+      storedTowers: [],
+      mergePlans: []
     };
   }
 
@@ -114,6 +128,7 @@
     const parsedCurrentLevel = Number.parseInt(safe.currentLevel, 10) || 0;
     const parsedTargetLevel = Number.parseInt(safe.targetLevel, 10) || 0;
     const savedTowers = Array.isArray(safe.storedTowers) ? safe.storedTowers : [];
+    const savedMerges = Array.isArray(safe.mergePlans) ? safe.mergePlans : [];
     const wasEffDemoDefault = parsedCurrentLevel === 871 &&
       parsedTargetLevel === 900 &&
       !Number.parseInt(safe.currentXp, 10) &&
@@ -127,7 +142,19 @@
         type: String(item?.type || ""),
         level: Math.max(0, Number.parseInt(item?.level, 10) || 0),
         quantity: Math.max(1, Math.min(100, Number.parseInt(item?.quantity, 10) || 1))
-      })).filter(item => item.type && CATALOG.towerLevels?.[item.type]?.length)
+      })).filter(item => item.type && fortRowsForType(item.type).length),
+      mergePlans: savedMerges.map(item => ({
+        destinationType: String(item?.destinationType || ""),
+        destinationLevel: Math.max(0, Number.parseInt(item?.destinationLevel, 10) || 0),
+        sourceType: String(item?.sourceType || ""),
+        sourceLevel: Math.max(0, Number.parseInt(item?.sourceLevel, 10) || 0),
+        resultLevel: Math.max(0, Number.parseInt(item?.resultLevel, 10) || 0),
+        quantity: Math.max(1, Math.min(100, Number.parseInt(item?.quantity, 10) || 1))
+      })).filter(item =>
+        item.destinationType &&
+        item.sourceType &&
+        item.resultLevel > item.destinationLevel
+      )
     };
   }
 
@@ -869,11 +896,32 @@
     return xp;
   }
 
+  function mergePlanStats(planner) {
+    const plans = Array.isArray(planner.mergePlans) ? planner.mergePlans : [];
+    return plans.map((plan, index) => {
+      const rows = fortRowsForType(plan.destinationType);
+      const ordinarySteps = rows.filter(row =>
+        Number(row.level) > plan.destinationLevel &&
+        Number(row.level) <= plan.resultLevel
+      );
+      const xpAvoidedEach = ordinarySteps.reduce((sum, row) => sum + (Number(row.xp) || 0), 0);
+      const secondsAvoidedEach = ordinarySteps.reduce((sum, row) => sum + (Number(row.seconds) || 0), 0);
+      return {
+        ...plan,
+        index,
+        levelsMoved: Math.max(0, plan.resultLevel - plan.destinationLevel) * plan.quantity,
+        xpAvoided: xpAvoidedEach * plan.quantity,
+        secondsAvoided: secondsAvoidedEach * plan.quantity
+      };
+    });
+  }
+
   function fortPlan(value) {
     const planner = normaliseFortPlanner(value);
     const currentLevel = planner.currentLevel;
     const targetLevel = planner.targetLevel;
     const ready = currentLevel >= 600 && targetLevel > currentLevel;
+    const merges = mergePlanStats(planner);
     if (!ready) {
       return {
         planner,
@@ -887,7 +935,8 @@
         ready: false,
         route: [],
         summary: [],
-        blockers: []
+        blockers: [],
+        merges
       };
     }
     const xpNeeded = Array.from({ length: targetLevel - currentLevel }, (_, index) =>
@@ -899,6 +948,26 @@
         instances.push({ entryIndex, copy, type: entry.type, level: entry.level });
       }
     });
+    // Apply confirmed merges before simulating ordinary Fort upgrades. The
+    // resulting tower continues from its merged level, while a matching source
+    // tower is removed from the ordinary-upgrade pool when it was also entered.
+    planner.mergePlans.forEach(plan => {
+      for (let copy = 0; copy < plan.quantity; copy += 1) {
+        const destination = instances.find(instance =>
+          instance.type === plan.destinationType &&
+          instance.level === plan.destinationLevel
+        );
+        if (!destination) continue;
+        const destinationIndex = instances.indexOf(destination);
+        const sourceIndex = instances.findIndex((instance, index) =>
+          index !== destinationIndex &&
+          instance.type === plan.sourceType &&
+          instance.level === plan.sourceLevel
+        );
+        if (sourceIndex >= 0) instances.splice(sourceIndex, 1);
+        destination.level = plan.resultLevel;
+      }
+    });
     let simulatedLevel = currentLevel;
     let progressXp = planner.currentXp;
     let earnedXp = 0;
@@ -906,7 +975,7 @@
     const safetyLimit = 50000;
     while (simulatedLevel < targetLevel && route.length < safetyLimit) {
       const choices = instances.map((instance, index) => {
-        const next = CATALOG.towerLevels?.[instance.type]?.find(row => Number(row.level) === instance.level + 1);
+        const next = fortRowsForType(instance.type).find(row => Number(row.level) === instance.level + 1);
         return next &&
           Number(next.level) <= planner.maximumTowerLevel &&
           (!next.playerLevelRequired || next.playerLevelRequired <= simulatedLevel)
@@ -945,7 +1014,7 @@
       return groups;
     }, {})).sort((left, right) => right.xp - left.xp);
     const blockers = Object.values(instances.reduce((groups, instance) => {
-      const next = CATALOG.towerLevels?.[instance.type]?.find(row => Number(row.level) === instance.level + 1);
+      const next = fortRowsForType(instance.type).find(row => Number(row.level) === instance.level + 1);
       if (!next || Number(next.level) > planner.maximumTowerLevel || !next.playerLevelRequired || next.playerLevelRequired <= simulatedLevel) {
         return groups;
       }
@@ -972,7 +1041,8 @@
       ready: true,
       route,
       summary,
-      blockers
+      blockers,
+      merges
     };
   }
 
@@ -988,6 +1058,10 @@
 
   function renderFortPlanner(layout) {
     const result = fortPlan(layout.fortPlanner);
+    const fortTowerTypes = Array.from(new Set([
+      ...Object.keys(CATALOG.towerLevels || {}),
+      ...MAGES
+    ])).sort((left, right) => left.localeCompare(right));
     const levelled = result.simulatedLevel - result.currentLevel;
     const targetCoverage = result.ready && result.xpNeeded > 0
       ? Math.min(100, (result.earnedXp / result.xpNeeded) * 100)
@@ -998,6 +1072,9 @@
     const nextLevelProgress = nextLevelXp
       ? Math.min(100, (result.progressXp / nextLevelXp) * 100)
       : 100;
+    const mergeLevels = result.merges.reduce((sum, item) => sum + item.levelsMoved, 0);
+    const mergeXpAvoided = result.merges.reduce((sum, item) => sum + item.xpAvoided, 0);
+    const mergeSecondsAvoided = result.merges.reduce((sum, item) => sum + item.secondsAvoided, 0);
     return `
       <section class="nbp-panel nbp-fort-planner">
         <div class="nbp-section-heading">
@@ -1014,7 +1091,7 @@
         <p class="nbp-fort-entry-help">Add every active or stored tower you could upgrade. Reuse this row for each tower type, or enter a quantity to add matching towers together.</p>
         <div class="nbp-fort-entry">
           <label>Available tower<select id="nbpFortTowerType">
-            ${Object.keys(CATALOG.towerLevels || {}).sort().map(type => `<option>${escapeHtml(type)}</option>`).join("")}
+            ${fortTowerTypes.map(type => `<option>${escapeHtml(type)}</option>`).join("")}
           </select></label>
           <label>Current level<input id="nbpFortTowerLevel" type="number" min="0" value="0"></label>
           <label>Quantity<input id="nbpFortTowerQuantity" type="number" min="1" max="100" value="1"></label>
@@ -1028,6 +1105,43 @@
             </article>
           `).join("") || `<p class="nbp-empty-copy">Add the active or stored towers available for Fort.</p>`}
         </div>
+        <details class="nbp-merge-planner" ${result.merges.length ? "open" : ""}>
+          <summary>Merge strategy ${result.merges.length ? `(${result.merges.length})` : ""}</summary>
+          <p class="nbp-muted">Use this for towers strengthened by consuming a stored tower. Enter the resulting level WD shows. Noir records the tower gain but does not count the merge itself as fresh player XP or ordinary build time.</p>
+          <div class="nbp-merge-entry">
+            <label>Destination tower<select id="nbpMergeDestinationType">
+              ${fortTowerTypes.map(type => `<option>${escapeHtml(type)}</option>`).join("")}
+            </select></label>
+            <label>Current level<input id="nbpMergeDestinationLevel" type="number" min="0" value="0"></label>
+            <label>Stored/source tower<select id="nbpMergeSourceType">
+              ${fortTowerTypes.map(type => `<option>${escapeHtml(type)}</option>`).join("")}
+            </select></label>
+            <label>Source level<input id="nbpMergeSourceLevel" type="number" min="0" value="0"></label>
+            <label>Resulting level<input id="nbpMergeResultLevel" type="number" min="1" max="${result.planner.maximumTowerLevel}" value="1"></label>
+            <label>Quantity<input id="nbpMergeQuantity" type="number" min="1" max="100" value="1"></label>
+            <button type="button" class="nbp-primary" id="nbpAddMergePlan">Add merge</button>
+          </div>
+          <div class="nbp-merge-list">
+            ${result.merges.map(item => `
+              <article>
+                <div>
+                  <strong>${item.quantity > 1 ? `${item.quantity} × ` : ""}${escapeHtml(item.destinationType)}: ${item.destinationLevel} → ${item.resultLevel}</strong>
+                  <small>Uses ${escapeHtml(item.sourceType)} level ${item.sourceLevel} · ${formatNumber(item.xpAvoided)} ordinary-upgrade XP avoided</small>
+                </div>
+                <button type="button" data-remove-merge="${item.index}">Remove</button>
+              </article>
+            `).join("") || `<p class="nbp-empty-copy">No merge strategy added.</p>`}
+          </div>
+          ${result.merges.length ? `
+            <div class="nbp-merge-summary">
+              <article><small>Tower levels gained by merging</small><strong>${formatNumber(mergeLevels)}</strong></article>
+              <article><small>Player XP from the merges</small><strong>0</strong></article>
+              <article><small>Ordinary-upgrade XP avoided</small><strong>${formatNumber(mergeXpAvoided)}</strong></article>
+              <article><small>Ordinary build time bypassed</small><strong>${formatDuration(mergeSecondsAvoided)}</strong></article>
+            </div>
+          ` : ""}
+          <p class="nbp-trust-copy">Only normal upgrades listed above affect the projected player level. Source towers may have awarded XP when originally built; that historical XP is not awarded again when they are merged.</p>
+        </details>
         <div class="nbp-fort-result ${result.reached ? "reached" : "short"}">
           <strong>${!result.ready ? "Enter your levels to calculate" : result.reached ? `Target ${result.targetLevel} is reachable` : `Entered upgrades reach player level ${result.simulatedLevel}`}</strong>
           <p>${formatNumber(result.xpNeeded)} XP required · ${formatNumber(result.earnedXp)} XP planned · ${result.route.length} upgrades</p>
@@ -1288,7 +1402,7 @@
       const type = overlay.querySelector("#nbpFortTowerType")?.value;
       const level = Math.max(0, Number.parseInt(overlay.querySelector("#nbpFortTowerLevel")?.value, 10) || 0);
       const quantity = Math.max(1, Math.min(100, Number.parseInt(overlay.querySelector("#nbpFortTowerQuantity")?.value, 10) || 1));
-      if (!type || !CATALOG.towerLevels?.[type]?.length) return;
+      if (!type || !fortRowsForType(type).length) return;
       layout.fortPlanner.storedTowers.push({ type, level, quantity });
       saveState();
       render();
@@ -1296,6 +1410,36 @@
     overlay.querySelectorAll("[data-remove-stored]").forEach(button => {
       button.addEventListener("click", () => {
         layout.fortPlanner.storedTowers.splice(Number(button.dataset.removeStored), 1);
+        saveState();
+        render();
+      });
+    });
+    overlay.querySelector("#nbpAddMergePlan")?.addEventListener("click", () => {
+      const destinationType = overlay.querySelector("#nbpMergeDestinationType")?.value || "";
+      const destinationLevel = Math.max(0, Number.parseInt(overlay.querySelector("#nbpMergeDestinationLevel")?.value, 10) || 0);
+      const sourceType = overlay.querySelector("#nbpMergeSourceType")?.value || "";
+      const sourceLevel = Math.max(0, Number.parseInt(overlay.querySelector("#nbpMergeSourceLevel")?.value, 10) || 0);
+      const resultLevel = Math.max(0, Number.parseInt(overlay.querySelector("#nbpMergeResultLevel")?.value, 10) || 0);
+      const quantity = Math.max(1, Math.min(100, Number.parseInt(overlay.querySelector("#nbpMergeQuantity")?.value, 10) || 1));
+      if (!destinationType || !sourceType || resultLevel <= destinationLevel) {
+        window.alert("Choose both towers and enter a resulting level higher than the destination's current level.");
+        return;
+      }
+      layout.fortPlanner.mergePlans.push({
+        destinationType,
+        destinationLevel,
+        sourceType,
+        sourceLevel,
+        resultLevel,
+        quantity
+      });
+      layout.fortPlanner = normaliseFortPlanner(layout.fortPlanner);
+      saveState();
+      render();
+    });
+    overlay.querySelectorAll("[data-remove-merge]").forEach(button => {
+      button.addEventListener("click", () => {
+        layout.fortPlanner.mergePlans.splice(Number(button.dataset.removeMerge), 1);
         saveState();
         render();
       });
@@ -1521,8 +1665,9 @@
       [data-catalog-kind]{position:relative}.nbp-suggestions{position:relative;z-index:8;max-height:280px;margin-top:6px;overflow-y:auto;border:1px solid #4a4c50;border-radius:13px;background:#090a0b;box-shadow:0 14px 32px rgba(0,0,0,.55)}.nbp-suggestions button{display:block;width:100%;padding:11px 12px;border:0!important;border-bottom:1px solid #242629!important;border-radius:0!important;text-align:left;background:#0d0e10!important}.nbp-suggestions button:last-child{border-bottom:0!important}.nbp-suggestions strong,.nbp-suggestions small{display:block}.nbp-suggestions strong{color:#eeeae2}.nbp-suggestions small{margin-top:4px;color:#a9a39a;font-size:11px}.nbp-suggestions p{margin:0;padding:13px;color:#99938a}
       .nbp-fort-entry-help{margin:13px 0 0;color:#c9b770;font-size:12px;line-height:1.45}.nbp-fort-blockers{margin-top:10px;padding:13px 14px;border:1px solid rgba(213,184,95,.42);border-radius:13px;background:rgba(91,72,20,.15)}.nbp-fort-blockers strong{color:#dfc36e}.nbp-fort-blockers p{margin:7px 0 0;color:#d0c9bd}.nbp-fort-blockers small{display:block;margin-top:8px;color:#9f998f;line-height:1.4}
       .nbp-fort-targets{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.nbp-fort-entry{display:grid;grid-template-columns:minmax(170px,1fr) 110px 90px auto;gap:9px;align-items:end;margin-top:15px}.nbp-fort-entry button{min-height:47px}.nbp-fort-storage{display:grid;gap:7px;margin-top:13px}.nbp-fort-storage article,.nbp-fort-route article{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 12px;border:1px solid #303237;border-radius:12px;background:#0c0d0f}.nbp-fort-storage strong,.nbp-fort-storage small{display:block}.nbp-fort-storage small{margin-top:4px;color:#9c978f}.nbp-fort-result{margin-top:14px;padding:15px;border:1px solid #3b3d41;border-radius:15px;background:#0b0c0d}.nbp-fort-result.reached{border-color:rgba(79,188,147,.55);background:rgba(29,74,58,.2)}.nbp-fort-result.short{border-color:rgba(213,184,95,.4)}.nbp-fort-result strong{color:#dfc36e}.nbp-fort-result p{margin:6px 0 0;color:#aaa49b}.nbp-fort-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}.nbp-fort-stats article{padding:12px;border:1px solid #303237;border-radius:12px;background:#0c0d0f}.nbp-fort-stats small,.nbp-fort-stats strong{display:block}.nbp-fort-stats small{color:#9c978f;font-size:11px}.nbp-fort-stats strong{margin-top:5px;color:#dfc36e;font-size:15px}.nbp-fort-route{display:grid;gap:7px;margin-top:14px}.nbp-fort-route h4{margin:0 0 2px}.nbp-fort-route span{color:#a9a39a;font-size:12px;text-align:right}
+      .nbp-merge-planner{margin-top:16px;padding:14px;border:1px solid rgba(105,210,180,.35);border-radius:15px;background:rgba(20,63,53,.12)}.nbp-merge-planner>summary{color:#78d4b8;font-weight:900;cursor:pointer}.nbp-merge-entry{display:grid;grid-template-columns:repeat(3,minmax(130px,1fr));gap:9px;align-items:end;margin-top:13px}.nbp-merge-entry button{min-height:47px}.nbp-merge-list{display:grid;gap:7px;margin-top:12px}.nbp-merge-list article{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 12px;border:1px solid #303c38;border-radius:12px;background:#0b1110}.nbp-merge-list strong,.nbp-merge-list small{display:block}.nbp-merge-list small{margin-top:4px;color:#9eb4ad}.nbp-merge-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}.nbp-merge-summary article{padding:12px;border:1px solid rgba(105,210,180,.28);border-radius:12px;background:#0b1110}.nbp-merge-summary small,.nbp-merge-summary strong{display:block}.nbp-merge-summary small{color:#91aaa2;font-size:11px}.nbp-merge-summary strong{margin-top:5px;color:#78d4b8}
       .nbp-findings{display:grid;gap:10px;margin-top:14px}.nbp-finding{padding:14px 15px;border:1px solid #303030;border-left-width:4px;border-radius:15px;background:#0b0b0b}.nbp-finding strong{display:block}.nbp-finding p{margin:5px 0 0;color:#aaa49b;line-height:1.45}.nbp-finding.error{border-left-color:#e08089}.nbp-finding.warning{border-left-color:#dcc16e}.nbp-finding.good{border-left-color:#69dab0}.nbp-empty-copy{color:#99938a}.nbp-danger-zone{text-align:center}.nbp-danger-zone button{color:#dda2ad;border-color:rgba(190,105,121,.45)}.hidden{display:none!important}
-      @media(max-width:720px){.nct-home-tools .nbp-launch{min-height:0}.nbp-base-details,.nbp-meter-grid,.nbp-form-grid,.nbp-perch-grid,.nbp-photo-grid,.nbp-fort-targets,.nbp-fort-entry{grid-template-columns:1fr}.nbp-fort-stats{grid-template-columns:repeat(2,1fr)}.nbp-section-heading{align-items:flex-start;flex-wrap:wrap}.nbp-island-slots{grid-template-columns:repeat(5,minmax(82px,1fr));overflow-x:auto;padding-bottom:5px}.nbp-slot{min-width:82px}.nbp-photo-grid img{height:auto;max-height:360px}.nbp-fort-route article{align-items:flex-start;flex-direction:column}.nbp-fort-route span{text-align:left}}
+      @media(max-width:720px){.nct-home-tools .nbp-launch{min-height:0}.nbp-base-details,.nbp-meter-grid,.nbp-form-grid,.nbp-perch-grid,.nbp-photo-grid,.nbp-fort-targets,.nbp-fort-entry,.nbp-merge-entry{grid-template-columns:1fr}.nbp-fort-stats,.nbp-merge-summary{grid-template-columns:repeat(2,1fr)}.nbp-section-heading{align-items:flex-start;flex-wrap:wrap}.nbp-island-slots{grid-template-columns:repeat(5,minmax(82px,1fr));overflow-x:auto;padding-bottom:5px}.nbp-slot{min-width:82px}.nbp-photo-grid img{height:auto;max-height:360px}.nbp-fort-route article,.nbp-merge-list article{align-items:flex-start;flex-direction:column}.nbp-fort-route span{text-align:left}}
     `;
     document.head.appendChild(style);
   }
