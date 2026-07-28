@@ -392,14 +392,14 @@
     );
     overlay.setAttribute(
       "aria-label",
-      "Noir help and instructions"
+      "NOIR • I ZI help and instructions"
     );
 
     overlay.innerHTML = `
       <div class="noir-help-shell">
         <header class="noir-help-topbar">
           <div>
-            <p class="noir-help-eyebrow">CHEST COMPANION</p>
+            <p class="noir-help-eyebrow">NOIR • I ZI</p>
             <h1>Help &amp; How It Works</h1>
           </div>
           <button
@@ -411,9 +411,9 @@
         </header>
 
         <section class="noir-help-intro">
-          <h2>Quick start</h2>
+          <h2>Know what waits in the dark.</h2>
           <p>
-            Noir uses the current event’s live chest decks and your own
+            NOIR • I ZI uses the current event’s live chest decks and your own
             consecutive rewards to locate where you are. Your history stays
             on your device and never changes another player’s position.
           </p>
@@ -428,7 +428,7 @@
             </div>
             <div class="noir-help-step">
               <span>3</span>
-              <div>Keep recording until Noir says safe predictions are ready.</div>
+              <div>Keep recording until NOIR • I ZI says safe predictions are ready.</div>
             </div>
             <div class="noir-help-step">
               <span>4</span>
@@ -450,7 +450,7 @@
               <li>Use Undo immediately if the wrong reward or amount was entered.</li>
             </ol>
             <div class="noir-help-callout">
-              When Noir says <strong>Predictions ready</strong> or
+              When NOIR • I ZI says <strong>Predictions ready</strong> or
               <strong>Safe predictions ready</strong>, you can stop recording
               and use the displayed list.
             </div>
@@ -464,7 +464,7 @@
           </summary>
           <div class="noir-help-body">
             <p>
-              <strong>100%</strong> means Noir has uniquely located the main
+              <strong>100%</strong> means NOIR • I ZI has uniquely located the main
               sequence and every separate reward pool used by that chest.
             </p>
             <p>
@@ -474,14 +474,14 @@
               a 1% chance of being wrong.
             </p>
             <p>
-              Noir may show only a few predictions because it pauses before an
+              NOIR • I ZI may show only a few predictions because it pauses before an
               unresolved reward pool instead of guessing. When the safe list
               ends, open and record the next consecutive reward to identify
               that pool and unlock more.
             </p>
             <div class="noir-help-callout noir-help-warning">
               Different players and chest types may need different numbers of
-              consecutive starting rewards. Keep recording until Noir
+              consecutive starting rewards. Keep recording until NOIR • I ZI
               explicitly says safe predictions are ready.
             </div>
           </div>
@@ -589,27 +589,27 @@
               <li>Use <strong>Save &amp; next empty</strong> to enter the base quickly without returning to the map after every tower.</li>
               <li>Enter each perch’s level, dragon, dragon level and perch rider. Rider skills and all eight gear slots are optional but improve the completed record.</li>
               <li>When the entered layout matches your real base, tap <strong>Save proposal as current</strong>. This becomes the comparison baseline.</li>
-              <li>To test a move, tap one tower and then its destination. Noir moves it into an empty slot or swaps it with the tower already there.</li>
+              <li>To test a move, tap one tower and then its destination. NOIR • I ZI moves it into an empty slot or swaps it with the tower already there.</li>
               <li>Watch <strong>Projected defensive strength</strong>, <strong>Defensive effectiveness</strong> and the advice cards. Green is an improvement; red is a weaker proposal.</li>
               <li>Use Undo, Redo or Restore current layout while experimenting. Save the proposal as current only after making the same changes in WD.</li>
               <li>For Fortification planning, enter your current player level, target level and any XP already earned toward the next level.</li>
               <li>The <strong>Account XP requirements</strong> card automatically shows the XP needed for the next level and the chosen target. Players do not need to calculate expected XP or merge deductions themselves.</li>
-              <li>Add each active or stored tower you can upgrade, including its current level and quantity. Noir uses WD’s upgrade XP and level requirements to calculate whether the entered towers can reach the target and recommends an upgrade route.</li>
-              <li>Add planned merges in <strong>Merge strategy</strong>. Noir calculates the XP loss from the destination, sacrificed and resulting tower levels and includes that debt in the account projection automatically.</li>
+              <li>Add each active or stored tower you can upgrade, including its current level and quantity. NOIR • I ZI uses WD’s upgrade XP and level requirements to calculate whether the entered towers can reach the target and recommends an upgrade route.</li>
+              <li>Add planned merges in <strong>Tower merge &amp; XP debt</strong>. NOIR • I ZI compares the tower being kept, the tower being consumed and the resulting level shown by WD, then includes the debt in the account projection automatically.</li>
             </ol>
             <div class="noir-help-callout">
               <strong>Planning tower merges</strong>
               <ol>
                 <li>Open the merge preview in WD, but do not confirm it yet.</li>
-                <li>In Noir’s <strong>Merge strategy</strong>, choose the destination tower and enter its current level.</li>
-                <li>Choose the tower being sacrificed and enter its level.</li>
+                <li>In <strong>Tower merge &amp; XP debt</strong>, choose the lower tower being improved and kept, then enter its current level.</li>
+                <li>Choose the stored or active tower being consumed and enter its level.</li>
                 <li>Enter the resulting tower level shown in WD’s preview. This is important because the result can change with tower type, resources and level limits.</li>
-                <li>If repeating the same merge, enter the quantity, then tap <strong>Add merge</strong>.</li>
+                <li>If repeating the same merge, enter the quantity, then tap <strong>Calculate and add merge</strong>.</li>
               </ol>
               <p>
-                Noir adds the XP already held by both original towers and
+                NOIR • I ZI adds the XP already held by both original towers and
                 compares it with the XP retained by the resulting tower. Any
-                lost XP is shown as <strong>XP deducted by merging</strong> and
+                lost XP is shown as <strong>Player XP debt created</strong> and
                 is added to the amount needed for the player’s next level.
               </p>
               <p>
@@ -617,12 +617,12 @@
                 later normal tower upgrades repay any remaining merge XP debt
                 before adding progress towards another player level. There is
                 no single fixed deduction for a tower—the amount depends on the
-                destination tower, sacrificed tower and resulting level.
+                kept tower, consumed tower and resulting level.
               </p>
             </div>
             <div class="noir-help-callout">
               The current DP is the number shown in WD. Projected defensive
-              strength is Noir’s planning estimate—it can compare placements,
+              strength is NOIR • I ZI’s planning estimate—it can compare placements,
               coverage and support, but moving towers does not change WD’s
               displayed DP by itself.
             </div>
@@ -640,11 +640,11 @@
               <li>Check the selected chest, reward name and amount.</li>
               <li>Confirm whether the result was a regular or bonus chest.</li>
               <li>Use Undo for an incorrect last entry.</li>
-              <li>Take screenshots of Noir’s prediction and the game result before changing anything.</li>
+              <li>Take screenshots of NOIR • I ZI’s prediction and the game result before changing anything.</li>
             </ol>
             <div class="noir-help-callout noir-help-warning">
               Never reset saved history simply because the safe list is short.
-              A short list usually means Noir needs one result from a new pool.
+              A short list usually means NOIR • I ZI needs one result from a new pool.
             </div>
           </div>
         </details>
@@ -656,12 +656,12 @@
           </summary>
           <div class="noir-help-body">
             <p>
-              Found a problem or have an idea for Noir? Email Chest Companion
+              Found a problem or have an idea for NOIR • I ZI? Email Chest Companion
               and include:
             </p>
             <ul>
               <li>The chest type you were using.</li>
-              <li>Screenshots of Noir and the game result.</li>
+              <li>Screenshots of NOIR • I ZI and the game result.</li>
               <li>The confidence shown at the time.</li>
               <li>Whether it was a regular or bonus chest.</li>
               <li>A short description of what happened.</li>
@@ -672,8 +672,8 @@
             </div>
             <a
               class="noir-help-email"
-              href="mailto:noirchestcompanion@gmail.com?subject=Noir%20Help%20%26%20Feedback"
-            >Email Noir Chest Companion</a>
+              href="mailto:noirchestcompanion@gmail.com?subject=NOIR • I ZI%20Help%20%26%20Feedback"
+            >Email NOIR • I ZI Chest Companion</a>
           </div>
         </details>
 
