@@ -591,8 +591,33 @@
               <li>When the entered layout matches your real base, tap <strong>Save proposal as current</strong>. This becomes the comparison baseline.</li>
               <li>To test a move, tap one tower and then its destination. Noir moves it into an empty slot or swaps it with the tower already there.</li>
               <li>Watch <strong>Projected defensive strength</strong>, <strong>Defensive effectiveness</strong> and the advice cards. Green is an improvement; red is a weaker proposal.</li>
-              <li>Use Undo, Redo or Restore current layout while experimenting. Save the proposal as current only after making the same changes in WD.</li>\n              <li>For Fortification planning, enter your current player level, target level and any XP already earned toward the next level.</li>\n              <li>Add each stored tower with its current level and quantity. Noir uses the WD upgrade XP and level requirements to calculate whether the entered storage can reach the target and recommends an upgrade route.</li>
+              <li>Use Undo, Redo or Restore current layout while experimenting. Save the proposal as current only after making the same changes in WD.</li>
+              <li>For Fortification planning, enter your current player level, target level and any XP already earned toward the next level.</li>
+              <li>Add each active or stored tower you can upgrade, including its current level and quantity. Noir uses WD’s upgrade XP and level requirements to calculate whether the entered towers can reach the target and recommends an upgrade route.</li>
             </ol>
+            <div class="noir-help-callout">
+              <strong>Planning tower merges</strong>
+              <ol>
+                <li>Open the merge preview in WD, but do not confirm it yet.</li>
+                <li>In Noir’s <strong>Merge strategy</strong>, choose the destination tower and enter its current level.</li>
+                <li>Choose the tower being sacrificed and enter its level.</li>
+                <li>Enter the resulting tower level shown in WD’s preview. This is important because the result can change with tower type, resources and level limits.</li>
+                <li>If repeating the same merge, enter the quantity, then tap <strong>Add merge</strong>.</li>
+              </ol>
+              <p>
+                Noir adds the XP already held by both original towers and
+                compares it with the XP retained by the resulting tower. Any
+                lost XP is shown as <strong>XP deducted by merging</strong> and
+                is added to the amount needed for the player’s next level.
+              </p>
+              <p>
+                A merge never makes the player drop an attained level. Instead,
+                later normal tower upgrades repay any remaining merge XP debt
+                before adding progress towards another player level. There is
+                no single fixed deduction for a tower—the amount depends on the
+                destination tower, sacrificed tower and resulting level.
+              </p>
+            </div>
             <div class="noir-help-callout">
               The current DP is the number shown in WD. Projected defensive
               strength is Noir’s planning estimate—it can compare placements,
