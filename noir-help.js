@@ -593,8 +593,9 @@
               <li>Watch <strong>Projected defensive strength</strong>, <strong>Defensive effectiveness</strong> and the advice cards. Green is an improvement; red is a weaker proposal.</li>
               <li>Use Undo, Redo or Restore current layout while experimenting. Save the proposal as current only after making the same changes in WD.</li>
               <li>For Fortification planning, enter your current player level, target level and any XP already earned toward the next level.</li>
-              <li>For a quick numerical result, enter the XP the account will gain and any XP that will be deducted. The <strong>Account XP &amp; level result</strong> shows the projected player level, levels gained, next-level progress and XP still needed for the target without requiring any tower entries.</li>
+              <li>The <strong>Account XP requirements</strong> card automatically shows the XP needed for the next level and the chosen target. Players do not need to calculate expected XP or merge deductions themselves.</li>
               <li>Add each active or stored tower you can upgrade, including its current level and quantity. Noir uses WD’s upgrade XP and level requirements to calculate whether the entered towers can reach the target and recommends an upgrade route.</li>
+              <li>Add planned merges in <strong>Merge strategy</strong>. Noir calculates the XP loss from the destination, sacrificed and resulting tower levels and includes that debt in the account projection automatically.</li>
             </ol>
             <div class="noir-help-callout">
               <strong>Planning tower merges</strong>
