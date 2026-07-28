@@ -898,20 +898,23 @@
 
   function mergePlanStats(planner) {
     const plans = Array.isArray(planner.mergePlans) ? planner.mergePlans : [];
+    const accumulatedTowerXp = (type, level) => fortRowsForType(type)
+      .filter(row => Number(row.level) <= Number(level))
+      .reduce((sum, row) => sum + (Number(row.xp) || 0), 0);
     return plans.map((plan, index) => {
-      const rows = fortRowsForType(plan.destinationType);
-      const ordinarySteps = rows.filter(row =>
-        Number(row.level) > plan.destinationLevel &&
-        Number(row.level) <= plan.resultLevel
-      );
-      const xpAvoidedEach = ordinarySteps.reduce((sum, row) => sum + (Number(row.xp) || 0), 0);
-      const secondsAvoidedEach = ordinarySteps.reduce((sum, row) => sum + (Number(row.seconds) || 0), 0);
+      const destinationXp = accumulatedTowerXp(plan.destinationType, plan.destinationLevel);
+      const sourceXp = accumulatedTowerXp(plan.sourceType, plan.sourceLevel);
+      const resultXp = accumulatedTowerXp(plan.destinationType, plan.resultLevel);
+      const xpDeductedEach = Math.max(0, destinationXp + sourceXp - resultXp);
       return {
         ...plan,
         index,
         levelsMoved: Math.max(0, plan.resultLevel - plan.destinationLevel) * plan.quantity,
-        xpAvoided: xpAvoidedEach * plan.quantity,
-        secondsAvoided: secondsAvoidedEach * plan.quantity
+        destinationXp,
+        sourceXp,
+        resultXp,
+        xpDeductedEach,
+        xpDeducted: xpDeductedEach * plan.quantity
       };
     });
   }
@@ -922,6 +925,7 @@
     const targetLevel = planner.targetLevel;
     const ready = currentLevel >= 600 && targetLevel > currentLevel;
     const merges = mergePlanStats(planner);
+    const mergeXpDebt = merges.reduce((sum, item) => sum + item.xpDeducted, 0);
     if (!ready) {
       return {
         planner,
@@ -936,12 +940,14 @@
         route: [],
         summary: [],
         blockers: [],
-        merges
+        merges,
+        mergeXpDebt
       };
     }
-    const xpNeeded = Array.from({ length: targetLevel - currentLevel }, (_, index) =>
+    const xpNeededBeforeMerges = Array.from({ length: targetLevel - currentLevel }, (_, index) =>
       playerXpForLevel(currentLevel + index + 1)
     ).reduce((sum, xp) => sum + xp, 0) - planner.currentXp;
+    const xpNeeded = xpNeededBeforeMerges + mergeXpDebt;
     const instances = [];
     planner.storedTowers.forEach((entry, entryIndex) => {
       for (let copy = 0; copy < entry.quantity; copy += 1) {
@@ -969,7 +975,9 @@
       }
     });
     let simulatedLevel = currentLevel;
-    let progressXp = planner.currentXp;
+    // WD protects the attained player level when a merge reduces total tower
+    // XP. The reduction therefore becomes debt against the next player level.
+    let progressXp = planner.currentXp - mergeXpDebt;
     let earnedXp = 0;
     const route = [];
     const safetyLimit = 50000;
@@ -1042,7 +1050,8 @@
       route,
       summary,
       blockers,
-      merges
+      merges,
+      mergeXpDebt
     };
   }
 
@@ -1073,8 +1082,7 @@
       ? Math.min(100, (result.progressXp / nextLevelXp) * 100)
       : 100;
     const mergeLevels = result.merges.reduce((sum, item) => sum + item.levelsMoved, 0);
-    const mergeXpAvoided = result.merges.reduce((sum, item) => sum + item.xpAvoided, 0);
-    const mergeSecondsAvoided = result.merges.reduce((sum, item) => sum + item.secondsAvoided, 0);
+    const mergeXpDebt = result.merges.reduce((sum, item) => sum + item.xpDeducted, 0);
     return `
       <section class="nbp-panel nbp-fort-planner">
         <div class="nbp-section-heading">
@@ -1107,7 +1115,7 @@
         </div>
         <details class="nbp-merge-planner" ${result.merges.length ? "open" : ""}>
           <summary>Merge strategy ${result.merges.length ? `(${result.merges.length})` : ""}</summary>
-          <p class="nbp-muted">Use this for towers strengthened by consuming a stored tower. Enter the resulting level WD shows. Noir records the tower gain but does not count the merge itself as fresh player XP or ordinary build time.</p>
+          <p class="nbp-muted">Use this for towers strengthened by consuming another tower. Enter the resulting level WD shows before confirming the merge. Noir compares the XP held by both original towers with the XP held by the result; any loss is added to the XP required for your next player level.</p>
           <div class="nbp-merge-entry">
             <label>Destination tower<select id="nbpMergeDestinationType">
               ${fortTowerTypes.map(type => `<option>${escapeHtml(type)}</option>`).join("")}
@@ -1126,7 +1134,7 @@
               <article>
                 <div>
                   <strong>${item.quantity > 1 ? `${item.quantity} × ` : ""}${escapeHtml(item.destinationType)}: ${item.destinationLevel} → ${item.resultLevel}</strong>
-                  <small>Uses ${escapeHtml(item.sourceType)} level ${item.sourceLevel} · ${formatNumber(item.xpAvoided)} ordinary-upgrade XP avoided</small>
+                  <small>Uses ${escapeHtml(item.sourceType)} level ${item.sourceLevel} · ${formatNumber(item.xpDeducted)} XP deducted${item.quantity > 1 ? ` (${formatNumber(item.xpDeductedEach)} each)` : ""}</small>
                 </div>
                 <button type="button" data-remove-merge="${item.index}">Remove</button>
               </article>
@@ -1136,15 +1144,15 @@
             <div class="nbp-merge-summary">
               <article><small>Tower levels gained by merging</small><strong>${formatNumber(mergeLevels)}</strong></article>
               <article><small>Player XP from the merges</small><strong>0</strong></article>
-              <article><small>Ordinary-upgrade XP avoided</small><strong>${formatNumber(mergeXpAvoided)}</strong></article>
-              <article><small>Ordinary build time bypassed</small><strong>${formatDuration(mergeSecondsAvoided)}</strong></article>
+              <article><small>XP deducted by merging</small><strong>−${formatNumber(mergeXpDebt)}</strong></article>
+              <article><small>Added to next-level requirement</small><strong>${formatNumber(mergeXpDebt)}</strong></article>
             </div>
           ` : ""}
-          <p class="nbp-trust-copy">Only normal upgrades listed above affect the projected player level. Source towers may have awarded XP when originally built; that historical XP is not awarded again when they are merged.</p>
+          <p class="nbp-trust-copy">Merging never lowers an attained player level. If tower XP is lost, WD increases the distance to the next level by the same amount. Later normal upgrades must repay that XP debt before adding progress toward another player level.</p>
         </details>
         <div class="nbp-fort-result ${result.reached ? "reached" : "short"}">
           <strong>${!result.ready ? "Enter your levels to calculate" : result.reached ? `Target ${result.targetLevel} is reachable` : `Entered upgrades reach player level ${result.simulatedLevel}`}</strong>
-          <p>${formatNumber(result.xpNeeded)} XP required · ${formatNumber(result.earnedXp)} XP planned · ${result.route.length} upgrades</p>
+          <p>${formatNumber(result.xpNeeded)} XP required${mergeXpDebt ? ` including ${formatNumber(mergeXpDebt)} merge debt` : ""} · ${formatNumber(result.earnedXp)} XP planned · ${result.route.length} upgrades</p>
           ${!result.ready
             ? `<p>Enter a current level from 600 and a higher target level.</p>`
             : result.reached
@@ -1166,7 +1174,7 @@
           <article><small>XP still required</small><strong>${formatNumber(shortfallXp)}</strong></article>
           <article><small>Average XP per upgrade</small><strong>${formatNumber(averageXp)}</strong></article>
           <article><small>Level reached with entered towers</small><strong>${result.simulatedLevel}</strong></article>
-          <article><small>Progress into next level</small><strong>${!result.ready ? "0" : result.reached ? "Target reached" : `${formatNumber(result.progressXp)} / ${formatNumber(nextLevelXp)} (${nextLevelProgress.toFixed(1)}%)`}</strong></article>
+          <article><small>${result.progressXp < 0 ? "Merge XP debt remaining" : "Progress into next level"}</small><strong>${!result.ready ? "0" : result.reached ? "Target reached" : result.progressXp < 0 ? formatNumber(Math.abs(result.progressXp)) : `${formatNumber(result.progressXp)} / ${formatNumber(nextLevelXp)} (${nextLevelProgress.toFixed(1)}%)`}</strong></article>
           <article><small>Player levels gained</small><strong>${levelled}</strong></article>
         </div>
         ${result.summary.length ? `
