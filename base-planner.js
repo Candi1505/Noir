@@ -117,8 +117,6 @@
       currentLevel: 0,
       targetLevel: 0,
       currentXp: 0,
-      calculatorXpGain: 0,
-      calculatorXpDeduction: 0,
       maximumTowerLevel: 233,
       storedTowers: [],
       mergePlans: []
@@ -139,8 +137,6 @@
       currentLevel: wasEffDemoDefault || parsedCurrentLevel === 0 ? 0 : Math.max(600, Math.min(998, parsedCurrentLevel)),
       targetLevel: wasEffDemoDefault || parsedTargetLevel === 0 ? 0 : Math.max(601, Math.min(999, parsedTargetLevel)),
       currentXp: Math.max(0, Number.parseInt(safe.currentXp, 10) || 0),
-      calculatorXpGain: Math.max(0, Number.parseInt(safe.calculatorXpGain, 10) || 0),
-      calculatorXpDeduction: Math.max(0, Number.parseInt(safe.calculatorXpDeduction, 10) || 0),
       maximumTowerLevel: Math.max(1, Math.min(250, Number.parseInt(safe.maximumTowerLevel, 10) || 233)),
       storedTowers: savedTowers.map(item => ({
         type: String(item?.type || ""),
@@ -928,45 +924,30 @@
     const currentLevel = planner.currentLevel;
     const targetLevel = planner.targetLevel;
     const ready = currentLevel >= 600;
-    const xpGain = planner.calculatorXpGain;
-    const xpDeduction = planner.calculatorXpDeduction;
-    let projectedLevel = currentLevel;
-    let progressXp = planner.currentXp + xpGain - xpDeduction;
-    if (ready) {
-      while (
-        projectedLevel < 999 &&
-        progressXp >= playerXpForLevel(projectedLevel + 1)
-      ) {
-        progressXp -= playerXpForLevel(projectedLevel + 1);
-        projectedLevel += 1;
-      }
-    }
     const targetValid = ready && targetLevel > currentLevel;
+    const nextLevelXp = ready ? playerXpForLevel(currentLevel + 1) : 0;
+    const xpToNextLevel = ready
+      ? Math.max(0, nextLevelXp - planner.currentXp)
+      : 0;
     const targetXp = targetValid
       ? Array.from({ length: targetLevel - currentLevel }, (_, index) =>
           playerXpForLevel(currentLevel + index + 1)
         ).reduce((sum, xp) => sum + xp, 0)
       : 0;
     const xpRemainingToTarget = targetValid
-      ? Math.max(0, targetXp - planner.currentXp - xpGain + xpDeduction)
-      : 0;
-    const nextLevelXp = ready && projectedLevel < 999
-      ? playerXpForLevel(projectedLevel + 1)
+      ? Math.max(0, targetXp - planner.currentXp)
       : 0;
     return {
       planner,
       ready,
       currentLevel,
       targetLevel,
-      xpGain,
-      xpDeduction,
-      netXpChange: xpGain - xpDeduction,
-      projectedLevel,
-      levelsGained: Math.max(0, projectedLevel - currentLevel),
-      progressXp,
+      levelsRequested: targetValid ? targetLevel - currentLevel : 0,
       nextLevelXp,
+      xpToNextLevel,
+      targetXp,
       xpRemainingToTarget,
-      targetReached: targetValid && projectedLevel >= targetLevel
+      currentXp: planner.currentXp
     };
   }
 
@@ -1150,21 +1131,17 @@
         </div>
         <div class="nbp-account-calculator">
           <div class="nbp-section-heading">
-            <div><p class="nbp-kicker">QUICK CALCULATOR</p><h4>Account XP &amp; level result</h4></div>
+            <div><p class="nbp-kicker">QUICK CALCULATOR</p><h4>Account XP requirements</h4></div>
             <span class="nbp-estimate-label">No tower entry needed</span>
           </div>
-          <p class="nbp-muted">Enter any XP the account will gain and any XP that will be deducted. Noir applies both amounts to the current account progress above.</p>
-          <div class="nbp-account-inputs">
-            <label>XP the account will gain<input data-fort-field="calculatorXpGain" type="number" min="0" value="${account.xpGain}"></label>
-            <label>XP deducted, including merges<input data-fort-field="calculatorXpDeduction" type="number" min="0" value="${account.xpDeduction}"></label>
-          </div>
+          <p class="nbp-muted">Noir calculates these figures automatically from the current level, target level and visible XP progress entered above. Add towers below when you want Noir to calculate where the available upgrades will actually take the account.</p>
           <div class="nbp-fort-stats nbp-account-results">
-            <article><small>Projected player level</small><strong>${account.ready ? account.projectedLevel : "—"}</strong></article>
-            <article><small>Player levels gained</small><strong>${account.ready ? account.levelsGained : 0}</strong></article>
-            <article><small>Net XP change</small><strong>${account.netXpChange < 0 ? "−" : "+"}${formatNumber(Math.abs(account.netXpChange))}</strong></article>
-            <article><small>${account.progressXp < 0 ? "XP debt remaining" : "Progress into next level"}</small><strong>${!account.ready ? "—" : account.progressXp < 0 ? formatNumber(Math.abs(account.progressXp)) : account.projectedLevel >= 999 ? "Maximum level" : `${formatNumber(account.progressXp)} / ${formatNumber(account.nextLevelXp)}`}</strong></article>
-            <article><small>XP still needed for target</small><strong>${account.targetLevel > account.currentLevel ? formatNumber(account.xpRemainingToTarget) : "—"}</strong></article>
-            <article><small>Target result</small><strong>${account.targetLevel <= account.currentLevel ? "Enter a target" : account.targetReached ? "Reached" : `Level ${account.projectedLevel}`}</strong></article>
+            <article><small>Current player level</small><strong>${account.ready ? account.currentLevel : "—"}</strong></article>
+            <article><small>Target player level</small><strong>${account.targetLevel > account.currentLevel ? account.targetLevel : "—"}</strong></article>
+            <article><small>Player levels requested</small><strong>${account.levelsRequested || 0}</strong></article>
+            <article><small>XP already counted</small><strong>${formatNumber(account.currentXp)}</strong></article>
+            <article><small>XP needed for next level</small><strong>${account.ready ? formatNumber(account.xpToNextLevel) : "—"}</strong></article>
+            <article><small>Total XP still needed for target</small><strong>${account.targetLevel > account.currentLevel ? formatNumber(account.xpRemainingToTarget) : "—"}</strong></article>
           </div>
         </div>
         <div class="nbp-fort-divider"><span>Detailed tower upgrade planner</span></div>
@@ -1744,10 +1721,10 @@
       .nbp-perch-details{margin-top:13px;padding-top:11px;border-top:1px solid #292b2e}.nbp-perch-details summary{color:#d8bc69;font-weight:850;cursor:pointer}.nbp-add-row{display:grid;grid-template-columns:1fr auto;gap:7px;align-items:end}.nbp-add-row button{margin-top:7px}.nbp-chip-list{display:grid;gap:7px;margin-top:9px}.nbp-skill-chip{display:grid;grid-template-columns:minmax(0,1fr) 76px 36px;gap:7px;align-items:center;padding:8px 9px;border:1px solid rgba(83,156,123,.35);border-radius:12px;background:rgba(34,81,65,.25);color:#b9dcca}.nbp-skill-chip strong{font-size:12px;overflow-wrap:anywhere}.nbp-skill-chip label{font-size:10px}.nbp-skill-chip input{min-height:34px;padding:6px}.nbp-skill-chip button{min-height:34px;padding:5px;border-radius:9px;color:#e5a3ae;background:rgba(110,37,54,.25)}.nbp-chip-list small{color:#8f8b85}.nbp-gear-grid{display:grid;gap:9px}.nbp-gear-piece{padding:10px;border:1px solid #292b2e;border-radius:12px;background:#0d0e10}.nbp-gear-grid label{font-size:11px}.nbp-equipment-pair{display:grid;grid-template-columns:minmax(0,1fr) 92px;gap:8px;align-items:end}.nbp-tower-boosts{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:3px 0 0;padding:10px;border:1px solid #303237;border-radius:13px}.nbp-tower-boosts legend,.nbp-perch-bonuses legend{padding:0 5px;color:#d8bc69;font-size:12px;font-weight:850}.nbp-tower-boosts label{display:flex;gap:8px;align-items:center;min-height:42px;padding:8px 10px;border:1px solid rgba(216,188,105,.22);border-radius:10px;background:#0d0e10}.nbp-tower-boosts input{width:20px;height:20px;min-height:0;margin:0;accent-color:#d8bc69}.nbp-tower-boosts span{font-size:12px;font-weight:800}.nbp-perch-bonuses{display:grid;gap:8px;margin:5px 0 3px;padding:10px;border:1px solid #303237;border-radius:13px}.nbp-perch-bonuses label{font-size:11px}
       [data-catalog-kind]{position:relative}.nbp-suggestions{position:relative;z-index:8;max-height:280px;margin-top:6px;overflow-y:auto;border:1px solid #4a4c50;border-radius:13px;background:#090a0b;box-shadow:0 14px 32px rgba(0,0,0,.55)}.nbp-suggestions button{display:block;width:100%;padding:11px 12px;border:0!important;border-bottom:1px solid #242629!important;border-radius:0!important;text-align:left;background:#0d0e10!important}.nbp-suggestions button:last-child{border-bottom:0!important}.nbp-suggestions strong,.nbp-suggestions small{display:block}.nbp-suggestions strong{color:#eeeae2}.nbp-suggestions small{margin-top:4px;color:#a9a39a;font-size:11px}.nbp-suggestions p{margin:0;padding:13px;color:#99938a}
       .nbp-fort-entry-help{margin:13px 0 0;color:#c9b770;font-size:12px;line-height:1.45}.nbp-fort-blockers{margin-top:10px;padding:13px 14px;border:1px solid rgba(213,184,95,.42);border-radius:13px;background:rgba(91,72,20,.15)}.nbp-fort-blockers strong{color:#dfc36e}.nbp-fort-blockers p{margin:7px 0 0;color:#d0c9bd}.nbp-fort-blockers small{display:block;margin-top:8px;color:#9f998f;line-height:1.4}
-      .nbp-fort-targets{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.nbp-account-calculator{margin-top:16px;padding:15px;border:1px solid rgba(103,163,216,.38);border-radius:16px;background:rgba(27,54,79,.18)}.nbp-account-calculator h4{margin:5px 0 0;font-size:18px}.nbp-account-inputs{display:grid;grid-template-columns:1fr 1fr;gap:10px}.nbp-account-results article{border-color:rgba(103,163,216,.28);background:#0b1015}.nbp-account-results strong{color:#86c8f2}.nbp-fort-divider{display:flex;align-items:center;gap:10px;margin:20px 0 4px;color:#d9bd68;font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.09em}.nbp-fort-divider::before,.nbp-fort-divider::after{content:"";height:1px;flex:1;background:#343638}.nbp-fort-entry{display:grid;grid-template-columns:minmax(170px,1fr) 110px 90px auto;gap:9px;align-items:end;margin-top:15px}.nbp-fort-entry button{min-height:47px}.nbp-fort-storage{display:grid;gap:7px;margin-top:13px}.nbp-fort-storage article,.nbp-fort-route article{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 12px;border:1px solid #303237;border-radius:12px;background:#0c0d0f}.nbp-fort-storage strong,.nbp-fort-storage small{display:block}.nbp-fort-storage small{margin-top:4px;color:#9c978f}.nbp-fort-result{margin-top:14px;padding:15px;border:1px solid #3b3d41;border-radius:15px;background:#0b0c0d}.nbp-fort-result.reached{border-color:rgba(79,188,147,.55);background:rgba(29,74,58,.2)}.nbp-fort-result.short{border-color:rgba(213,184,95,.4)}.nbp-fort-result strong{color:#dfc36e}.nbp-fort-result p{margin:6px 0 0;color:#aaa49b}.nbp-fort-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}.nbp-fort-stats article{padding:12px;border:1px solid #303237;border-radius:12px;background:#0c0d0f}.nbp-fort-stats small,.nbp-fort-stats strong{display:block}.nbp-fort-stats small{color:#9c978f;font-size:11px}.nbp-fort-stats strong{margin-top:5px;color:#dfc36e;font-size:15px}.nbp-fort-route{display:grid;gap:7px;margin-top:14px}.nbp-fort-route h4{margin:0 0 2px}.nbp-fort-route span{color:#a9a39a;font-size:12px;text-align:right}
+      .nbp-fort-targets{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.nbp-account-calculator{margin-top:16px;padding:15px;border:1px solid rgba(103,163,216,.38);border-radius:16px;background:rgba(27,54,79,.18)}.nbp-account-calculator h4{margin:5px 0 0;font-size:18px}.nbp-account-results article{border-color:rgba(103,163,216,.28);background:#0b1015}.nbp-account-results strong{color:#86c8f2}.nbp-fort-divider{display:flex;align-items:center;gap:10px;margin:20px 0 4px;color:#d9bd68;font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.09em}.nbp-fort-divider::before,.nbp-fort-divider::after{content:"";height:1px;flex:1;background:#343638}.nbp-fort-entry{display:grid;grid-template-columns:minmax(170px,1fr) 110px 90px auto;gap:9px;align-items:end;margin-top:15px}.nbp-fort-entry button{min-height:47px}.nbp-fort-storage{display:grid;gap:7px;margin-top:13px}.nbp-fort-storage article,.nbp-fort-route article{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 12px;border:1px solid #303237;border-radius:12px;background:#0c0d0f}.nbp-fort-storage strong,.nbp-fort-storage small{display:block}.nbp-fort-storage small{margin-top:4px;color:#9c978f}.nbp-fort-result{margin-top:14px;padding:15px;border:1px solid #3b3d41;border-radius:15px;background:#0b0c0d}.nbp-fort-result.reached{border-color:rgba(79,188,147,.55);background:rgba(29,74,58,.2)}.nbp-fort-result.short{border-color:rgba(213,184,95,.4)}.nbp-fort-result strong{color:#dfc36e}.nbp-fort-result p{margin:6px 0 0;color:#aaa49b}.nbp-fort-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}.nbp-fort-stats article{padding:12px;border:1px solid #303237;border-radius:12px;background:#0c0d0f}.nbp-fort-stats small,.nbp-fort-stats strong{display:block}.nbp-fort-stats small{color:#9c978f;font-size:11px}.nbp-fort-stats strong{margin-top:5px;color:#dfc36e;font-size:15px}.nbp-fort-route{display:grid;gap:7px;margin-top:14px}.nbp-fort-route h4{margin:0 0 2px}.nbp-fort-route span{color:#a9a39a;font-size:12px;text-align:right}
       .nbp-merge-planner{margin-top:16px;padding:14px;border:1px solid rgba(105,210,180,.35);border-radius:15px;background:rgba(20,63,53,.12)}.nbp-merge-planner>summary{color:#78d4b8;font-weight:900;cursor:pointer}.nbp-merge-entry{display:grid;grid-template-columns:repeat(3,minmax(130px,1fr));gap:9px;align-items:end;margin-top:13px}.nbp-merge-entry button{min-height:47px}.nbp-merge-list{display:grid;gap:7px;margin-top:12px}.nbp-merge-list article{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 12px;border:1px solid #303c38;border-radius:12px;background:#0b1110}.nbp-merge-list strong,.nbp-merge-list small{display:block}.nbp-merge-list small{margin-top:4px;color:#9eb4ad}.nbp-merge-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}.nbp-merge-summary article{padding:12px;border:1px solid rgba(105,210,180,.28);border-radius:12px;background:#0b1110}.nbp-merge-summary small,.nbp-merge-summary strong{display:block}.nbp-merge-summary small{color:#91aaa2;font-size:11px}.nbp-merge-summary strong{margin-top:5px;color:#78d4b8}
       .nbp-findings{display:grid;gap:10px;margin-top:14px}.nbp-finding{padding:14px 15px;border:1px solid #303030;border-left-width:4px;border-radius:15px;background:#0b0b0b}.nbp-finding strong{display:block}.nbp-finding p{margin:5px 0 0;color:#aaa49b;line-height:1.45}.nbp-finding.error{border-left-color:#e08089}.nbp-finding.warning{border-left-color:#dcc16e}.nbp-finding.good{border-left-color:#69dab0}.nbp-empty-copy{color:#99938a}.nbp-danger-zone{text-align:center}.nbp-danger-zone button{color:#dda2ad;border-color:rgba(190,105,121,.45)}.hidden{display:none!important}
-      @media(max-width:720px){.nct-home-tools .nbp-launch{min-height:0}.nbp-base-details,.nbp-meter-grid,.nbp-form-grid,.nbp-perch-grid,.nbp-photo-grid,.nbp-fort-targets,.nbp-account-inputs,.nbp-fort-entry,.nbp-merge-entry{grid-template-columns:1fr}.nbp-fort-stats,.nbp-merge-summary{grid-template-columns:repeat(2,1fr)}.nbp-section-heading{align-items:flex-start;flex-wrap:wrap}.nbp-island-slots{grid-template-columns:repeat(5,minmax(82px,1fr));overflow-x:auto;padding-bottom:5px}.nbp-slot{min-width:82px}.nbp-photo-grid img{height:auto;max-height:360px}.nbp-fort-route article,.nbp-merge-list article{align-items:flex-start;flex-direction:column}.nbp-fort-route span{text-align:left}}
+      @media(max-width:720px){.nct-home-tools .nbp-launch{min-height:0}.nbp-base-details,.nbp-meter-grid,.nbp-form-grid,.nbp-perch-grid,.nbp-photo-grid,.nbp-fort-targets,.nbp-fort-entry,.nbp-merge-entry{grid-template-columns:1fr}.nbp-fort-stats,.nbp-merge-summary{grid-template-columns:repeat(2,1fr)}.nbp-section-heading{align-items:flex-start;flex-wrap:wrap}.nbp-island-slots{grid-template-columns:repeat(5,minmax(82px,1fr));overflow-x:auto;padding-bottom:5px}.nbp-slot{min-width:82px}.nbp-photo-grid img{height:auto;max-height:360px}.nbp-fort-route article,.nbp-merge-list article{align-items:flex-start;flex-direction:column}.nbp-fort-route span{text-align:left}}
     `;
     document.head.appendChild(style);
   }
