@@ -271,7 +271,7 @@
         };
       }
     } catch (error) {
-      console.warn("Noir could not read the saved base.", error);
+      console.warn("NOIR • I ZI could not read the saved base.", error);
     }
     const first = createLayout();
     return { layouts: [first], activeId: first.id };
@@ -287,7 +287,7 @@
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
       return true;
     } catch (error) {
-      console.warn("Noir could not save the base.", error);
+      console.warn("NOIR • I ZI could not save the base.", error);
       return false;
     }
   }
@@ -726,7 +726,7 @@
       <section class="nbp-panel">
         <p class="nbp-kicker">BASE SUPPORT</p>
         <h3>Perches, dragons and riders</h3>
-        <p class="nbp-muted">Enter the real assignments so Noir can include their island coverage. Riders, skills and every gear slot use the game catalogues.</p>
+        <p class="nbp-muted">Enter the real assignments so NOIR • I ZI can include their island coverage. Riders, skills and every gear slot use the game catalogues.</p>
         <div class="nbp-perch-grid">
           ${layout.perches.map((perch, index) => `
             <fieldset class="nbp-perch-card">
@@ -1118,7 +1118,7 @@
           <div><p class="nbp-kicker">FORTIFICATION PLANNER</p><h3>Plan a target player level</h3></div>
           <span class="nbp-estimate-label">Game XP values</span>
         </div>
-        <p class="nbp-muted">Enter the active or stored towers you can upgrade. Noir simulates legal upgrades and checks whether they contain enough building XP to reach your target.</p>
+        <p class="nbp-muted">Enter the active or stored towers you can upgrade. NOIR • I ZI simulates legal upgrades and checks whether they contain enough building XP to reach your target.</p>
         <div class="nbp-fort-targets">
           <label>Current player level<input data-fort-field="currentLevel" type="number" min="0" max="998" value="${result.planner.currentLevel}"></label>
           <label>Target player level<input data-fort-field="targetLevel" type="number" min="0" max="999" value="${result.planner.targetLevel}"></label>
@@ -1130,7 +1130,7 @@
             <div><p class="nbp-kicker">QUICK CALCULATOR</p><h4>Account XP requirements</h4></div>
             <span class="nbp-estimate-label">No tower entry needed</span>
           </div>
-          <p class="nbp-muted">Noir calculates these figures automatically from the current level, target level and visible XP progress entered above. Add towers below when you want Noir to calculate where the available upgrades will actually take the account.</p>
+          <p class="nbp-muted">NOIR • I ZI calculates these figures automatically from the current level, target level and visible XP progress entered above. Add towers below when you want NOIR • I ZI to calculate where the available upgrades will actually take the account.</p>
           <div class="nbp-fort-stats nbp-account-results">
             <article><small>Current player level</small><strong>${account.ready ? account.currentLevel : "—"}</strong></article>
             <article><small>Target player level</small><strong>${account.targetLevel > account.currentLevel ? account.targetLevel : "—"}</strong></article>
@@ -1161,7 +1161,7 @@
         <details class="nbp-merge-planner" ${result.merges.length ? "open" : ""}>
           <summary>Tower merge &amp; XP debt ${result.merges.length ? `(${result.merges.length})` : ""}</summary>
           <p class="nbp-muted"><strong>1.</strong> Choose the lower active tower you are keeping and improving. <strong>2.</strong> Choose the stored or active tower WD will consume. <strong>3.</strong> Copy the resulting level shown on WD's merge preview before confirming it in game.</p>
-          <p class="nbp-trust-copy">The resulting tower can be lower than the consumed tower because WD transfers only part of its time, shard and ember value. WD's preview is the authority; Noir uses that displayed result to calculate the player-XP debt.</p>
+          <p class="nbp-trust-copy">The resulting tower can be lower than the consumed tower because WD transfers only part of its time, shard and ember value. WD's preview is the authority; NOIR • I ZI uses that displayed result to calculate the player-XP debt.</p>
           <div class="nbp-merge-entry">
             <label>Tower being improved and kept<select id="nbpMergeDestinationType">
               ${fortTowerTypes.map(type => `<option>${escapeHtml(type)}</option>`).join("")}
@@ -1244,7 +1244,7 @@
     return `
       <section class="nbp-panel">
         <div class="nbp-section-heading">
-          <div><p class="nbp-kicker">NOIR ADVISER</p><h3>${findings.length ? "What this layout needs" : "No recorded conflicts"}</h3></div>
+          <div><p class="nbp-kicker">NOIR • I ZI ADVISER</p><h3>${findings.length ? "What this layout needs" : "No recorded conflicts"}</h3></div>
           <button type="button" class="nbp-primary" id="nbpMakeCurrent" ${changed ? "" : "disabled"}>Save proposal as current</button>
         </div>
         <div class="nbp-findings">
@@ -1400,7 +1400,7 @@
     overlay.innerHTML = `
       <div class="nbp-shell">
         <header class="nbp-topbar">
-          <div><p>NOIR BASE ADVISER</p><h2>Build, compare and strengthen</h2></div>
+          <div><p>NOIR • I ZI BASE ADVISER</p><h2>Build, compare and strengthen</h2></div>
           <button class="nbp-close" id="nbpClose" type="button" aria-label="Close">×</button>
         </header>
         <section class="nbp-panel nbp-base-details">
