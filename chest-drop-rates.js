@@ -95,19 +95,24 @@
     innerFire01: "Inner Fire",
     innerFireConsumable: "Inner Fire",
     repairConsumable: "Defense Hammers",
+    lumberConsumable2: "Lumber Packs",
+    lumberPack_1400000: "1.4M Lumber Packs",
     chest0: "Bronze Chests",
     chest1: "Silver Chests",
     chest2: "Gold Chests",
+    chest6: "Special Event Chests",
     chest11: "Platinum Chests",
     chest27: "Draconic Chests",
     chest33: "Freedom Chests",
+    chest37: "Arcane Chests",
     E24Q3InvokerDragonEvolutionFragment: "Orion Shards",
     E24Q4FestiveHunterDragonEvolutionFragment: "Razor Shards",
     E25Q1FestiveSorcererDragonEvolutionFragment: "Volcaryx Shards",
     E25Q2FestiveWarriorDragonEvolutionFragment: "Riphorn Shards",
     E25Q3FestiveWarriorDragonEvolutionFragment: "Eldrath Shards",
     E25Q4FestiveHunterDragonEvolutionFragment: "Drekgor Shards",
-    E26Q1FestiveInvokerDragonEvolutionFragment: "Voltgar Shards"
+    E26Q1FestiveInvokerDragonEvolutionFragment: "Voltgar Shards",
+    E26Q2FestiveHunterDragonEvolutionFragment: "Seasonal Hunter Shards"
   };
 
   const RARITY_ORDER = {
