@@ -6,6 +6,18 @@
   const ISLAND_COUNT = 8;
   const SLOTS_PER_ISLAND = 5;
   const TOTAL_SLOTS = ISLAND_COUNT * SLOTS_PER_ISLAND;
+  const MERGE_TRANSFER_RATE = 0.45;
+  const RUBBLE_VALUES = Object.freeze({
+    time: 0.002268982,
+    piercing: 0,
+    food: 0,
+    elementalEmber: 3.3898,
+    iceShard: 1.6949,
+    fireShard: 1.6949,
+    electrumBar: 5.0847,
+    cosmicCharge: 3660,
+    bloodstone: 11.17
+  });
 
   const CATALOG = window.NoirBaseCatalog || {};
   const FALLBACK_TOWER_TYPES = [
@@ -892,6 +904,33 @@
     return xp;
   }
 
+  function upgradeRubble(row) {
+    let value = (Number(row?.seconds) || 0) * RUBBLE_VALUES.time;
+    String(row?.cost || "").split(/[|;]/).forEach(part => {
+      const [resource, amount] = part.split(":");
+      value += (Number(amount) || 0) * (RUBBLE_VALUES[resource] || 0);
+    });
+    return value;
+  }
+
+  function accumulatedTowerRubble(type, level) {
+    return fortRowsForType(type)
+      .filter(row => Number(row.level) <= Number(level))
+      .reduce((sum, row) => sum + upgradeRubble(row), 0);
+  }
+
+  function calculateMergeResultLevel(destinationType, destinationLevel, sourceType, sourceLevel, quantity, maximumTowerLevel) {
+    const availableValue =
+      accumulatedTowerRubble(destinationType, destinationLevel) +
+      accumulatedTowerRubble(sourceType, sourceLevel) * quantity * MERGE_TRANSFER_RATE;
+    return fortRowsForType(destinationType)
+      .filter(row =>
+        Number(row.level) <= maximumTowerLevel &&
+        accumulatedTowerRubble(destinationType, row.level) <= availableValue
+      )
+      .reduce((highest, row) => Math.max(highest, Number(row.level) || 0), destinationLevel);
+  }
+
   function mergePlanStats(planner) {
     const plans = Array.isArray(planner.mergePlans) ? planner.mergePlans : [];
     const accumulatedTowerXp = (type, level) => fortRowsForType(type)
@@ -899,18 +938,20 @@
       .reduce((sum, row) => sum + (Number(row.xp) || 0), 0);
     return plans.map((plan, index) => {
       const destinationXp = accumulatedTowerXp(plan.destinationType, plan.destinationLevel);
-      const sourceXp = accumulatedTowerXp(plan.sourceType, plan.sourceLevel);
+      const sourceXpEach = accumulatedTowerXp(plan.sourceType, plan.sourceLevel);
+      const sourceXp = sourceXpEach * plan.quantity;
       const resultXp = accumulatedTowerXp(plan.destinationType, plan.resultLevel);
       const xpDeductedEach = Math.max(0, destinationXp + sourceXp - resultXp);
       return {
         ...plan,
         index,
-        levelsMoved: Math.max(0, plan.resultLevel - plan.destinationLevel) * plan.quantity,
+        levelsMoved: Math.max(0, plan.resultLevel - plan.destinationLevel),
         destinationXp,
         sourceXp,
+        sourceXpEach,
         resultXp,
         xpDeductedEach,
-        xpDeducted: xpDeductedEach * plan.quantity
+        xpDeducted: xpDeductedEach
       };
     });
   }
@@ -1160,8 +1201,8 @@
         </div>
         <details class="nbp-merge-planner" ${result.merges.length ? "open" : ""}>
           <summary>Tower merge &amp; XP debt ${result.merges.length ? `(${result.merges.length})` : ""}</summary>
-          <p class="nbp-muted"><strong>1.</strong> Choose the lower active tower you are keeping and improving. <strong>2.</strong> Choose the stored or active tower WD will consume. <strong>3.</strong> Copy the resulting level shown on WD's merge preview before confirming it in game.</p>
-          <p class="nbp-trust-copy">The resulting tower can be lower than the consumed tower because WD transfers only part of its time, shard and ember value. WD's preview is the authority; NOIR • I ZI uses that displayed result to calculate the player-XP debt.</p>
+          <p class="nbp-muted"><strong>1.</strong> Choose the active tower being kept. <strong>2.</strong> Choose the stored or active tower being consumed. <strong>3.</strong> Enter how many matching towers are selected together. NOIR • I ZI calculates the resulting level and XP debt.</p>
+          <p class="nbp-trust-copy">The calculation uses WD's verified 45% transfer of construction time, shards, embers and other eligible tower value, while respecting the current maximum tower level.</p>
           <div class="nbp-merge-entry">
             <label>Tower being improved and kept<select id="nbpMergeDestinationType">
               ${fortTowerTypes.map(type => `<option>${escapeHtml(type)}</option>`).join("")}
@@ -1171,16 +1212,15 @@
               ${fortTowerTypes.map(type => `<option>${escapeHtml(type)}</option>`).join("")}
             </select></label>
             <label>Consumed tower's level<input id="nbpMergeSourceLevel" type="number" min="1" max="${result.planner.maximumTowerLevel}" value="1"></label>
-            <label>Resulting level shown by WD<input id="nbpMergeResultLevel" type="number" min="2" max="${result.planner.maximumTowerLevel}" value="2"></label>
-            <label>Number of identical merges<input id="nbpMergeQuantity" type="number" min="1" max="100" value="1"></label>
-            <button type="button" class="nbp-primary" id="nbpAddMergePlan">Calculate and add merge</button>
+            <label>Number of matching towers consumed<input id="nbpMergeQuantity" type="number" min="1" max="100" value="1"></label>
+            <button type="button" class="nbp-primary" id="nbpAddMergePlan">Calculate merge</button>
           </div>
           <div class="nbp-merge-list">
             ${result.merges.map(item => `
               <article>
                 <div>
-                  <strong>${item.quantity > 1 ? `${item.quantity} × ` : ""}Keep ${escapeHtml(item.destinationType)} level ${item.destinationLevel} → ${item.resultLevel}</strong>
-                  <small>Consumes ${escapeHtml(item.sourceType)} level ${item.sourceLevel} · ${formatNumber(item.xpDeducted)} XP debt${item.quantity > 1 ? ` (${formatNumber(item.xpDeductedEach)} each)` : ""}</small>
+                  <strong>Keep ${escapeHtml(item.destinationType)} level ${item.destinationLevel} → ${item.resultLevel}</strong>
+                  <small>Consumes ${item.quantity > 1 ? `${item.quantity} × ` : ""}${escapeHtml(item.sourceType)} level ${item.sourceLevel} · ${formatNumber(item.xpDeducted)} XP debt</small>
                 </div>
                 <button type="button" data-remove-merge="${item.index}">Remove</button>
               </article>
@@ -1473,7 +1513,6 @@
       const destinationLevel = Math.max(0, Number.parseInt(overlay.querySelector("#nbpMergeDestinationLevel")?.value, 10) || 0);
       const sourceType = overlay.querySelector("#nbpMergeSourceType")?.value || "";
       const sourceLevel = Math.max(0, Number.parseInt(overlay.querySelector("#nbpMergeSourceLevel")?.value, 10) || 0);
-      const resultLevel = Math.max(0, Number.parseInt(overlay.querySelector("#nbpMergeResultLevel")?.value, 10) || 0);
       const quantity = Math.max(1, Math.min(100, Number.parseInt(overlay.querySelector("#nbpMergeQuantity")?.value, 10) || 1));
       const maximumTowerLevel = layout.fortPlanner.maximumTowerLevel;
       if (!destinationType || !sourceType) {
@@ -1484,12 +1523,20 @@
         window.alert("Enter the current level of both towers.");
         return;
       }
-      if (destinationLevel > maximumTowerLevel || sourceLevel > maximumTowerLevel || resultLevel > maximumTowerLevel) {
+      if (destinationLevel > maximumTowerLevel || sourceLevel > maximumTowerLevel) {
         window.alert(`Tower levels cannot exceed the current level ${maximumTowerLevel} cap.`);
         return;
       }
+      const resultLevel = calculateMergeResultLevel(
+        destinationType,
+        destinationLevel,
+        sourceType,
+        sourceLevel,
+        quantity,
+        maximumTowerLevel
+      );
       if (resultLevel <= destinationLevel) {
-        window.alert("The resulting level shown by WD must be higher than the tower being kept.");
+        window.alert("Those consumed towers do not contain enough transferable value to raise the kept tower by a level.");
         return;
       }
       layout.fortPlanner.mergePlans.push({
