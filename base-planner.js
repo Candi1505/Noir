@@ -26,12 +26,30 @@
     "Dark Flak Tower", "Fire Flak Tower", "Ice Flak Tower", "Earth Flak Tower",
     "Electro-Flak Tower", "Crystal Howitzer", "Soul Drain Tower", "Drakul Pylon",
     "Cosmic Orrery", "Charged Volt Tower", "Red Archmage Tower", "Blue Archmage Tower",
-    "Oculus Tower", "Nexus Tower", "Nullspire Tower", "Other"
+    "Oculus Tower", "Nexus Tower", "Nullspire Tower", "Dark Totem", "Other"
   ];
   const TOWER_TYPES = Array.from(new Set([
     ...(Array.isArray(CATALOG.towers) ? CATALOG.towers.map(tower => tower.name) : []),
     ...FALLBACK_TOWER_TYPES
   ])).filter(Boolean).sort((left, right) => left.localeCompare(right));
+  const INVENTORY_ACTIONS = Object.freeze({
+    upgrade: "Upgrade this Fort",
+    hold: "Hold",
+    merge: "Reserve for merge",
+    transform: "Reserve for transform"
+  });
+  const TOWER_ALIASES = Object.freeze({
+    "archer": "Archer Tower",
+    "ballista tower": "Ballista",
+    "cannon": "Cannon Tower",
+    "dark flak": "Dark Flak Tower",
+    "earth flak": "Earth Flak Tower",
+    "electro flak": "Electro-Flak Tower",
+    "electro-flak": "Electro-Flak Tower",
+    "fire flak": "Fire Flak Tower",
+    "ice flak": "Ice Flak Tower",
+    "trebuchet tower": "Trebuchet"
+  });
 
   const MODERN = new Set([
     "Dark Flak Tower", "Fire Flak Tower", "Ice Flak Tower", "Earth Flak Tower",
@@ -131,7 +149,8 @@
       currentXp: 0,
       maximumTowerLevel: 230,
       storedTowers: [],
-      mergePlans: []
+      mergePlans: [],
+      inventoryImportedAt: ""
     };
   }
 
@@ -149,8 +168,10 @@
       storedTowers: savedTowers.map(item => ({
         type: String(item?.type || ""),
         level: Math.max(0, Number.parseInt(item?.level, 10) || 0),
-        quantity: Math.max(1, Math.min(100, Number.parseInt(item?.quantity, 10) || 1))
-      })).filter(item => item.type && fortRowsForType(item.type).length),
+        quantity: Math.max(1, Math.min(250, Number.parseInt(item?.quantity, 10) || 1)),
+        location: item?.location === "base" ? "base" : "storage",
+        action: Object.hasOwn(INVENTORY_ACTIONS, item?.action) ? item.action : "upgrade"
+      })).filter(item => item.type && (fortRowsForType(item.type).length || TOWER_TYPES.includes(item.type))),
       mergePlans: savedMerges.map(item => ({
         destinationType: String(item?.destinationType || ""),
         destinationLevel: Math.max(0, Number.parseInt(item?.destinationLevel, 10) || 0),
@@ -162,8 +183,63 @@
         item.destinationType &&
         item.sourceType &&
         item.resultLevel > item.destinationLevel
-      )
+      ),
+      inventoryImportedAt: String(safe.inventoryImportedAt || "")
     };
+  }
+
+  function canonicalTowerType(value) {
+    const clean = String(value || "").trim().replace(/\s+/g, " ");
+    if (!clean) return "";
+    const alias = TOWER_ALIASES[clean.toLowerCase()];
+    if (alias) return alias;
+    return TOWER_TYPES.find(type => type.toLowerCase() === clean.toLowerCase()) || clean;
+  }
+
+  function parseInventoryRows(rows) {
+    const parsed = [];
+    const rejected = [];
+    (Array.isArray(rows) ? rows : []).forEach((rawRow, index) => {
+      let row = Array.isArray(rawRow) ? rawRow : [rawRow];
+      if (row.length === 1 && typeof row[0] === "string") {
+        row = row[0].split(",").map(value => value.trim());
+      }
+      const [rawType, rawLevel, rawStored] = row;
+      if (index === 0 && /tower/i.test(String(rawType)) && /level/i.test(String(rawLevel))) return;
+      const type = canonicalTowerType(rawType);
+      const level = Number.parseInt(rawLevel, 10);
+      const storedText = String(rawStored || "").trim().toLowerCase();
+      const location = ["no", "base", "active", "false"].includes(storedText) ? "base" : "storage";
+      if (!type || !Number.isFinite(level) || level < 1 || (!fortRowsForType(type).length && !TOWER_TYPES.includes(type))) {
+        rejected.push({ row: index + 1, type: String(rawType || ""), level: String(rawLevel || "") });
+        return;
+      }
+      parsed.push({ type, level, location, action: "upgrade" });
+    });
+    const grouped = Object.values(parsed.reduce((groups, item) => {
+      const key = `${item.location}|${item.type}|${item.level}`;
+      groups[key] ||= { ...item, quantity: 0 };
+      groups[key].quantity += 1;
+      return groups;
+    }, {})).sort((left, right) =>
+      left.location.localeCompare(right.location) ||
+      left.type.localeCompare(right.type) ||
+      right.level - left.level
+    );
+    return { entries: grouped, rejected, rowsRead: parsed.length + rejected.length };
+  }
+
+  async function readInventoryFile(file) {
+    const extension = String(file?.name || "").split(".").pop().toLowerCase();
+    if (extension === "xlsx" || extension === "xls") {
+      if (!window.XLSX) throw new Error("Excel reader is still loading. Close the planner, reopen it and try again.");
+      const bytes = await file.arrayBuffer();
+      const workbook = window.XLSX.read(bytes, { type: "array" });
+      const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+      return window.XLSX.utils.sheet_to_json(firstSheet, { header: 1, raw: false, defval: "" });
+    }
+    const text = await file.text();
+    return text.split(/\r?\n/).filter(Boolean).map(line => line.split(","));
   }
 
   function normaliseTower(tower) {
@@ -1043,7 +1119,7 @@
     ).reduce((sum, xp) => sum + xp, 0) - planner.currentXp;
     const xpNeeded = xpNeededBeforeMerges + mergeXpDebt;
     const instances = [];
-    planner.storedTowers.forEach((entry, entryIndex) => {
+    planner.storedTowers.filter(entry => entry.action === "upgrade").forEach((entry, entryIndex) => {
       for (let copy = 0; copy < entry.quantity; copy += 1) {
         instances.push({ entryIndex, copy, type: entry.type, level: entry.level });
       }
@@ -1178,6 +1254,14 @@
       : 100;
     const mergeLevels = result.merges.reduce((sum, item) => sum + item.levelsMoved, 0);
     const mergeXpDebt = result.merges.reduce((sum, item) => sum + item.xpDeducted, 0);
+    const inventoryCount = result.planner.storedTowers.reduce((sum, item) => sum + item.quantity, 0);
+    const baseCount = result.planner.storedTowers
+      .filter(item => item.location === "base")
+      .reduce((sum, item) => sum + item.quantity, 0);
+    const storageCount = inventoryCount - baseCount;
+    const plannedCount = result.planner.storedTowers
+      .filter(item => item.action === "upgrade")
+      .reduce((sum, item) => sum + item.quantity, 0);
     return `
       <section class="nbp-panel nbp-fort-planner">
         <div class="nbp-section-heading">
@@ -1207,19 +1291,45 @@
           </div>
         </div>
         <div class="nbp-fort-divider"><span>Detailed tower upgrade planner</span></div>
-        <p class="nbp-fort-entry-help">Add every active or stored tower you could upgrade. Reuse this row for each tower type, or enter a quantity to add matching towers together.</p>
+        <details class="nbp-inventory-import" ${inventoryCount ? "open" : ""}>
+          <summary>Veteran inventory ${inventoryCount ? `(${inventoryCount} towers)` : ""}</summary>
+          <p class="nbp-muted">Import an Excel or CSV inventory with <strong>Tower, Level, Stored?</strong> columns. NOIR • I ZI recognises veteran shorthand, groups matching towers and keeps the live base separate from storage.</p>
+          <label class="nbp-inventory-file">Import tower inventory
+            <input id="nbpInventoryInput" type="file" accept=".xlsx,.xls,.csv,text/csv">
+          </label>
+          <p id="nbpInventoryStatus" class="nbp-trust-copy">${result.planner.inventoryImportedAt ? `Last imported ${escapeHtml(new Date(result.planner.inventoryImportedAt).toLocaleString("en-AU"))}.` : "Nothing is uploaded to the cloud; the inventory stays on this device."}</p>
+          ${inventoryCount ? `
+            <div class="nbp-inventory-summary">
+              <article><small>Total towers</small><strong>${inventoryCount}</strong></article>
+              <article><small>On live base</small><strong>${baseCount}</strong></article>
+              <article><small>In storage</small><strong>${storageCount}</strong></article>
+              <article><small>Planned for upgrades</small><strong>${plannedCount}</strong></article>
+            </div>
+            <button type="button" class="nbp-danger" id="nbpClearInventory">Clear imported inventory</button>
+          ` : ""}
+        </details>
+        <p class="nbp-fort-entry-help">Add a tower manually or import the whole veteran inventory above. Choose whether each grouped row is being upgraded, held, merged or transformed this Fort.</p>
         <div class="nbp-fort-entry">
           <label>Available tower<select id="nbpFortTowerType">
             ${fortTowerTypes.map(type => `<option>${escapeHtml(type)}</option>`).join("")}
           </select></label>
           <label>Current level<input id="nbpFortTowerLevel" type="number" min="0" value="0"></label>
           <label>Quantity<input id="nbpFortTowerQuantity" type="number" min="1" max="100" value="1"></label>
+          <label>Location<select id="nbpFortTowerLocation"><option value="base">Live base</option><option value="storage">Storage</option></select></label>
           <button type="button" class="nbp-primary" id="nbpAddStoredTower">Add tower</button>
         </div>
-        <div class="nbp-fort-storage">
+        <div class="nbp-inventory-tabs" role="group" aria-label="Tower inventory filters">
+          <button type="button" data-inventory-filter="all" class="active">All ${inventoryCount}</button>
+          <button type="button" data-inventory-filter="base">Base ${baseCount}</button>
+          <button type="button" data-inventory-filter="storage">Storage ${storageCount}</button>
+        </div>
+        <div class="nbp-fort-storage" id="nbpInventoryRows">
           ${result.planner.storedTowers.map((entry, index) => `
-            <article>
-              <div><strong>${escapeHtml(entry.type)}</strong><small>Level ${entry.level} · quantity ${entry.quantity}</small></div>
+            <article data-inventory-location="${entry.location}">
+              <div><strong>${escapeHtml(entry.type)}</strong><small>Level ${entry.level} · quantity ${entry.quantity} · ${entry.location === "base" ? "live base" : "storage"}</small></div>
+              <select data-inventory-action="${index}" aria-label="Planned Fort action for ${escapeHtml(entry.type)}">
+                ${Object.entries(INVENTORY_ACTIONS).map(([value, label]) => `<option value="${value}" ${entry.action === value ? "selected" : ""}>${label}</option>`).join("")}
+              </select>
               <button type="button" data-remove-stored="${index}">Remove</button>
             </article>
           `).join("") || `<p class="nbp-empty-copy">Add the active or stored towers available for Fort.</p>`}
@@ -1521,10 +1631,59 @@
       const type = overlay.querySelector("#nbpFortTowerType")?.value;
       const level = Math.max(0, Number.parseInt(overlay.querySelector("#nbpFortTowerLevel")?.value, 10) || 0);
       const quantity = Math.max(1, Math.min(100, Number.parseInt(overlay.querySelector("#nbpFortTowerQuantity")?.value, 10) || 1));
+      const location = overlay.querySelector("#nbpFortTowerLocation")?.value === "base" ? "base" : "storage";
       if (!type || !fortRowsForType(type).length) return;
-      layout.fortPlanner.storedTowers.push({ type, level, quantity });
+      layout.fortPlanner.storedTowers.push({ type, level, quantity, location, action: "upgrade" });
       saveState();
       render();
+    });
+    overlay.querySelector("#nbpInventoryInput")?.addEventListener("change", async event => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      try {
+        const rows = await readInventoryFile(file);
+        const parsed = parseInventoryRows(rows);
+        if (!parsed.entries.length) {
+          window.alert("No supported tower rows were found. Use Tower, Level and Stored? columns.");
+          return;
+        }
+        layout.fortPlanner.storedTowers = parsed.entries;
+        layout.fortPlanner.inventoryImportedAt = new Date().toISOString();
+        layout.fortPlanner = normaliseFortPlanner(layout.fortPlanner);
+        saveState();
+        render();
+        if (parsed.rejected.length) {
+          window.alert(`${parsed.entries.reduce((sum, item) => sum + item.quantity, 0)} towers imported. ${parsed.rejected.length} unsupported or incomplete row${parsed.rejected.length === 1 ? " was" : "s were"} skipped.`);
+        }
+      } catch (error) {
+        console.error("NOIR • I ZI inventory import failed.", error);
+        window.alert(error?.message || "That inventory could not be read.");
+      }
+    });
+    overlay.querySelector("#nbpClearInventory")?.addEventListener("click", () => {
+      if (!window.confirm("Clear the imported Base and Storage inventory?")) return;
+      layout.fortPlanner.storedTowers = [];
+      layout.fortPlanner.inventoryImportedAt = "";
+      saveState();
+      render();
+    });
+    overlay.querySelectorAll("[data-inventory-filter]").forEach(button => {
+      button.addEventListener("click", () => {
+        const filter = button.dataset.inventoryFilter;
+        overlay.querySelectorAll("[data-inventory-filter]").forEach(item => item.classList.toggle("active", item === button));
+        overlay.querySelectorAll("[data-inventory-location]").forEach(row => {
+          row.classList.toggle("hidden", filter !== "all" && row.dataset.inventoryLocation !== filter);
+        });
+      });
+    });
+    overlay.querySelectorAll("[data-inventory-action]").forEach(select => {
+      select.addEventListener("change", () => {
+        const item = layout.fortPlanner.storedTowers[Number(select.dataset.inventoryAction)];
+        if (!item || !Object.hasOwn(INVENTORY_ACTIONS, select.value)) return;
+        item.action = select.value;
+        saveState();
+        render();
+      });
     });
     overlay.querySelectorAll("[data-remove-stored]").forEach(button => {
       button.addEventListener("click", () => {
@@ -1804,10 +1963,10 @@
       .nbp-perch-details{margin-top:13px;padding-top:11px;border-top:1px solid #292b2e}.nbp-perch-details summary{color:#d8bc69;font-weight:850;cursor:pointer}.nbp-add-row{display:grid;grid-template-columns:1fr auto;gap:7px;align-items:end}.nbp-add-row button{margin-top:7px}.nbp-chip-list{display:grid;gap:7px;margin-top:9px}.nbp-skill-chip{display:grid;grid-template-columns:minmax(0,1fr) 76px 36px;gap:7px;align-items:center;padding:8px 9px;border:1px solid rgba(83,156,123,.35);border-radius:12px;background:rgba(34,81,65,.25);color:#b9dcca}.nbp-skill-chip strong{font-size:12px;overflow-wrap:anywhere}.nbp-skill-chip label{font-size:10px}.nbp-skill-chip input{min-height:34px;padding:6px}.nbp-skill-chip button{min-height:34px;padding:5px;border-radius:9px;color:#e5a3ae;background:rgba(110,37,54,.25)}.nbp-chip-list small{color:#8f8b85}.nbp-gear-grid{display:grid;gap:9px}.nbp-gear-piece{padding:10px;border:1px solid #292b2e;border-radius:12px;background:#0d0e10}.nbp-gear-grid label{font-size:11px}.nbp-equipment-pair{display:grid;grid-template-columns:minmax(0,1fr) 92px;gap:8px;align-items:end}.nbp-tower-boosts{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:3px 0 0;padding:10px;border:1px solid #303237;border-radius:13px}.nbp-tower-boosts legend,.nbp-perch-bonuses legend{padding:0 5px;color:#d8bc69;font-size:12px;font-weight:850}.nbp-tower-boosts label{display:flex;gap:8px;align-items:center;min-height:42px;padding:8px 10px;border:1px solid rgba(216,188,105,.22);border-radius:10px;background:#0d0e10}.nbp-tower-boosts input{width:20px;height:20px;min-height:0;margin:0;accent-color:#d8bc69}.nbp-tower-boosts span{font-size:12px;font-weight:800}.nbp-perch-bonuses{display:grid;gap:8px;margin:5px 0 3px;padding:10px;border:1px solid #303237;border-radius:13px}.nbp-perch-bonuses label{font-size:11px}
       [data-catalog-kind]{position:relative}.nbp-suggestions{position:relative;z-index:8;max-height:280px;margin-top:6px;overflow-y:auto;border:1px solid #4a4c50;border-radius:13px;background:#090a0b;box-shadow:0 14px 32px rgba(0,0,0,.55)}.nbp-suggestions button{display:block;width:100%;padding:11px 12px;border:0!important;border-bottom:1px solid #242629!important;border-radius:0!important;text-align:left;background:#0d0e10!important}.nbp-suggestions button:last-child{border-bottom:0!important}.nbp-suggestions strong,.nbp-suggestions small{display:block}.nbp-suggestions strong{color:#eeeae2}.nbp-suggestions small{margin-top:4px;color:#a9a39a;font-size:11px}.nbp-suggestions p{margin:0;padding:13px;color:#99938a}
       .nbp-fort-entry-help{margin:13px 0 0;color:#c9b770;font-size:12px;line-height:1.45}.nbp-fort-blockers{margin-top:10px;padding:13px 14px;border:1px solid rgba(213,184,95,.42);border-radius:13px;background:rgba(91,72,20,.15)}.nbp-fort-blockers strong{color:#dfc36e}.nbp-fort-blockers p{margin:7px 0 0;color:#d0c9bd}.nbp-fort-blockers small{display:block;margin-top:8px;color:#9f998f;line-height:1.4}
-      .nbp-fort-targets{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.nbp-account-calculator{margin-top:16px;padding:15px;border:1px solid rgba(103,163,216,.38);border-radius:16px;background:rgba(27,54,79,.18)}.nbp-account-calculator h4{margin:5px 0 0;font-size:18px}.nbp-account-results article{border-color:rgba(103,163,216,.28);background:#0b1015}.nbp-account-results strong{color:#86c8f2}.nbp-fort-divider{display:flex;align-items:center;gap:10px;margin:20px 0 4px;color:#d9bd68;font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.09em}.nbp-fort-divider::before,.nbp-fort-divider::after{content:"";height:1px;flex:1;background:#343638}.nbp-fort-entry{display:grid;grid-template-columns:minmax(170px,1fr) 110px 90px auto;gap:9px;align-items:end;margin-top:15px}.nbp-fort-entry button{min-height:47px}.nbp-fort-storage{display:grid;gap:7px;margin-top:13px}.nbp-fort-storage article,.nbp-fort-route article{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 12px;border:1px solid #303237;border-radius:12px;background:#0c0d0f}.nbp-fort-storage strong,.nbp-fort-storage small{display:block}.nbp-fort-storage small{margin-top:4px;color:#9c978f}.nbp-fort-result{margin-top:14px;padding:15px;border:1px solid #3b3d41;border-radius:15px;background:#0b0c0d}.nbp-fort-result.reached{border-color:rgba(79,188,147,.55);background:rgba(29,74,58,.2)}.nbp-fort-result.short{border-color:rgba(213,184,95,.4)}.nbp-fort-result strong{color:#dfc36e}.nbp-fort-result p{margin:6px 0 0;color:#aaa49b}.nbp-fort-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}.nbp-fort-stats article{padding:12px;border:1px solid #303237;border-radius:12px;background:#0c0d0f}.nbp-fort-stats small,.nbp-fort-stats strong{display:block}.nbp-fort-stats small{color:#9c978f;font-size:11px}.nbp-fort-stats strong{margin-top:5px;color:#dfc36e;font-size:15px}.nbp-fort-route{display:grid;gap:7px;margin-top:14px}.nbp-fort-route h4{margin:0 0 2px}.nbp-fort-route span{color:#a9a39a;font-size:12px;text-align:right}
+      .nbp-fort-targets{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.nbp-account-calculator{margin-top:16px;padding:15px;border:1px solid rgba(103,163,216,.38);border-radius:16px;background:rgba(27,54,79,.18)}.nbp-account-calculator h4{margin:5px 0 0;font-size:18px}.nbp-account-results article{border-color:rgba(103,163,216,.28);background:#0b1015}.nbp-account-results strong{color:#86c8f2}.nbp-fort-divider{display:flex;align-items:center;gap:10px;margin:20px 0 4px;color:#d9bd68;font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.09em}.nbp-fort-divider::before,.nbp-fort-divider::after{content:"";height:1px;flex:1;background:#343638}.nbp-inventory-import{margin:15px 0;padding:15px;border:1px solid rgba(215,186,100,.38);border-radius:16px;background:rgba(65,50,16,.14)}.nbp-inventory-import>summary{color:#dfc36e;font-weight:950;cursor:pointer}.nbp-inventory-file{display:inline-block;margin:12px 0;padding:12px 15px;border:1px solid #d7ba64;border-radius:13px;background:#d7ba64;color:#090909!important;cursor:pointer}.nbp-inventory-file input{display:none}.nbp-inventory-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0}.nbp-inventory-summary article{padding:12px;border:1px solid rgba(215,186,100,.25);border-radius:12px;background:#0d0e10}.nbp-inventory-summary small,.nbp-inventory-summary strong{display:block}.nbp-inventory-summary small{color:#9c978f;font-size:11px}.nbp-inventory-summary strong{margin-top:5px;color:#dfc36e;font-size:18px}.nbp-inventory-tabs{display:flex;gap:7px;margin-top:14px;overflow-x:auto}.nbp-inventory-tabs button{white-space:nowrap}.nbp-inventory-tabs button.active{border-color:#78d4b8;color:#78d4b8;background:rgba(20,63,53,.3)}.nbp-fort-entry{display:grid;grid-template-columns:minmax(170px,1fr) 100px 80px 110px auto;gap:9px;align-items:end;margin-top:15px}.nbp-fort-entry button{min-height:47px}.nbp-fort-storage{display:grid;gap:7px;margin-top:13px}.nbp-fort-storage article,.nbp-fort-route article{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 12px;border:1px solid #303237;border-radius:12px;background:#0c0d0f}.nbp-fort-storage article>div{min-width:170px;flex:1}.nbp-fort-storage article select{width:min(210px,100%);margin:0}.nbp-fort-storage strong,.nbp-fort-storage small{display:block}.nbp-fort-storage small{margin-top:4px;color:#9c978f}.nbp-fort-result{margin-top:14px;padding:15px;border:1px solid #3b3d41;border-radius:15px;background:#0b0c0d}.nbp-fort-result.reached{border-color:rgba(79,188,147,.55);background:rgba(29,74,58,.2)}.nbp-fort-result.short{border-color:rgba(213,184,95,.4)}.nbp-fort-result strong{color:#dfc36e}.nbp-fort-result p{margin:6px 0 0;color:#aaa49b}.nbp-fort-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}.nbp-fort-stats article{padding:12px;border:1px solid #303237;border-radius:12px;background:#0c0d0f}.nbp-fort-stats small,.nbp-fort-stats strong{display:block}.nbp-fort-stats small{color:#9c978f;font-size:11px}.nbp-fort-stats strong{margin-top:5px;color:#dfc36e;font-size:15px}.nbp-fort-route{display:grid;gap:7px;margin-top:14px}.nbp-fort-route h4{margin:0 0 2px}.nbp-fort-route span{color:#a9a39a;font-size:12px;text-align:right}
       .nbp-merge-planner{margin-top:16px;padding:14px;border:1px solid rgba(105,210,180,.35);border-radius:15px;background:rgba(20,63,53,.12)}.nbp-merge-planner>summary{color:#78d4b8;font-weight:900;cursor:pointer}.nbp-merge-entry{display:grid;grid-template-columns:repeat(3,minmax(130px,1fr));gap:9px;align-items:end;margin-top:13px}.nbp-merge-entry button{min-height:47px}.nbp-merge-list{display:grid;gap:7px;margin-top:12px}.nbp-merge-list article{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 12px;border:1px solid #303c38;border-radius:12px;background:#0b1110}.nbp-merge-list strong,.nbp-merge-list small{display:block}.nbp-merge-list small{margin-top:4px;color:#9eb4ad}.nbp-merge-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}.nbp-merge-summary article{padding:12px;border:1px solid rgba(105,210,180,.28);border-radius:12px;background:#0b1110}.nbp-merge-summary small,.nbp-merge-summary strong{display:block}.nbp-merge-summary small{color:#91aaa2;font-size:11px}.nbp-merge-summary strong{margin-top:5px;color:#78d4b8}
       .nbp-findings{display:grid;gap:10px;margin-top:14px}.nbp-finding{padding:14px 15px;border:1px solid #303030;border-left-width:4px;border-radius:15px;background:#0b0b0b}.nbp-finding strong{display:block}.nbp-finding p{margin:5px 0 0;color:#aaa49b;line-height:1.45}.nbp-finding.error{border-left-color:#e08089}.nbp-finding.warning{border-left-color:#dcc16e}.nbp-finding.good{border-left-color:#69dab0}.nbp-empty-copy{color:#99938a}.nbp-danger-zone{text-align:center}.nbp-danger-zone button{color:#dda2ad;border-color:rgba(190,105,121,.45)}.hidden{display:none!important}
-      @media(max-width:720px){.nct-home-tools .nbp-launch{min-height:0}.nbp-base-details,.nbp-meter-grid,.nbp-form-grid,.nbp-perch-grid,.nbp-photo-grid,.nbp-fort-targets,.nbp-fort-entry,.nbp-merge-entry{grid-template-columns:1fr}.nbp-fort-stats,.nbp-merge-summary,.nbp-construction-ranking{grid-template-columns:repeat(2,1fr)}.nbp-construction-riders>summary{align-items:flex-start;flex-direction:column}.nbp-construction-riders>summary small{text-align:left}.nbp-section-heading{align-items:flex-start;flex-wrap:wrap}.nbp-island-slots{grid-template-columns:repeat(5,minmax(82px,1fr));overflow-x:auto;padding-bottom:5px}.nbp-slot{min-width:82px}.nbp-photo-grid img{height:auto;max-height:360px}.nbp-fort-route article,.nbp-merge-list article{align-items:flex-start;flex-direction:column}.nbp-fort-route span{text-align:left}}
+      @media(max-width:720px){.nct-home-tools .nbp-launch{min-height:0}.nbp-base-details,.nbp-meter-grid,.nbp-form-grid,.nbp-perch-grid,.nbp-photo-grid,.nbp-fort-targets,.nbp-fort-entry,.nbp-merge-entry{grid-template-columns:1fr}.nbp-fort-stats,.nbp-merge-summary,.nbp-construction-ranking,.nbp-inventory-summary{grid-template-columns:repeat(2,1fr)}.nbp-construction-riders>summary{align-items:flex-start;flex-direction:column}.nbp-construction-riders>summary small{text-align:left}.nbp-section-heading{align-items:flex-start;flex-wrap:wrap}.nbp-island-slots{grid-template-columns:repeat(5,minmax(82px,1fr));overflow-x:auto;padding-bottom:5px}.nbp-slot{min-width:82px}.nbp-photo-grid img{height:auto;max-height:360px}.nbp-fort-route article,.nbp-merge-list article,.nbp-fort-storage article{align-items:stretch;flex-direction:column}.nbp-fort-storage article select{width:100%}.nbp-fort-route span{text-align:left}}
     `;
     document.head.appendChild(style);
   }
@@ -1864,6 +2023,7 @@
     comparison,
     accountXpProjection,
     fortPlan,
+    parseInventoryRows,
     getState: () => clone(state),
     getActiveLayout: () => clone(activeLayout()),
     constants: Object.freeze({ ISLAND_COUNT, SLOTS_PER_ISLAND, TOTAL_SLOTS, TOWER_TYPES })
