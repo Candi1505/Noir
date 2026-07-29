@@ -9,7 +9,7 @@
 (function initialiseNoirChestTools(window, document) {
   "use strict";
 
-  const CHEST_ORDER = ["gold", "platinum", "draconic", "freedom"];
+  const CHEST_ORDER = ["gold", "platinum", "draconic", "freedom", "arcane"];
   const CHEST_META = {
     gold: {
       label: "Gold", icon: "◆", bonusEvery: 30,
@@ -25,6 +25,10 @@
     },
     freedom: {
       label: "Freedom", icon: "🦅", bonusEvery: 15,
+      singleCost: 1350, tenPackCost: 12000
+    },
+    arcane: {
+      label: "Arcane", icon: "🔮", bonusEvery: 15,
       singleCost: 1350, tenPackCost: 12000
     }
   };

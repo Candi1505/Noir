@@ -49,6 +49,16 @@
         "freedom_chest_bonus",
         "freedom_bonus_chest"
       ]
+    },
+    arcane: {
+      label: "Arcane",
+      icon: "🔮",
+      mainKey: "arcane_chest",
+      bonusEvery: 15,
+      bonusKeys: [
+        "arcane_chest_bonus",
+        "arcane_bonus_chest"
+      ]
     }
   };
 

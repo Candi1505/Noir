@@ -12,14 +12,16 @@
     "gold",
     "platinum",
     "draconic",
-    "freedom"
+    "freedom",
+    "arcane"
   ];
 
   const CHEST_META = {
     gold: { label: "Gold", icon: "◆" },
     platinum: { label: "Platinum", icon: "✦" },
     draconic: { label: "Draconic", icon: "🐉" },
-    freedom: { label: "Freedom", icon: "🦅" }
+    freedom: { label: "Freedom", icon: "🦅" },
+    arcane: { label: "Arcane", icon: "🔮" }
   };
 
   const CATEGORIES = [

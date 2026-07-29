@@ -4,7 +4,7 @@
    Purpose:
    - Reads WD use_gacha requests from a HAR file.
    - Extracts chest-opening history.
-   - Identifies Gold, Platinum, Draconic and Freedom chests.
+   - Identifies Gold, Platinum, Draconic, Freedom and Arcane chests.
    - Detects bonus claims.
    - Extracts rewards and chest costs.
    - Keeps sensitive HAR information out of the returned results.
@@ -41,6 +41,11 @@
     "33": {
       key: "freedom",
       label: "Freedom Chest"
+    },
+
+    "37": {
+      key: "arcane",
+      label: "Arcane Chest"
     }
   };
 
@@ -67,6 +72,12 @@
       key: "freedom_bonus",
       parentKey: "freedom",
       label: "Freedom Bonus Chest"
+    },
+
+    "37": {
+      key: "arcane_bonus",
+      parentKey: "arcane",
+      label: "Arcane Bonus Chest"
     }
   };
 
@@ -80,6 +91,7 @@
     chest4: "Gold Bonus Chest",
     chest12: "Platinum Bonus Chest",
     chest34: "Freedom Bonus Chest",
+    chest37: "Arcane Chest",
 
     rubies: "Rubies",
     sigil: "Sigils",
@@ -603,32 +615,33 @@
     return summary;
   }
 
-  function calculateFreedomProgress(
+  function calculateBonusProgress(
     openings,
+    chestKey,
     bonusEvery = 15
   ) {
     let openedSinceBonus = 0;
-    let freedomChestsOpened = 0;
-    let freedomBonusClaims = 0;
+    let regularChestsOpened = 0;
+    let bonusClaims = 0;
 
     openings.forEach(opening => {
-      const isFreedom =
+      const isTargetChest =
         opening.parentChestKey ===
-          "freedom" ||
+          chestKey ||
         opening.chestKey ===
-          "freedom";
+          chestKey;
 
-      if (!isFreedom) {
+      if (!isTargetChest) {
         return;
       }
 
       if (opening.isBonus) {
-        freedomBonusClaims += 1;
+        bonusClaims += 1;
         openedSinceBonus = 0;
         return;
       }
 
-      freedomChestsOpened +=
+      regularChestsOpened +=
         opening.count;
 
       openedSinceBonus =
@@ -647,16 +660,16 @@
     return {
       bonusEvery,
 
-      freedomChestsOpened,
+      regularChestsOpened,
 
-      freedomBonusClaims,
+      bonusClaims,
 
       openedSinceBonus,
 
       chestsUntilBonus,
 
       nextChestNumber:
-        freedomChestsOpened + 1,
+        regularChestsOpened + 1,
 
       nextChestIsBonus:
         openedSinceBonus ===
@@ -666,9 +679,9 @@
         openings.some(opening => {
           return (
             opening.parentChestKey ===
-              "freedom" ||
+              chestKey ||
             opening.chestKey ===
-              "freedom"
+              chestKey
           );
         })
     };
@@ -805,8 +818,16 @@
         buildChestSummary(openings),
 
       freedom:
-        calculateFreedomProgress(
+        calculateBonusProgress(
           openings,
+          "freedom",
+          15
+        ),
+
+      arcane:
+        calculateBonusProgress(
+          openings,
+          "arcane",
           15
         ),
 

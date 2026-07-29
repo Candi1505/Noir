@@ -32,7 +32,8 @@
     gold: "🥇",
     platinum: "💎",
     draconic: "🐉",
-    freedom: "🦅"
+    freedom: "🦅",
+    arcane: "🔮"
   };
 
   let bonusProgressRenderTimer =
@@ -42,7 +43,8 @@
     gold: "",
     platinum: "",
     draconic: "",
-    freedom: ""
+    freedom: "",
+    arcane: ""
   };
 
   function escapeHTML(value) {
@@ -3762,8 +3764,9 @@
         Number(
           selectedChest?.bonusEvery
         ) || (
-          selectedChest?.chestType ===
-            "freedom"
+          ["freedom", "arcane"].includes(
+            selectedChest?.chestType
+          )
             ? 15
             : 30
         );
@@ -5283,6 +5286,12 @@
       .toLowerCase();
 
     if (
+      text.includes("arcane")
+    ) {
+      return "arcane";
+    }
+
+    if (
       text.includes("draconic") ||
       text.includes("drac")
     ) {
@@ -6033,8 +6042,9 @@
         Number(
           selectedChest.bonusEvery
         ) || (
-          selectedChest.chestType ===
-            "freedom"
+          ["freedom", "arcane"].includes(
+            selectedChest.chestType
+          )
             ? 15
             : 30
         );

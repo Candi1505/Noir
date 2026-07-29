@@ -1978,7 +1978,8 @@ span {
 .gold-card,
 .platinum-card,
 .draconic-card,
-.freedom-card {
+.freedom-card,
+.arcane-card {
   background:
     linear-gradient(
       145deg,
@@ -1995,7 +1996,8 @@ span {
 .gold-card::before,
 .platinum-card::before,
 .draconic-card::before,
-.freedom-card::before {
+.freedom-card::before,
+.arcane-card::before {
   background:
     radial-gradient(
       circle at 84% 16%,
@@ -2024,15 +2026,22 @@ span {
   background: linear-gradient(145deg, rgba(48, 25, 58, 0.64), #070407 72%);
 }
 
+.arcane-card {
+  border-color: rgba(181, 116, 255, 0.44);
+  background: linear-gradient(145deg, rgba(60, 26, 84, 0.7), #08040c 72%);
+}
+
 .gold-card .chest-symbol { color: #d8b45d; }
 .platinum-card .chest-symbol { color: #91aec4; }
 .draconic-card .chest-symbol { color: #cc8149; }
 .freedom-card .chest-symbol { color: #ae7fc3; }
+.arcane-card .chest-symbol { color: #c995ff; }
 
 .gold-card .chest-symbol,
 .platinum-card .chest-symbol,
 .draconic-card .chest-symbol,
-.freedom-card .chest-symbol {
+.freedom-card .chest-symbol,
+.arcane-card .chest-symbol {
   filter: saturate(0.72);
 
   text-shadow:

@@ -12,7 +12,7 @@
 
   <title>NOIR • I ZI — Chest Companion</title>
 
-  <link rel="stylesheet" href="styles.css?v=20260726-6">
+  <link rel="stylesheet" href="styles.css?v=20260730-arcane">
 
   <style>
     .home-platform-statement {
@@ -225,6 +225,30 @@
 
               <small>
                 Track &amp; Predict
+              </small>
+
+            </span>
+
+          </button>
+
+          <button
+            type="button"
+            class="chest-card arcane-card"
+            data-open-chest="arcane"
+          >
+
+            <span class="chest-symbol">
+              🔮
+            </span>
+
+            <span class="chest-card-text">
+
+              <strong>
+                Arcane
+              </strong>
+
+              <small>
+                Temporary · Bonus at 15
               </small>
 
             </span>
@@ -643,6 +667,10 @@
 
             <option value="freedom">
               Freedom
+            </option>
+
+            <option value="arcane">
+              Arcane
             </option>
 
           </select>
@@ -1193,6 +1221,37 @@
   </section>
 
 
+  <!-- ARCANE PREDICTOR -->
+
+  <section class="glass-panel content-panel hidden" aria-hidden="true">
+
+    <div class="section-heading">
+
+      <div>
+
+        <p class="eyebrow">
+          ARCANE CHESTS
+        </p>
+
+        <h3>
+          Arcane Predictor
+        </h3>
+
+      </div>
+
+      <div id="arcanePredictorBadge" class="status-badge">
+        Not loaded
+      </div>
+
+    </div>
+
+    <p class="muted-text">
+      Temporary Arcane deck. Its bonus chest is earned after 15 regular openings.
+    </p>
+
+  </section>
+
+
   <!-- ACTIVE PREDICTOR SUMMARY -->
 
   <section class="glass-panel content-panel hidden" aria-hidden="true">
@@ -1232,7 +1291,7 @@
           <hr>
 
           <p class="muted-text">
-                        Created for Gold, Platinum, Draconic and Freedom
+                        Created for Gold, Platinum, Draconic, Freedom and Arcane
             chest tracking and sequence prediction.
           </p>
 
@@ -1410,31 +1469,31 @@
   =========================================== -->
 
 <script src="supabase.js"></script>
-<script src="database.js?v=20260723-2"></script>
+<script src="database.js?v=20260730-arcane"></script>
 
-<script src="predictor-cloud.js?v=20260722-4"></script>
-  <script src="event-parser.js?v=20260727-1"></script>
-<script src="har-event-adapter.js?v=20260727-1"></script>
-<script src="js/har-gacha-parser.js?v=20260727-1"></script>
-<script src="event-import.js?v=20260727-1"></script>
+<script src="predictor-cloud.js?v=20260730-arcane"></script>
+  <script src="event-parser.js?v=20260730-arcane"></script>
+<script src="har-event-adapter.js?v=20260730-arcane"></script>
+<script src="js/har-gacha-parser.js?v=20260730-arcane"></script>
+<script src="event-import.js?v=20260730-arcane"></script>
 <script src="admin-event-publisher.js?v=20260724-1"></script>
-<script src="live-predictor-engine.js?v=20260727-1"></script>
-<script src="live-predictor-ui.js?v=20260728-8"></script>
-  <script src="chest-drop-rates.js?v=20260725-5"></script>
-  <script src="chest-planner.js?v=20260728-3"></script>
-  <script src="noir-chest-tools.js?v=20260728-12"></script>
-  <script src="double-armory-planner.js?v=20260723-3"></script>
+<script src="live-predictor-engine.js?v=20260730-arcane"></script>
+<script src="live-predictor-ui.js?v=20260730-arcane"></script>
+  <script src="chest-drop-rates.js?v=20260730-arcane"></script>
+  <script src="chest-planner.js?v=20260730-arcane"></script>
+  <script src="noir-chest-tools.js?v=20260730-arcane"></script>
+  <script src="double-armory-planner.js?v=20260730-arcane"></script>
 
 <script src="predictor-engine.js"></script>
 
-<script src="noir-help.js?v=20260728-7"></script>
+<script src="noir-help.js?v=20260730-arcane"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="base-adviser-catalog-towers.js?v=20260727-3"></script>
 <script src="base-adviser-catalog-monuments.js?v=20260727-2"></script>
 <script src="base-adviser-catalog-people.js?v=20260727-2"></script>
     <script src="base-planner.js?v=20260729-2"></script>
 
-<script src="app.js?v=20260728-7"></script>
+<script src="app.js?v=20260730-arcane"></script>
 
 </body>
 </html>

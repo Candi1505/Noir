@@ -43,6 +43,10 @@
     return "freedom";
   }
 
+  if (chest.includes("arcane")) {
+    return "arcane";
+  }
+
   return chest;
 }
 

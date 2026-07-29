@@ -9,9 +9,9 @@
  * - Gold chest deck
  * - Platinum chest deck
  * - Draconic chest deck
- * - Freedom chest deck
- * - Freedom reward pools
- * - Freedom bonus-drop information
+ * - Freedom and Arcane chest decks
+ * - Freedom and Arcane reward pools
+ * - 15-opening bonus-drop information
  */
 
 class EventParser {
@@ -187,6 +187,12 @@ class EventParser {
         mainKey: "freedom_chest",
         bonusEvery: 15,
         keyPatterns: [/^freedom_chest(?:_bonus)?$/, /^(?:epic|legendary|mythic)_freedom_items$/]
+      },
+      arcane: {
+        label: "Arcane",
+        mainKey: "arcane_chest",
+        bonusEvery: 15,
+        keyPatterns: [/^arcane_chest(?:_bonus)?$/, /^(?:epic|legendary|mythic)_arcane_items$/]
       }
     };
     const sides = {};
@@ -543,6 +549,49 @@ class EventParser {
     };
   }
 
+  getArcaneData() {
+    const arcaneChest = this.getChest(
+      "arcane_chest",
+      "Arcane"
+    );
+    const regularSpin =
+      this.findSpinType(["arcane", "open"]) ||
+      this.findSpinType("arcane") ||
+      this.findSpinType("chest37");
+    const bonusSpin =
+      this.findSpinType(["arcane", "bonus"]);
+    const bonusEvery =
+      this.getFreedomBonusFrequency(regularSpin, bonusSpin);
+    const rewardPools = {
+      epic: this.getDeck("epic_arcane_items"),
+      legendary: this.getDeck("legendary_arcane_items"),
+      mythic: this.getDeck("mythic_arcane_items")
+    };
+    const availableRewardPoolCount =
+      Object.values(rewardPools).filter(pool => pool.length > 0).length;
+
+    return {
+      ...arcaneChest,
+      found: arcaneChest.deckLength > 0 && availableRewardPoolCount > 0,
+      bonusEvery,
+      singleRubyCost: 1350,
+      tenPackRubyCost: 12000,
+      spinTypeId: 37,
+      bonusDescription:
+        regularSpin?.desc ||
+        regularSpin?.description ||
+        `Open ${bonusEvery} for a bonus chest.`,
+      regularSpinType: regularSpin,
+      bonusSpinType: bonusSpin,
+      rewardPools,
+      availableRewardPoolCount,
+      hasRewardPools: availableRewardPoolCount > 0,
+      openedSinceBonus: null,
+      chestsUntilBonus: null,
+      nextChestIsBonus: false
+    };
+  }
+
   parse() {
     const params = this.getGachaParams();
 
@@ -580,7 +629,9 @@ const deckIndices =
           "Draconic"
         ),
 
-        freedom: this.getFreedomData()
+        freedom: this.getFreedomData(),
+
+        arcane: this.getArcaneData()
       },
 
       decks:
@@ -688,7 +739,8 @@ window.testEventParser = function testEventParser(
       );
 
       if (
-        chest.label === "Freedom"
+        chest.label === "Freedom" ||
+        chest.label === "Arcane"
       ) {
         console.log(
           "Bonus every:",

@@ -494,7 +494,7 @@
           </summary>
           <div class="noir-help-body">
             <ul>
-              <li>Freedom earns a bonus after 15 regular chests.</li>
+              <li>Freedom and temporary Arcane chests earn a bonus after 15 regular chests.</li>
               <li>Gold, Platinum and Draconic earn a bonus after 30 regular chests.</li>
               <li>Enter the progress number currently shown on the game’s bonus bar—not your total history.</li>
               <li>Tick <strong>This reward came from a bonus chest</strong> only for the actual claimed bonus reward.</li>
