@@ -153,17 +153,27 @@
         .filter(reward => looksTechnical(reward.name))
         .map(reward => reward.name);
       const chestIssues = [];
+      const chestWarnings = [];
 
       if (!regular?.rootKey || !regularRewards.length) {
         chestIssues.push("regular rewards missing");
       }
       if (!bonus?.rootKey || !bonusRewards.length) {
-        chestIssues.push("bonus rewards missing");
+        if (chestType === "arcane" && regular?.rootKey && regularRewards.length) {
+          chestWarnings.push(
+            "bonus rewards unverified until an Arcane bonus claim is captured"
+          );
+        } else {
+          chestIssues.push("bonus rewards missing");
+        }
       }
       if (Math.abs(Number(regular?.probabilityTotal || 0) - 1) > 0.001) {
         chestIssues.push("regular chances incomplete");
       }
-      if (Math.abs(Number(bonus?.probabilityTotal || 0) - 1) > 0.001) {
+      if (
+        bonusRewards.length &&
+        Math.abs(Number(bonus?.probabilityTotal || 0) - 1) > 0.001
+      ) {
         chestIssues.push("bonus chances incomplete");
       }
       if (technical.length) {
@@ -175,7 +185,8 @@
         regularRewards: regularRewards.length,
         bonusRewards: bonusRewards.length,
         bonusEvery: chest?.bonusEvery || meta.bonusEvery,
-        issues: chestIssues
+        issues: chestIssues,
+        warnings: chestWarnings
       };
 
       chestIssues.forEach(issue => {
@@ -432,12 +443,13 @@
     const change = recordEventChange();
     const readyCount = Object.values(report.chests)
       .filter(chest => chest.ready).length;
+    const chestCount = CHEST_ORDER.length;
 
     banner.classList.toggle("nct-not-ready", !report.ready);
     banner.innerHTML = `
       <div>
         <p class="eyebrow">EVENT CHECK</p>
-        <strong>${report.ready ? "✓ Ready for players" : `${readyCount}/4 chests ready`}</strong>
+        <strong>${report.ready ? "✓ Ready for players" : `${readyCount}/${chestCount} chests ready`}</strong>
         <small>${escapeHtml(report.eventName)} · Regular and bonus rewards checked</small>
       </div>
       <div class="nct-readiness-chests">
@@ -448,7 +460,13 @@
             <div class="${chest.ready ? "ready" : "warning"}">
               <span>${meta.icon}</span>
               <b>${meta.label}</b>
-              <small>${chest.ready ? "Ready" : "Check needed"}</small>
+              <small>${
+                chest.ready
+                  ? chest.warnings?.length
+                    ? "Deck ready · bonus unverified"
+                    : "Ready"
+                  : "Check needed"
+              }</small>
               <em>${chest.regularRewards || 0} regular · ${chest.bonusRewards || 0} bonus</em>
             </div>
           `;
@@ -622,7 +640,7 @@
           <strong>${report.ready ? "✓ Ready for players" : "Needs attention"}</strong>
           <span>${escapeHtml(report.eventName)}</span>
           <p>${report.ready
-            ? "All four regular decks, bonus decks, reward names and chance totals passed."
+            ? `All ${CHEST_ORDER.length} regular decks, available bonus decks, reward names and chance totals passed.`
             : "One or more event checks did not pass."}</p>
         </article>
         <div class="nct-check-grid">
@@ -637,6 +655,7 @@
                 <p>${chest.bonusRewards || 0} bonus rewards</p>
                 <p>Bonus after ${chest.bonusEvery || meta.bonusEvery}</p>
                 ${chest.issues?.length ? `<small>${escapeHtml(chest.issues.join(", "))}</small>` : ""}
+                ${chest.warnings?.length ? `<small>${escapeHtml(chest.warnings.join(", "))}</small>` : ""}
               </article>
             `;
           }).join("")}
