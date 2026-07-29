@@ -88,6 +88,7 @@
   const DISPLAY_NAMES = {
     chest0: "Bronze Chests",
     chest2: "Gold Chests",
+    chest6: "Special Event Chests",
     chest4: "Gold Bonus Chest",
     chest12: "Platinum Bonus Chest",
     chest34: "Freedom Bonus Chest",
@@ -104,11 +105,14 @@
     expediteConsumable4: "12 Hour Speedup",
 
     repairConsumable: "Defense Hammer",
+    lumberConsumable2: "Lumber Packs",
+    lumberPack_1400000: "1.4M Lumber Packs",
     elementalEmber: "Elemental Embers",
     blackPearl: "Black Pearls",
     mysticFragment: "Mystic Fragments",
     electrumBar: "Electrum Bars",
     cosmicCharge: "Cosmic Charge",
+    E26Q2FestiveHunterDragonEvolutionFragment: "Seasonal Hunter Shards",
 
     increaseBuildingAttack1: "+30% Tower Attack",
     increaseBuildingHP1: "+30% Tower HP",
