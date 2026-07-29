@@ -7,7 +7,7 @@
  * Responsibilities:
  * - Read an uploaded .json, .txt or .har file
  * - Parse the WD about_v2 response
- * - Detect Gold, Platinum, Draconic and Freedom decks
+ * - Detect Gold, Platinum, Draconic, Freedom and Arcane decks
  * - Parse use_gacha requests when the file is a HAR capture
  * - Keep imported capture information in memory only
  * - Notify the rest of Noir when new data becomes available
@@ -473,6 +473,11 @@ document.addEventListener("DOMContentLoaded", () => {
       freedom:
         document.getElementById(
           "freedomPredictorBadge"
+        ),
+
+      arcane:
+        document.getElementById(
+          "arcanePredictorBadge"
         )
     };
 

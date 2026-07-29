@@ -11,7 +11,13 @@
 
   const OVERLAY_ID = "noirDoubleArmoryOverlay";
   const BUTTON_ID = "noirDoubleArmoryButton";
-  const CHEST_ICONS = { gold: "🥇", platinum: "💎", draconic: "🐉", freedom: "🦅" };
+  const CHEST_ICONS = {
+    gold: "🥇",
+    platinum: "💎",
+    draconic: "🐉",
+    freedom: "🦅",
+    arcane: "🔮"
+  };
   const STORAGE_PREFIX = "chestCompanionDoubleArmory";
   const PREFERENCE_LABELS = {
     favourite: "⭐ Favourite",

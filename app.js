@@ -55,6 +55,9 @@
       {},
 
     freedom:
+      {},
+
+    arcane:
       {}
 
   }
@@ -432,6 +435,15 @@
       sequence:
         []
 
+    },
+
+    arcane: {
+
+      rewards: [],
+
+      sequence:
+        []
+
     }
 
   };
@@ -751,6 +763,12 @@
     savedState
       .priorities
       ?.freedom ||
+    {},
+
+  arcane:
+    savedState
+      .priorities
+      ?.arcane ||
     {}
 
 },

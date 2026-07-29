@@ -37,7 +37,10 @@
     "Mythic_DragFrag_Tier3_Resources",
     "epic_freedom_items",
     "legendary_freedom_items",
-    "mythic_freedom_items"
+    "mythic_freedom_items",
+    "epic_arcane_items",
+    "legendary_arcane_items",
+    "mythic_arcane_items"
   ];
 
   function decodeUtf8Base64(value) {
@@ -199,6 +202,14 @@
       if (Array.isArray(decks?.mythic_freedom_items)) {
         score += 25;
       }
+
+      if (Array.isArray(decks?.arcane_chest)) {
+        score += 100 + decks.arcane_chest.length;
+      }
+
+      if (Array.isArray(decks?.epic_arcane_items)) score += 25;
+      if (Array.isArray(decks?.legendary_arcane_items)) score += 25;
+      if (Array.isArray(decks?.mythic_arcane_items)) score += 25;
     });
 
     return score;

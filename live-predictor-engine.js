@@ -8,7 +8,7 @@
 
    Responsibilities:
    - Reads published WD event data
-   - Supports Gold, Platinum, Draconic and Freedom decks
+   - Supports Gold, Platinum, Draconic, Freedom and Arcane decks
    - Creates a searchable reward catalogue
    - Records each player's observations locally
    - Solves the player's position
@@ -29,35 +29,40 @@
     "gold",
     "platinum",
     "draconic",
-    "freedom"
+    "freedom",
+    "arcane"
   ];
 
   const CHEST_LABELS = {
     gold: "Gold",
     platinum: "Platinum",
     draconic: "Draconic",
-    freedom: "Freedom"
+    freedom: "Freedom",
+    arcane: "Arcane"
   };
   
   const CHEST_DECK_KEYS = {
   gold: "gold_chest",
   platinum: "platinum_chest",
   draconic: "dragfrag_chest_tier3",
-  freedom: "freedom_chest"
+  freedom: "freedom_chest",
+  arcane: "arcane_chest"
 };
 
   const BONUS_DECK_KEYS = {
     gold: "gold_chest_bonus",
     platinum: "platinum_chest_bonus",
     draconic: "dragfrag_chest_tier3_bonus",
-    freedom: "freedom_chest_bonus"
+    freedom: "freedom_chest_bonus",
+    arcane: "arcane_chest_bonus"
   };
 
   const BONUS_FREQUENCIES = {
     gold: 30,
     platinum: 30,
     draconic: 30,
-    freedom: 15
+    freedom: 15,
+    arcane: 15
   };
 
   let state =
@@ -244,14 +249,16 @@
       gold: [],
       platinum: [],
       draconic: [],
-      freedom: []
+      freedom: [],
+      arcane: []
     },
 
     bonusProgress: {
       gold: null,
       platinum: null,
       draconic: null,
-      freedom: null
+      freedom: null,
+      arcane: null
     },
 
     importedGachaIds: [],
@@ -1301,6 +1308,12 @@ function getBonusDeckKey(
       "bonus_freedom_chest",
       "freedom_bonus",
       "chest34"
+    ],
+    arcane: [
+      "arcane_bonus_chest",
+      "bonus_arcane_chest",
+      "arcane_bonus",
+      "chest37"
     ]
   }[normalised] || [];
 
@@ -1335,6 +1348,10 @@ function getBonusDeckKey(
     freedom: [
       "freedom",
       "chest34"
+    ],
+    arcane: [
+      "arcane",
+      "chest37"
     ]
   }[normalised] || [];
 
@@ -4852,6 +4869,17 @@ function normaliseGachaChestType(
       opening?.chestType ||
       opening?.chest
     ).toLowerCase();
+
+  if (
+    possibleValue.includes(
+      "arcane"
+    ) ||
+    possibleValue.includes(
+      "chest37"
+    )
+  ) {
+    return "arcane";
+  }
 
   if (
     possibleValue.includes(
