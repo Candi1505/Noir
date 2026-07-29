@@ -8,11 +8,12 @@
   "use strict";
 
   const SUPPORTED_CHESTS = Object.freeze([
-  "gold",
-  "platinum",
-  "draconic",
-  "freedom"
-]);
+    "gold",
+    "platinum",
+    "draconic",
+    "freedom",
+    "arcane"
+  ]);
 
   const VALID_RARITIES = new Set([
     "common",
@@ -2491,7 +2492,8 @@ freedom:
   loadProfile("gold", activeEventId),
   loadProfile("platinum", activeEventId),
   loadProfile("draconic", activeEventId),
-  loadProfile("freedom", activeEventId)
+  loadProfile("freedom", activeEventId),
+  loadProfile("arcane", activeEventId)
 ]);
 
         console.info(
@@ -2518,7 +2520,8 @@ freedom:
   loadProfile("gold", activeEventId),
   loadProfile("platinum", activeEventId),
   loadProfile("draconic", activeEventId),
-  loadProfile("freedom", activeEventId)
+  loadProfile("freedom", activeEventId),
+  loadProfile("arcane", activeEventId)
 ]);
     }
 
