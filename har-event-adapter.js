@@ -680,7 +680,6 @@
         parsed,
         eventKey
       );
-
     const arcaneBonusVerification =
       extractArcaneBonusVerificationFromHar(
         parsed
