@@ -78,6 +78,16 @@
       key: "arcane_bonus",
       parentKey: "arcane",
       label: "Arcane Bonus Chest"
+    },
+
+    /*
+     * Arcane regular openings use spin 37, while the separate
+     * credit-spin claim created after 15 openings uses spin 38.
+     */
+    "38": {
+      key: "arcane_bonus",
+      parentKey: "arcane",
+      label: "Arcane Bonus Chest"
     }
   };
 
@@ -430,6 +440,21 @@
     const updates =
       response?.smr_updates || {};
 
+    const rewardSources =
+      Array.from(
+        new Set(
+          (
+            Array.isArray(response?.drops)
+              ? response.drops
+              : []
+          )
+            .map(drop =>
+              String(drop?.src || "").trim()
+            )
+            .filter(Boolean)
+        )
+      );
+
     const chest =
       detectChest(parameters);
 
@@ -493,6 +518,14 @@
       rewards,
 
       costs,
+
+      /*
+       * Pool identifiers are event configuration, not player
+       * progress. They let the importer verify which shared
+       * bonus pool produced a captured claim without publishing
+       * the administrator's personal reward history.
+       */
+      rewardSources,
 
       rewardCount:
         rewards.length,
