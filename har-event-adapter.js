@@ -23,6 +23,9 @@
   const CURRENT_EVENT_PAGE_PATTERN =
     /\/dragons\/event\/current(?:\?|$)/i;
 
+  const USE_GACHA_PATTERN =
+    /\/ext\/dragonsong\/event\/use_gacha(?:\?|$)/i;
+
   const EMBEDDED_EVENT_DATA_MARKER =
     "window.params_and_data";
 
@@ -557,6 +560,101 @@
     );
   }
 
+  function getRequestParameters(entry) {
+    const parameters = {};
+    const postData = entry?.request?.postData;
+
+    if (Array.isArray(postData?.params)) {
+      postData.params.forEach(parameter => {
+        if (parameter?.name) {
+          parameters[parameter.name] =
+            parameter.value ?? "";
+        }
+      });
+    }
+
+    if (typeof postData?.text === "string") {
+      try {
+        new URLSearchParams(postData.text)
+          .forEach((value, key) => {
+            parameters[key] = value;
+          });
+      } catch (error) {
+        // Parsed HAR form parameters above remain usable.
+      }
+    }
+
+    return parameters;
+  }
+
+  function extractArcaneBonusVerificationFromHar(har) {
+    const entries = har?.log?.entries;
+
+    if (!Array.isArray(entries)) {
+      return null;
+    }
+
+    const verifiedClaim =
+      entries.find(entry => {
+        const url =
+          String(entry?.request?.url || "");
+
+        if (!USE_GACHA_PATTERN.test(url)) {
+          return false;
+        }
+
+        const parameters =
+          getRequestParameters(entry);
+        const claimType =
+          String(
+            parameters.claim_options_type ||
+            ""
+          ).toLowerCase();
+
+        if (
+          String(parameters.spin_type || "") !== "38" ||
+          !claimType.includes("bonus")
+        ) {
+          return false;
+        }
+
+        try {
+          const response =
+            parseJsonText(
+              getResponseText(entry),
+              "The Arcane bonus response"
+            );
+
+          return (
+            response?.success !== false &&
+            Array.isArray(response?.drops) &&
+            response.drops.some(
+              drop =>
+                drop?.src ===
+                "mythic_arcane_items"
+            )
+          );
+        } catch (error) {
+          return false;
+        }
+      });
+
+    if (!verifiedClaim) {
+      return null;
+    }
+
+    /*
+     * Deliberately omit the player's reward, sequence, timestamp
+     * and account details. Only shared event facts are returned.
+     */
+    return {
+      verified: true,
+      cadence: 15,
+      poolKey: "mythic_arcane_items",
+      evidence: "captured_bonus_claim"
+    };
+  }
+
   function parseImportText(rawText) {
     const text = String(rawText || "").trim();
 
@@ -582,6 +680,10 @@
         parsed,
         eventKey
       );
+    const arcaneBonusVerification =
+      extractArcaneBonusVerificationFromHar(
+        parsed
+      );
 
     const armoryDrops = extractArmoryDropsFromHar(parsed);
     const eventPayload = attachArmoryDrops(
@@ -605,6 +707,10 @@
     return {
       kind: "har",
       eventPayload,
+      sharedVerification: {
+        arcane:
+          arcaneBonusVerification
+      },
       diagnostics: {
         sourceEntryIndex: extracted.entryIndex,
         sourceUrl: extracted.url,
@@ -621,6 +727,10 @@
             : 0,
         eventName,
         eventKey,
+        arcaneBonusVerified:
+          Boolean(
+            arcaneBonusVerification
+          ),
         doubleArmoryDetected:
           Object.keys(armoryDrops).length >= 2
       }
@@ -650,9 +760,31 @@
         importedAt: new Date().toISOString()
       };
 
-      return originalParse(
+      const parsedEvent = originalParse(
         JSON.stringify(imported.eventPayload)
       );
+
+      const arcaneVerification =
+        imported.sharedVerification?.arcane;
+
+      if (
+        arcaneVerification?.verified === true &&
+        Array.isArray(
+          parsedEvent?.decks?.[
+            arcaneVerification.poolKey
+          ]
+        ) &&
+        parsedEvent?.chests?.arcane
+      ) {
+        parsedEvent.chests.arcane = {
+          ...parsedEvent.chests.arcane,
+          bonusVerification: {
+            ...arcaneVerification
+          }
+        };
+      }
+
+      return parsedEvent;
     };
 
     Object.defineProperty(
@@ -678,6 +810,7 @@
       parseImportText,
       extractAboutV2FromHar,
       extractRewardDropsFromHar,
+      extractArcaneBonusVerificationFromHar,
       inferEventName,
       findEventKey,
       classifyArmoryEventKey,

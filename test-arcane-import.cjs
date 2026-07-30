@@ -33,8 +33,58 @@ if (arcane.key !== "arcane_chest") throw new Error("Wrong Arcane deck key.");
 if (arcane.availableRewardPoolCount !== 3) {
   throw new Error("All three Arcane reward pools must be present.");
 }
+if (
+  gacha.openings.some(
+    opening =>
+      opening.isBonus &&
+      opening.parentChestKey === "arcane"
+  ) &&
+  (
+    arcane.bonusVerification?.verified !== true ||
+    arcane.bonusVerification?.poolKey !==
+      "mythic_arcane_items"
+  )
+) {
+  throw new Error(
+    "The captured Arcane bonus should verify the shared mythic pool."
+  );
+}
 if (!gacha.openings.some(opening => opening.chestKey === "arcane")) {
   throw new Error("Spin type 37 was not recognised as Arcane.");
+}
+
+const arcaneBonusClaims =
+  gacha.openings.filter(opening =>
+    opening.isBonus &&
+    opening.parentChestKey === "arcane"
+  );
+
+if (arcaneBonusClaims.length) {
+  const capturedPool =
+    arcaneBonusClaims
+      .flatMap(opening => opening.rewardSources || [])
+      .find(poolKey => poolKey === "mythic_arcane_items");
+
+  if (!capturedPool) {
+    throw new Error(
+      "The captured Arcane bonus did not retain its shared reward-pool identifier."
+    );
+  }
+
+  const claimedRewards =
+    arcaneBonusClaims.flatMap(opening => opening.rewards || []);
+
+  if (
+    !claimedRewards.some(
+      reward =>
+        reward.id === "chest2" &&
+        Number(reward.quantity) === 60
+    )
+  ) {
+    throw new Error(
+      "The captured Arcane bonus should contain 60 Gold Chests."
+    );
+  }
 }
 
 console.log(JSON.stringify({

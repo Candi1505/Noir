@@ -62,13 +62,15 @@ if (!report.chests.arcane.ready) {
   throw new Error("The Arcane regular deck should be ready.");
 }
 
-if (
-  !report.chests.arcane.warnings.some(
-    warning => warning.includes("bonus rewards unverified")
-  )
-) {
+if (report.chests.arcane.warnings.length) {
   throw new Error(
-    "Arcane should clearly identify its uncaptured bonus data."
+    `Verified Arcane bonus should have no warnings: ${report.chests.arcane.warnings.join("; ")}`
+  );
+}
+
+if (report.chests.arcane.bonusRewards !== 7) {
+  throw new Error(
+    `Expected seven verified Arcane bonus rewards, found ${report.chests.arcane.bonusRewards}.`
   );
 }
 
