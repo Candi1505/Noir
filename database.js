@@ -674,6 +674,15 @@ async publishLiveEvent(
   eventData,
   sourceFile = null
 ) {
+  const supabaseClient =
+    window.chestSupabase;
+
+  if (!supabaseClient) {
+    throw new Error(
+      "Supabase is not connected."
+    );
+  }
+
   const access =
     await this.getCurrentAccess();
 
@@ -742,20 +751,56 @@ async publishLiveEvent(
     );
   }
 
-  const records = [];
-
-  for (const chestType of chestTypes) {
-    records.push(
-      await this.savePredictor({
+  /*
+   * Publish the complete event in one database transaction. A failed fifth
+   * chest must never leave the first four pointing at a different event.
+   */
+  const predictors = chestTypes.map(
+    chestType => ({
+      chest_type: chestType,
+      predictor_data: {
+        schema: "noir-live-event-v1",
         chestType,
-        version,
-        predictorData: {
-          schema: "noir-live-event-v1",
-          chestType,
-          eventData: sanitisedEvent
-        },
-        uploadedBy: access.user.id
-      })
+        eventData: sanitisedEvent
+      }
+    })
+  );
+
+  const {
+    data: publishedRows,
+    error: publishError
+  } = await supabaseClient.rpc(
+    "publish_noir_event",
+    {
+      p_version: version,
+      p_predictors: predictors
+    }
+  );
+
+  if (publishError) {
+    const atomicPublisherMissing =
+      publishError.code === "PGRST202" ||
+      /publish_noir_event|schema cache|function/i
+        .test(String(publishError.message || ""));
+
+    if (atomicPublisherMissing) {
+      throw new Error(
+        "The Supabase Arcane publishing update is required before this event can be published. No cloud predictor records were changed."
+      );
+    }
+
+    throw publishError;
+  }
+
+  const records = Array.isArray(publishedRows)
+    ? publishedRows
+    : publishedRows
+      ? [publishedRows]
+      : [];
+
+  if (records.length !== chestTypes.length) {
+    throw new Error(
+      "Supabase did not confirm every chest predictor. The event was not accepted as published."
     );
   }
 
