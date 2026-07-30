@@ -20,7 +20,40 @@ const gacha = HarGachaParser.parse(harText);
 const arcane = parsed.chests.arcane;
 
 if (!arcane?.found) {
-  const arcaneBonusClaims =
+  console.log(JSON.stringify({
+    event: parsed.event,
+    availableDeckKeys: parsed.availableDeckKeys,
+    chests: parsed.chests,
+    diagnostics: global.ChestCompanionLastImport
+  }, null, 2));
+  throw new Error("Arcane deck was not detected.");
+}
+if (arcane.bonusEvery !== 15) throw new Error("Arcane cadence must be 15.");
+if (arcane.key !== "arcane_chest") throw new Error("Wrong Arcane deck key.");
+if (arcane.availableRewardPoolCount !== 3) {
+  throw new Error("All three Arcane reward pools must be present.");
+}
+if (
+  gacha.openings.some(
+    opening =>
+      opening.isBonus &&
+      opening.parentChestKey === "arcane"
+  ) &&
+  (
+    arcane.bonusVerification?.verified !== true ||
+    arcane.bonusVerification?.poolKey !==
+      "mythic_arcane_items"
+  )
+) {
+  throw new Error(
+    "The captured Arcane bonus should verify the shared mythic pool."
+  );
+}
+if (!gacha.openings.some(opening => opening.chestKey === "arcane")) {
+  throw new Error("Spin type 37 was not recognised as Arcane.");
+}
+
+const arcaneBonusClaims =
   gacha.openings.filter(opening =>
     opening.isBonus &&
     opening.parentChestKey === "arcane"
@@ -52,39 +85,6 @@ if (arcaneBonusClaims.length) {
       "The captured Arcane bonus should contain 60 Gold Chests."
     );
   }
-}
-
-console.log(JSON.stringify({
-    event: parsed.event,
-    availableDeckKeys: parsed.availableDeckKeys,
-    chests: parsed.chests,
-    diagnostics: global.ChestCompanionLastImport
-  }, null, 2));
-  throw new Error("Arcane deck was not detected.");
-}
-if (arcane.bonusEvery !== 15) throw new Error("Arcane cadence must be 15.");
-if (arcane.key !== "arcane_chest") throw new Error("Wrong Arcane deck key.");
-if (arcane.availableRewardPoolCount !== 3) {
-  throw new Error("All three Arcane reward pools must be present.");
-}
-if (
-  gacha.openings.some(
-    opening =>
-      opening.isBonus &&
-      opening.parentChestKey === "arcane"
-  ) &&
-  (
-    arcane.bonusVerification?.verified !== true ||
-    arcane.bonusVerification?.poolKey !==
-      "mythic_arcane_items"
-  )
-) {
-  throw new Error(
-    "The captured Arcane bonus should verify the shared mythic pool."
-  );
-}
-if (!gacha.openings.some(opening => opening.chestKey === "arcane")) {
-  throw new Error("Spin type 37 was not recognised as Arcane.");
 }
 
 console.log(JSON.stringify({
