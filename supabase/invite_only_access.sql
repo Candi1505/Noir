@@ -6,11 +6,6 @@ begin;
 alter table public.profiles
   add column if not exists access_approved boolean not null default false;
 
--- Preserve access for accounts that already existed before this lock-down.
-update public.profiles
-set access_approved = true
-where access_approved is false;
-
 create or replace function public.is_noir_member()
 returns boolean
 language sql
