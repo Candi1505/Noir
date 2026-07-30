@@ -1370,6 +1370,7 @@
 
 
   async function startApplication() {
+    let accessGranted = false;
 
     /* Remove the shared storage used by older releases. */
     try {
@@ -1451,6 +1452,27 @@
 
         );
 
+      if (!player?.user) {
+        window.NoirAccessControl?.show?.({
+          message:
+            "NOIR • I ZI is private. Sign in with an approved invitation to enter."
+        });
+        return;
+      }
+
+      if (!player?.isApproved) {
+        currentUser = player.user;
+        window.NoirAccessControl?.show?.({
+          message:
+            "Your account is signed in but has not been approved for Noir. Ask the administrator to approve your invitation.",
+          failed: true,
+          signedIn: true
+        });
+        return;
+      }
+
+      currentUser = player.user;
+
       if (
         window.ChestPredictorCloud
           ?.load
@@ -1462,10 +1484,6 @@
         );
       }
 
-
-      currentUser =
-        player?.user ||
-        null;
 
       appState =
         loadLocalState(
@@ -1543,16 +1561,18 @@
 
       );
 
+      accessGranted = true;
+
     } catch (error) {
 
-      console.warn(
-        "Chest Companion is opening in device mode:",
+      console.error(
+        "NOIR secure access failed:",
         error
       );
 
 
       updateCloudBadge(
-        "Device mode",
+        "Access unavailable",
         false
       );
 
@@ -1563,9 +1583,16 @@
           "loadingStatus"
         ),
 
-        "Cloud unavailable — opening device mode"
+        "Secure access could not be verified"
 
       );
+
+      window.NoirAccessControl?.show?.({
+        message:
+          "NOIR could not verify secure access. Please try again shortly.",
+        failed: true,
+        signedIn: Boolean(currentUser)
+      });
 
     } finally {
 
@@ -1574,14 +1601,15 @@
       renderHomeScreen();
 
 
-      window.setTimeout(
-        () => {
-
-          openApplicationShell();
-
-        },
-        500
-      );
+      if (accessGranted) {
+        window.NoirAccessControl?.hide?.();
+        window.setTimeout(
+          () => {
+            openApplicationShell();
+          },
+          500
+        );
+      }
 
     }
 
@@ -3894,7 +3922,13 @@ function getArmoryPage(position, positionsPerPage = 20) {
 
       console.error(error);
 
-      openApplicationShell();
+      if (!currentUser) {
+        window.NoirAccessControl?.show?.({
+          message:
+            "NOIR could not verify secure access. Please refresh and try again.",
+          failed: true
+        });
+      }
 
     }
   );
@@ -3906,7 +3940,13 @@ function getArmoryPage(position, positionsPerPage = 20) {
 
       console.error(error);
 
-      openApplicationShell();
+      if (!currentUser) {
+        window.NoirAccessControl?.show?.({
+          message:
+            "NOIR could not verify secure access. Please refresh and try again.",
+          failed: true
+        });
+      }
 
     }
   );

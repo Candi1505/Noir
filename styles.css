@@ -307,6 +307,38 @@ p{
 
 }
 
+.access-gate {
+    min-height: 100vh;
+    display: grid;
+    place-items: end center;
+    padding:
+        24px
+        18px
+        calc(34px + var(--safe-bottom));
+}
+
+.access-gate-card {
+    width: min(100%, 560px);
+    padding: 34px 28px;
+    border-radius: var(--radius-large);
+}
+
+.access-gate-card h1 {
+    margin: 10px 0 12px;
+    font-size: clamp(2rem, 8vw, 3rem);
+}
+
+.access-gate-card .profile-form {
+    margin-top: 24px;
+}
+
+.access-gate-note {
+    margin-top: 22px;
+    color: var(--text-muted);
+    font-size: .88rem;
+    text-align: center;
+}
+
 .loading-card h1 {
 
     margin:
