@@ -9,6 +9,10 @@
   >
 
   <meta name="theme-color" content="#050505">
+  <meta
+    name="robots"
+    content="noindex, nofollow, noarchive, nosnippet, noimageindex"
+  >
 
   <title>NOIR • I ZI — Chest Companion</title>
 
@@ -70,6 +74,60 @@
 
     </div>
 
+  </section>
+
+  <!-- ==========================================
+       INVITE-ONLY ACCESS GATE
+  =========================================== -->
+
+  <section id="accessGate" class="access-gate hidden">
+    <div class="access-gate-card glass-panel">
+      <p class="eyebrow">NOIR • I ZI</p>
+      <h1>Private access</h1>
+      <p id="accessGateMessage" class="muted-text">
+        Sign in with an approved invitation to enter.
+      </p>
+
+      <div class="profile-form">
+        <input
+          id="accessGateEmail"
+          type="email"
+          autocomplete="username"
+          placeholder="Email"
+        >
+        <input
+          id="accessGatePassword"
+          type="password"
+          autocomplete="current-password"
+          placeholder="Password"
+        >
+        <button
+          id="accessGateSignIn"
+          class="button primary-button full-width-button"
+          type="button"
+        >
+          Sign in
+        </button>
+        <button
+          id="accessGateResetPassword"
+          class="button secondary-button full-width-button"
+          type="button"
+        >
+          Forgot password?
+        </button>
+        <button
+          id="accessGateSignOut"
+          class="button secondary-button full-width-button hidden"
+          type="button"
+        >
+          Sign out
+        </button>
+      </div>
+
+      <p class="access-gate-note">
+        NOIR • I ZI is invitation-only. Public registration is unavailable.
+      </p>
+    </div>
   </section>
 
 
@@ -826,58 +884,12 @@
       Sign in
     </button>
     <button
-      id="showMemberSignUpButton"
-      class="button secondary-button full-width-button"
-      type="button"
-    >
-      Create account
-    </button>
-    <button
       id="forgotPasswordButton"
       class="button secondary-button full-width-button"
       type="button"
     >
       Forgot password?
     </button>
-  </div>
-
-  <div id="memberSignUpPanel" class="profile-form hidden">
-    <p class="eyebrow">CREATE PLAYER ACCOUNT</p>
-    <input
-      id="memberNicknameInput"
-      type="text"
-      maxlength="30"
-      autocomplete="nickname"
-      placeholder="Nickname"
-    >
-    <input
-      id="memberSignUpEmailInput"
-      type="email"
-      autocomplete="email"
-      placeholder="Email"
-    >
-    <input
-      id="memberSignUpPasswordInput"
-      type="password"
-      minlength="8"
-      autocomplete="new-password"
-      placeholder="Password (at least 8 characters)"
-    >
-    <button
-      id="createMemberAccountButton"
-      class="button primary-button full-width-button"
-      type="button"
-    >
-      Create player account
-    </button>
-    <button
-      id="backToMemberSignInButton"
-      class="button secondary-button full-width-button"
-      type="button"
-    >
-      Back to sign in
-    </button>
-    <p id="memberSignUpStatus" class="muted-text"></p>
   </div>
 
   <div id="passwordRecoveryPanel" class="profile-form hidden">
@@ -1469,14 +1481,15 @@
   =========================================== -->
 
 <script src="supabase.js"></script>
-<script src="database.js?v=20260730-arcane-fix1"></script>
+<script src="database.js?v=20260730-invite-only"></script>
+<script src="access-control.js?v=20260730-invite-only"></script>
 
 <script src="predictor-cloud.js?v=20260730-arcane"></script>
   <script src="event-parser.js?v=20260730-arcane"></script>
 <script src="har-event-adapter.js?v=20260730-arcane-bonus"></script>
 <script src="js/har-gacha-parser.js?v=20260730-arcane-bonus"></script>
 <script src="event-import.js?v=20260730-arcane"></script>
-<script src="admin-event-publisher.js?v=20260724-1"></script>
+<script src="admin-event-publisher.js?v=20260730-invite-only"></script>
 <script src="live-predictor-engine.js?v=20260730-arcane-fix1"></script>
 <script src="live-predictor-ui.js?v=20260730-arcane"></script>
   <script src="chest-drop-rates.js?v=20260730-arcane-bonus"></script>
@@ -1493,7 +1506,7 @@
 <script src="base-adviser-catalog-people.js?v=20260727-2"></script>
     <script src="base-planner.js?v=20260729-2"></script>
 
-<script src="app.js?v=20260730-arcane"></script>
+<script src="app.js?v=20260730-invite-only"></script>
 
 </body>
 </html>
