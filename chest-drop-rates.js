@@ -506,6 +506,22 @@
     const config =
       CHESTS[chestType];
 
+    const verifiedPool =
+      eventData?.chests?.[chestType]
+        ?.bonusVerification;
+
+    if (
+      verifiedPool?.verified === true &&
+      typeof verifiedPool?.poolKey === "string" &&
+      Array.isArray(
+        eventData?.decks?.[
+          verifiedPool.poolKey
+        ]
+      )
+    ) {
+      return verifiedPool.poolKey;
+    }
+
     const explicit =
       config.bonusKeys.find(
         key =>
