@@ -43,7 +43,8 @@ window.ChestDatabase = {
       return {
         user: null,
         profile: null,
-        isAdmin: false
+        isAdmin: false,
+        isApproved: false
       };
     }
 
@@ -64,7 +65,10 @@ window.ChestDatabase = {
       user,
       profile,
       isAdmin:
-        this.isAdminProfile(profile)
+        this.isAdminProfile(profile),
+      isApproved:
+        this.isAdminProfile(profile) ||
+        profile?.access_approved === true
     };
   },
 
@@ -111,57 +115,6 @@ window.ChestDatabase = {
     }
 
     return this.getCurrentAccess();
-  },
-
-  async signUpMember(email, password, nickname = "") {
-    const cleanEmail =
-      String(email || "").trim();
-    const cleanPassword =
-      String(password || "");
-    const cleanNickname =
-      String(nickname || "")
-        .trim()
-        .slice(0, 30);
-
-    if (!cleanEmail) {
-      throw new Error("Enter your email address.");
-    }
-
-    if (cleanPassword.length < 8) {
-      throw new Error(
-        "Use a password with at least 8 characters."
-      );
-    }
-
-    const { data, error } =
-      await window.chestSupabase.auth
-        .signUp({
-          email: cleanEmail,
-          password: cleanPassword,
-          options: {
-            emailRedirectTo:
-              window.location.href
-                .split("#")[0]
-                .split("?")[0],
-            data: {
-              nickname:
-                cleanNickname || "Player"
-            }
-          }
-        });
-
-    if (error) throw error;
-
-    if (data.user && data.session) {
-      await this.getOrCreateProfile(data.user);
-    }
-
-    return {
-      user: data.user || null,
-      session: data.session || null,
-      confirmationRequired:
-        Boolean(data.user && !data.session)
-    };
   },
 
   async sendPasswordReset(email) {
@@ -224,7 +177,7 @@ window.ChestDatabase = {
     Gets the current Supabase session.
 
     Chest Companion never creates anonymous accounts. A player
-    must explicitly sign in or create an email-confirmed account.
+    must explicitly sign in with an approved invited account.
   */
 
   async getOrCreateSession() {
@@ -389,7 +342,9 @@ window.ChestDatabase = {
       return {
         session: null,
         user: null,
-        profile: null
+        profile: null,
+        isAdmin: false,
+        isApproved: false
       };
 
     }
@@ -398,6 +353,13 @@ window.ChestDatabase = {
     const profile =
       await this.getOrCreateProfile(user);
 
+    const isAdmin =
+      this.isAdminProfile(profile);
+
+    const isApproved =
+      isAdmin ||
+      profile?.access_approved === true;
+
 
     return {
 
@@ -405,7 +367,11 @@ window.ChestDatabase = {
 
       user,
 
-      profile
+      profile,
+
+      isAdmin,
+
+      isApproved
 
     };
 
