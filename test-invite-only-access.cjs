@@ -76,6 +76,11 @@ assert.match(
   /protect_noir_access_fields/,
   "Approval fields must be protected from self-promotion."
 );
+assert.doesNotMatch(
+  sql,
+  /update public\.profiles\s+set access_approved = true\s+where access_approved is false/i,
+  "Existing non-admin profiles must not be approved in bulk."
+);
 assert.equal(
   robots.trim(),
   "User-agent: *\nDisallow: /",
