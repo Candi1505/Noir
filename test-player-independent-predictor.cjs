@@ -50,15 +50,15 @@ LivePredictorEngine.publishEventData(event, {
 });
 
 const sequence = [
-  ["12-Hour Speedups", 15],
-  ["3-Hour Speedups", 40],
-  ["3-Hour Speedups", 40],
-  ["12-Hour Speedups", 15],
+  ["Elemental Embers", 4000],
   ["Elemental Embers", 600],
+  ["Urbanflare Sigils", 200],
   ["Ice Shards", 2500],
   ["Egg Tokens", 2800],
-  ["3-Hour Speedups", 40],
-  ["Egg Tokens", 2800]
+  ["12-Hour Speedups", 15],
+  ["12-Hour Speedups", 100, true],
+  ["Egg Tokens", 2800],
+  ["Ice Shards", 2500]
 ];
 
 function findReward(name, amount) {
@@ -79,10 +79,11 @@ function findReward(name, amount) {
 LivePredictorEngine.setPlayerIdentity("player-a");
 LivePredictorEngine.resetHistory("platinum");
 
-for (const [name, amount] of sequence) {
+for (const [name, amount, isBonus = false] of sequence) {
   const reward = findReward(name, amount);
   LivePredictorEngine.recordReward("platinum", {
-    reward: reward.raw
+    reward: reward.raw,
+    isBonus
   });
 
   const solution = LivePredictorEngine.solvePosition("platinum");
