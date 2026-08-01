@@ -1947,6 +1947,8 @@
     style.id = "noirBasePlannerStyles";
     style.textContent = `
       .nbp-launch{width:100%;margin:0;padding:22px;display:flex;justify-content:space-between;align-items:center;gap:16px;border:1px solid rgba(72,178,153,.46);border-radius:24px;background:linear-gradient(135deg,rgba(13,62,52,.7),rgba(4,9,8,.98) 74%);color:#eee9df;text-align:left;box-sizing:border-box}
+      .nbp-merge-launch{border-color:rgba(215,186,100,.55);background:linear-gradient(135deg,rgba(75,55,16,.72),rgba(4,9,8,.98) 74%)}
+      .nbp-merge-launch .nbp-launch-icon{color:#d7ba64}
       .nbp-launch strong,.nbp-launch small{display:block}.nbp-launch strong{font-size:19px}.nbp-launch small{margin-top:7px;color:#aaa49b;line-height:1.45;font-size:13px}.nbp-launch-icon{color:#69d2b4;font-size:31px}
       .nct-home-tools .nbp-launch{min-height:138px}
       .nbp-overlay{position:fixed;inset:0;z-index:100000;display:none;overflow-y:auto;padding:max(12px,env(safe-area-inset-top)) 12px max(28px,env(safe-area-inset-bottom));box-sizing:border-box;background:#030405;color:#eeeae2}.nbp-overlay.open{display:block}
@@ -1978,17 +1980,26 @@
     launch.type = "button";
     launch.className = "nbp-launch";
     launch.innerHTML = `<span><strong>Base Adviser</strong><small>Build your real base, test tower moves and compare the result.</small></span><span class="nbp-launch-icon" aria-hidden="true">⚔</span>`;
-    launch.addEventListener("click", open);
+    launch.addEventListener("click", () => open());
+
+    const mergeLaunch = document.createElement("button");
+    mergeLaunch.type = "button";
+    mergeLaunch.className = "nbp-launch nbp-merge-launch";
+    mergeLaunch.innerHTML = `<span><strong>Tower Merge Calculator</strong><small>See the resulting tower level and any player XP debt before you merge.</small></span><span class="nbp-launch-icon" aria-hidden="true">⇄</span>`;
+    mergeLaunch.addEventListener("click", () => open("merge"));
 
     const tools = document.querySelector(".nct-home-tools");
     const share = tools?.querySelector(".nct-share");
     if (share) {
       tools.insertBefore(launch, share);
+      tools.insertBefore(mergeLaunch, share);
     } else if (tools) {
       tools.prepend(launch);
+      launch.insertAdjacentElement("afterend", mergeLaunch);
     } else {
       const progress = document.querySelector("#activeSessionTitle")?.closest(".content-panel");
       progress?.insertAdjacentElement("afterend", launch);
+      launch.insertAdjacentElement("afterend", mergeLaunch);
     }
 
     const overlay = document.createElement("section");
@@ -1998,12 +2009,21 @@
     document.body.appendChild(overlay);
   }
 
-  function open() {
+  function open(section = "") {
     render();
     const overlay = document.getElementById(OVERLAY_ID);
     overlay?.classList.add("open");
     overlay?.setAttribute("aria-hidden", "false");
     document.body.style.overflow = "hidden";
+    if (section === "merge") {
+      window.requestAnimationFrame(() => {
+        const mergeCalculator = overlay?.querySelector(".nbp-merge-planner");
+        if (!mergeCalculator) return;
+        mergeCalculator.open = true;
+        mergeCalculator.scrollIntoView({ behavior: "smooth", block: "start" });
+        mergeCalculator.querySelector("select, input, button")?.focus({ preventScroll: true });
+      });
+    }
   }
 
   function close() {
