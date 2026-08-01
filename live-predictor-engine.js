@@ -19,8 +19,22 @@
 (function initialiseLivePredictorEngine(window) {
   "use strict";
 
-  const PLAYER_STORAGE_KEY =
+  const PLAYER_STORAGE_KEY_PREFIX =
     "chestCompanionLivePredictor";
+
+  let playerIdentity = "guest";
+
+  function getPlayerStorageKey(
+    userId = playerIdentity
+  ) {
+    const cleanUserId =
+      normaliseText(userId) || "guest";
+
+    return (
+      `${PLAYER_STORAGE_KEY_PREFIX}:` +
+      cleanUserId
+    );
+  }
 
   const EVENT_CACHE_KEY =
     "chestCompanionPublishedEvent";
@@ -315,7 +329,7 @@
       const saved =
         JSON.parse(
           localStorage.getItem(
-            PLAYER_STORAGE_KEY
+            getPlayerStorageKey()
           ) || "{}"
         );
 
@@ -391,7 +405,7 @@
   function savePlayerState() {
     try {
       localStorage.setItem(
-        PLAYER_STORAGE_KEY,
+        getPlayerStorageKey(),
         JSON.stringify(state)
       );
     } catch (error) {
@@ -400,6 +414,59 @@
         error
       );
     }
+  }
+
+  function setPlayerIdentity(userId) {
+    const nextIdentity =
+      normaliseText(userId) || "guest";
+
+    if (nextIdentity === playerIdentity) {
+      return false;
+    }
+
+    /*
+     * Builds before account-scoped storage used one browser-wide key.
+     * Move that progress once for the currently signed-in player so the
+     * privacy fix does not silently discard their existing history.
+     */
+    try {
+      const scopedKey =
+        getPlayerStorageKey(
+          nextIdentity
+        );
+      const legacyValue =
+        localStorage.getItem(
+          PLAYER_STORAGE_KEY_PREFIX
+        );
+
+      if (
+        !localStorage.getItem(scopedKey) &&
+        legacyValue
+      ) {
+        localStorage.setItem(
+          scopedKey,
+          legacyValue
+        );
+      }
+
+      if (legacyValue) {
+        localStorage.removeItem(
+          PLAYER_STORAGE_KEY_PREFIX
+        );
+      }
+    } catch (error) {
+      console.warn(
+        "[Chest Companion] Could not migrate predictor progress.",
+        error
+      );
+    }
+
+    playerIdentity = nextIdentity;
+    state = loadPlayerState();
+    syncPlayerEvent();
+    refresh();
+
+    return true;
   }
 
   /* ==========================================================
@@ -1489,12 +1556,13 @@ function getNamedDrops(
 function getNamedDeckIndex(
   deckKey
 ) {
-  return toFiniteNumber(
-    getEventDeckIndices()?.[
-      deckKey
-    ],
-    0
-  ) || 0;
+  /*
+   * A HAR cursor belongs to the account that produced the capture.
+   * Published deck arrays are shared, but their captured positions are
+   * never valid starting points for another player.
+   */
+  void deckKey;
+  return 0;
 }
 
 function getNextNamedDeckIndex(
@@ -1582,20 +1650,7 @@ function getNextNamedDeckIndex(
 }
 
 function createDeckCursors() {
-  const cursors = {};
-
-  Object.entries(
-    getEventDeckIndices()
-  ).forEach(
-    ([deckKey]) => {
-      cursors[deckKey] =
-        getNextNamedDeckIndex(
-          deckKey
-        );
-    }
-  );
-
-  return cursors;
+  return {};
 }
 
 function takeDeckValue(
@@ -2586,34 +2641,9 @@ function getNormalisedDeck(
       return [];
     }
 
-    const cursors =
-      Object.fromEntries(
-        Object.keys(
-          getEventDeckIndices()
-        ).map(
-          deckKey => [
-            deckKey,
-            Math.max(
-              0,
-              Math.floor(
-                getNamedDeckIndex(
-                  deckKey
-                )
-              )
-            )
-          ]
-        )
-      );
+    const cursors = {};
 
-    const startIndex =
-      Math.max(
-        0,
-        Math.floor(
-          getNamedDeckIndex(
-            bonusDeckKey
-          )
-        )
-      );
+    const startIndex = 0;
 
     return rawDeck.map(
       (rawValue, offset) => {
@@ -2692,6 +2722,25 @@ function getNormalisedDeck(
         chestType
       );
 
+    const mainDeckKey =
+      getChestDeckKey(
+        normalised
+      );
+    const nestedPoolKeys =
+      Array.from(
+        new Set(
+          getNamedDeck(mainDeckKey)
+            .map(
+              rawValue =>
+                getMainPoolKey(
+                  mainDeckKey,
+                  rawValue
+                )
+            )
+            .filter(Boolean)
+        )
+      );
+
     const deck =
       [
         ...getNormalisedDeck(
@@ -2699,6 +2748,13 @@ function getNormalisedDeck(
         ),
         ...getNormalisedBonusDeck(
           normalised
+        ),
+        ...nestedPoolKeys.flatMap(
+          poolKey =>
+            getIndependentPoolEntries(
+              poolKey,
+              normalised
+            )
         )
       ];
 
@@ -3651,7 +3707,7 @@ function valuesMatch(
           resolveDeckReward(
             poolKey,
             rawValue,
-            createDeckCursors()
+            {}
           );
 
         const reward =
@@ -3954,6 +4010,33 @@ function valuesMatch(
         candidate =>
           candidate.mainStart
       );
+    }
+
+    const normalised =
+      normaliseChestType(
+        chestType
+      );
+    const mainDeckKey =
+      getChestDeckKey(
+        normalised
+      );
+    const hasNestedPools =
+      getNamedDeck(mainDeckKey).some(
+        rawValue =>
+          Boolean(
+            getMainPoolKey(
+              mainDeckKey,
+              rawValue
+            )
+          )
+      );
+
+    /*
+     * Never fall back to the administrator's pre-resolved nested sequence.
+     * A nested chest must be solved from this player's own observations.
+     */
+    if (hasNestedPools) {
+      return [];
     }
 
     const deck =
@@ -5634,6 +5717,7 @@ function inspectGachaHistory(
       getSourceFile,
       getEventFingerprint,
       syncPlayerEvent,
+      setPlayerIdentity,
 
       publishEventData,
       clearPublishedEventData,

@@ -686,8 +686,11 @@ async publishLiveEvent(
     chests: eventData.chests,
     decks: eventData.decks || {},
     drops: eventData.drops || {},
-    deckIndices:
-      eventData.deckIndices || {},
+    /*
+     * Deck cursor positions identify the administrator's account and must
+     * never be published as shared player state.
+     */
+    deckIndices: {},
     spinTypes:
       eventData.spinTypes || [],
     doubleArmory:

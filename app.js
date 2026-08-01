@@ -1473,6 +1473,11 @@
 
       currentUser = player.user;
 
+      window.LivePredictorEngine
+        ?.setPlayerIdentity?.(
+          currentUser.id
+        );
+
       if (
         window.ChestPredictorCloud
           ?.load
