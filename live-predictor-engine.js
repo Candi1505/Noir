@@ -3878,18 +3878,33 @@ function valuesMatch(
       const poolStarts = {};
 
       for (
-        const [
-          poolKey,
-          poolObservations
-        ] of Object.entries(
-          observationsByPool
-        )
+        const poolKey of
+          poolKeys
       ) {
+        const entries =
+          poolEntries[
+            poolKey
+          ] || [];
+        const poolObservations =
+          observationsByPool[
+            poolKey
+          ] || [];
+
+        // A unique main-deck position is not enough to predict a nested
+        // chest such as Platinum. Every reward pool that the main deck can
+        // call must also have a known cursor. Keep unseen pools explicitly
+        // unresolved instead of allowing Object.values(...).every() to
+        // treat a partial poolStarts object as fully solved.
         const starts =
-          findCyclicObservationStarts(
-            poolEntries[poolKey],
-            poolObservations
-          );
+          poolObservations.length
+            ? findCyclicObservationStarts(
+                entries,
+                poolObservations
+              )
+            : entries.map(
+                (_, index) =>
+                  index
+              );
 
         if (!starts.length) {
           compatible = false;
