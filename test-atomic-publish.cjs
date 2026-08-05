@@ -17,7 +17,17 @@ const eventData = {
   chests: Object.fromEntries(
     chestTypes.map(chestType => [
       chestType,
-      { found: true }
+      {
+        found: true,
+        deck: [0, 1, 2],
+        index: 2,
+        foundIndex: 2,
+        sourceIndex: 2,
+        currentValue: 2,
+        openedSinceBonus: 7,
+        chestsUntilBonus: 8,
+        nextChestIsBonus: false
+      }
     ])
   ),
   decks: {},
@@ -60,6 +70,34 @@ async function runSuccessfulPublishTest() {
   if (result.records.length !== 5) {
     throw new Error("Five published records were expected.");
   }
+
+  const publishedEvent =
+    rpcCalls[0]
+      .params
+      .p_predictors[0]
+      .predictor_data
+      .eventData;
+
+  if (
+    publishedEvent.chests.gold.deck.length !== 3 ||
+    publishedEvent.chests.gold.found !== true
+  ) {
+    throw new Error("Shared Gold deck data was removed during sanitisation.");
+  }
+
+  [
+    "index",
+    "foundIndex",
+    "sourceIndex",
+    "currentValue",
+    "openedSinceBonus",
+    "chestsUntilBonus",
+    "nextChestIsBonus"
+  ].forEach(field => {
+    if (field in publishedEvent.chests.gold) {
+      throw new Error(`Private chest field was published: ${field}`);
+    }
+  });
 }
 
 async function runMissingFunctionTest() {
