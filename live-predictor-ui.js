@@ -3513,6 +3513,63 @@
             );
           }
 
+          const rewardAliases = {
+            innerFire01: [
+              "inner fire",
+              "inner fires",
+              "innerfire"
+            ],
+            innerFireConsumable: [
+              "inner fire",
+              "inner fires",
+              "innerfire"
+            ],
+            urbanflareSigil: [
+              "urbanflare sigil",
+              "urbanflare sigils"
+            ],
+            energyPack: [
+              "energy pack",
+              "energy packs"
+            ],
+            cmCrystaldarkGemstone: [
+              "dark gemstone",
+              "dark gemstones",
+              "dark crafting gemstone",
+              "dark crafting gemstones"
+            ],
+            cmCrystalearthGemstone: [
+              "earth gemstone",
+              "earth gemstones",
+              "earth crafting gemstone",
+              "earth crafting gemstones"
+            ],
+            cmCrystalfireGemstone: [
+              "fire gemstone",
+              "fire gemstones",
+              "fire crafting gemstone",
+              "fire crafting gemstones"
+            ],
+            cmCrystaliceGemstone: [
+              "ice gemstone",
+              "ice gemstones",
+              "ice crafting gemstone",
+              "ice crafting gemstones"
+            ],
+            cmCrystalwindGemstone: [
+              "wind gemstone",
+              "wind gemstones",
+              "wind crafting gemstone",
+              "wind crafting gemstones"
+            ]
+          }[reward.code];
+
+          if (rewardAliases) {
+            aliases.push(
+              ...rewardAliases
+            );
+          }
+
           const speedupAliases = {
             expediteConsumable1: ["15 min", "15min"],
             expediteConsumable1a: ["30 min", "30min"],

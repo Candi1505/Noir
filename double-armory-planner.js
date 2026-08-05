@@ -33,24 +33,29 @@
   let playerState = null;
 
   const REWARD_NAMES = {
-    breedingToken: "Breeding Tokens",
+    breedingToken: "Egg Tokens",
     elementalEmber: "Elemental Embers",
     electrumBar: "Electrum Bars",
-    urbanflareSigil: "Urbanflare Sigils",
+    urbanflareSigil: "Urbanflare Sigil",
     blackPearl: "Black Pearls",
     fireShard: "Fire Shards",
     iceShard: "Ice Shards",
-    expediteConsumable1: "1-Hour Speedups",
-    expediteConsumable2: "1-Hour Speedups",
-    expediteConsumable3: "3-Hour Speedups",
-    expediteConsumable4: "12-Hour Speedups",
-    increaseAttack1: "+30% Dragon Attack",
-    increaseHP1: "+30% Dragon HP",
-    increaseBuildingAttack1: "+30% Tower Attack",
-    increaseBuildingHP1: "+30% Tower HP",
+    expediteConsumable1: "15 Min Speedup",
+    expediteConsumable1a: "30 Min Speedup",
+    expediteConsumable2: "1 Hr Speedup",
+    expediteConsumable3: "3 Hr Speedup",
+    expediteConsumable4: "12 Hr Speedup",
+    increaseAttack1: "Dragon Attack Boost",
+    increaseHP1: "Dragon HP Boost",
+    increaseBuildingAttack1: "Tower Attack Boost",
+    increaseBuildingHP1: "Tower HP Boost",
     innerFire01: "Inner Fire",
     innerFireConsumable: "Inner Fire",
     energyPack: "Energy Packs",
+    repairConsumable: "Defense Hammer",
+    fullHeal: "Healing Potions",
+    xpMultiplierSpellConsumable01: "Dragon XP Boost",
+    xpMultiplierSpellConsumable02: "Dragon XP Boost",
     dragonHealPotion: "Dragon Heal Potions",
     mysticFragment: "Mystic Fragments",
     chest0: "Bronze Chests",
@@ -204,7 +209,7 @@
     if (REWARD_NAMES[raw]) return REWARD_NAMES[raw];
     const gemstone = raw.match(/^cmCrystal(ice|dark|earth|fire|wind)Gemstone$/i);
     if (gemstone) {
-      return `${gemstone[1][0].toUpperCase()}${gemstone[1].slice(1).toLowerCase()} Gemstones`;
+      return `${gemstone[1][0].toUpperCase()}${gemstone[1].slice(1).toLowerCase()} Crafting Gemstones`;
     }
     return raw
       .replace(/([a-z])([A-Z])/g, "$1 $2")
