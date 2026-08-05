@@ -88,7 +88,7 @@
         Sign in with an approved invitation to enter.
       </p>
 
-      <div class="profile-form">
+      <div id="accessGateCredentials" class="profile-form">
         <input
           id="accessGateEmail"
           type="email"
@@ -121,6 +121,40 @@
           type="button"
         >
           Sign out
+        </button>
+      </div>
+
+      <div
+        id="accessGateRecovery"
+        class="profile-form hidden"
+        aria-live="polite"
+      >
+        <label for="accessGateNewPassword">
+          New password
+        </label>
+        <input
+          id="accessGateNewPassword"
+          type="password"
+          minlength="8"
+          autocomplete="new-password"
+          placeholder="At least 8 characters"
+        >
+        <label for="accessGateConfirmPassword">
+          Confirm new password
+        </label>
+        <input
+          id="accessGateConfirmPassword"
+          type="password"
+          minlength="8"
+          autocomplete="new-password"
+          placeholder="Enter it again"
+        >
+        <button
+          id="accessGateSavePassword"
+          class="button primary-button full-width-button"
+          type="button"
+        >
+          Save new password
         </button>
       </div>
 

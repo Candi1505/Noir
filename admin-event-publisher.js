@@ -226,9 +226,11 @@
   async function sendPasswordReset() {
     const email =
       get("adminEmailInput")?.value;
+    const status =
+      get("adminAccessStatus");
 
     try {
-      status.classList.remove("error-text");
+      status?.classList.remove("error-text");
       await window.ChestDatabase
         .sendPasswordReset(email);
       window.alert(

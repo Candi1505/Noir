@@ -1606,11 +1606,20 @@
       renderHomeScreen();
 
 
-      if (accessGranted) {
+      if (
+        accessGranted &&
+        !window.NoirAccessControl
+          ?.isPasswordRecoveryActive?.()
+      ) {
         window.NoirAccessControl?.hide?.();
         window.setTimeout(
           () => {
-            openApplicationShell();
+            if (
+              !window.NoirAccessControl
+                ?.isPasswordRecoveryActive?.()
+            ) {
+              openApplicationShell();
+            }
           },
           500
         );

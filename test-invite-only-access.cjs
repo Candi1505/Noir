@@ -23,6 +23,26 @@ assert.match(
 );
 assert.match(
   html,
+  /id="accessGateRecovery"/,
+  "Password recovery must be reachable from the private gate."
+);
+assert.match(
+  access,
+  /event === "PASSWORD_RECOVERY"/,
+  "The private gate must handle Supabase password-recovery links."
+);
+assert.match(
+  access,
+  /updateMemberPassword\(password\)/,
+  "The private gate must save the recovered password."
+);
+assert.match(
+  app,
+  /isPasswordRecoveryActive/,
+  "Startup must not cover the active recovery form with the app shell."
+);
+assert.match(
+  html,
   /noindex, nofollow, noarchive/,
   "Search engines must receive no-index instructions."
 );

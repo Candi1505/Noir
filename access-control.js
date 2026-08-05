@@ -11,6 +11,7 @@
 
   const get = id =>
     document.getElementById(id);
+  let passwordRecoveryActive = false;
 
   function setMessage(message, failed = false) {
     const element = get("accessGateMessage");
@@ -33,6 +34,16 @@
     get("loadingScreen")?.classList.add("hidden");
     get("appShell")?.classList.add("hidden");
     get("accessGate")?.classList.remove("hidden");
+    get("accessGateCredentials")
+      ?.classList.toggle(
+        "hidden",
+        passwordRecoveryActive
+      );
+    get("accessGateRecovery")
+      ?.classList.toggle(
+        "hidden",
+        !passwordRecoveryActive
+      );
     get("accessGateSignOut")
       ?.classList.toggle("hidden", !signedIn);
     get("accessGateEmail")
@@ -114,8 +125,16 @@
 
       window.location.reload();
     } catch (error) {
+      const invalidCredentials =
+        error?.code === "invalid_credentials" ||
+        /invalid login credentials/i.test(
+          String(error?.message || "")
+        );
+
       setMessage(
-        error?.message ||
+        invalidCredentials
+          ? "Email or password not recognised. Use the email your invitation was sent to, or choose Forgot password."
+          : error?.message ||
         "Sign-in failed.",
         true
       );
@@ -153,6 +172,73 @@
     }
   }
 
+  function beginPasswordRecovery() {
+    passwordRecoveryActive = true;
+    show({
+      message:
+        "Choose and confirm your new Noir password."
+    });
+    get("accessGateNewPassword")?.focus();
+  }
+
+  async function saveRecoveredPassword() {
+    const password =
+      get("accessGateNewPassword")?.value || "";
+    const confirmation =
+      get("accessGateConfirmPassword")?.value || "";
+    const button =
+      get("accessGateSavePassword");
+
+    if (password.length < 8) {
+      setMessage(
+        "Use a password with at least 8 characters.",
+        true
+      );
+      return;
+    }
+
+    if (password !== confirmation) {
+      setMessage(
+        "The two passwords do not match.",
+        true
+      );
+      return;
+    }
+
+    button.disabled = true;
+    button.textContent = "Saving...";
+
+    try {
+      await window.ChestDatabase
+        .updateMemberPassword(password);
+
+      setMessage(
+        "Password updated. Opening Noir..."
+      );
+      passwordRecoveryActive = false;
+
+      const cleanUrl =
+        new URL(window.location.href);
+      cleanUrl.hash = "";
+      cleanUrl.search = "";
+      window.history.replaceState(
+        {},
+        document.title,
+        cleanUrl.toString()
+      );
+      window.location.reload();
+    } catch (error) {
+      setMessage(
+        error?.message ||
+        "Your password could not be updated.",
+        true
+      );
+    } finally {
+      button.disabled = false;
+      button.textContent = "Save new password";
+    }
+  }
+
   function bind() {
     get("accessGateSignIn")
       ?.addEventListener("click", signIn);
@@ -162,6 +248,11 @@
       ?.addEventListener(
         "click",
         resetPassword
+      );
+    get("accessGateSavePassword")
+      ?.addEventListener(
+        "click",
+        saveRecoveredPassword
       );
     get("accessGatePassword")
       ?.addEventListener(
@@ -184,10 +275,22 @@
     bind();
   }
 
+  window.chestSupabase?.auth
+    ?.onAuthStateChange?.(
+      event => {
+        if (event === "PASSWORD_RECOVERY") {
+          beginPasswordRecovery();
+        }
+      }
+    );
+
   window.NoirAccessControl =
     Object.freeze({
       verify,
       show,
-      hide
+      hide,
+      beginPasswordRecovery,
+      isPasswordRecoveryActive: () =>
+        passwordRecoveryActive
     });
 })(window);
