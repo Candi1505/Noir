@@ -673,6 +673,37 @@ async publishLiveEvent(
   const version =
     Math.floor(Date.now() / 1000);
 
+  const privateChestFields = [
+    "index",
+    "foundIndex",
+    "sourceIndex",
+    "currentValue",
+    "openedSinceBonus",
+    "chestsUntilBonus",
+    "nextChestIsBonus"
+  ];
+
+  const sharedChests =
+    Object.fromEntries(
+      Object.entries(eventData.chests)
+        .map(([chestType, chestData]) => {
+          const sharedChest = {
+            ...(chestData || {})
+          };
+
+          privateChestFields.forEach(
+            field => {
+              delete sharedChest[field];
+            }
+          );
+
+          return [
+            chestType,
+            sharedChest
+          ];
+        })
+    );
+
   const sanitisedEvent = {
     schema: "noir-live-event-v1",
     event: eventData.event || "Current event",
@@ -683,7 +714,7 @@ async publishLiveEvent(
     ready: Boolean(eventData.ready),
     readyChestCount:
       Number(eventData.readyChestCount) || 0,
-    chests: eventData.chests,
+    chests: sharedChests,
     decks: eventData.decks || {},
     drops: eventData.drops || {},
     /*

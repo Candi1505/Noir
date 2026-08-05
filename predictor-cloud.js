@@ -73,6 +73,59 @@
     );
   }
 
+  function sanitiseEventForPlayer(
+    publishedEvent
+  ) {
+    const eventData =
+      JSON.parse(
+        JSON.stringify(
+          publishedEvent || {}
+        )
+      );
+
+    // Upload details and captured cursors belong only to the administrator
+    // who supplied the HAR. Every player must solve their own position.
+    [
+      "sourceFile",
+      "fileName",
+      "filename"
+    ].forEach(field => {
+      delete eventData[field];
+    });
+
+    eventData.deckIndices = {};
+    delete eventData.deck_indices;
+
+    const privateChestFields = [
+      "index",
+      "foundIndex",
+      "sourceIndex",
+      "currentValue",
+      "openedSinceBonus",
+      "chestsUntilBonus",
+      "nextChestIsBonus"
+    ];
+
+    Object.values(
+      eventData.chests || {}
+    ).forEach(chestData => {
+      if (
+        !chestData ||
+        typeof chestData !== "object"
+      ) {
+        return;
+      }
+
+      privateChestFields.forEach(
+        field => {
+          delete chestData[field];
+        }
+      );
+    });
+
+    return eventData;
+  }
+
   function installPredictor(record) {
     if (
       !record ||
@@ -146,13 +199,7 @@
     }
 
     const eventData =
-      JSON.parse(JSON.stringify(newest));
-
-    // Source/upload metadata is private admin context and is never exposed
-    // to player sessions, including for older published records.
-    delete eventData.sourceFile;
-    delete eventData.fileName;
-    delete eventData.filename;
+      sanitiseEventForPlayer(newest);
 
     window.currentEventData = eventData;
     window.currentEventSourceFile =
