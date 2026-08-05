@@ -70,7 +70,7 @@ const window = {
     }
   },
   location: {
-    href: "https://candi1505.github.io/Noir/#access_token=test",
+    href: "https://candi1505.github.io/Noir/?invite=1#access_token=test",
     reload: () => {
       reloaded = true;
     }
@@ -97,12 +97,15 @@ assert.equal(
   "Supabase recovery listener must be registered."
 );
 
-authListener("PASSWORD_RECOVERY", {});
+authListener(
+  "SIGNED_IN",
+  { user: { id: "invited-player" } }
+);
 
 assert.equal(
   elements.accessGateRecovery.classList.contains("hidden"),
   false,
-  "Recovery form must be visible after the recovery event."
+  "Password setup must be visible after an invited user signs in."
 );
 assert.equal(
   elements.accessGateCredentials.classList.contains("hidden"),

@@ -33,6 +33,16 @@ assert.match(
 );
 assert.match(
   access,
+  /searchParams\.get\("invite"\) === "1"/,
+  "The private gate must recognise an invited account setup link."
+);
+assert.match(
+  access,
+  /event === "SIGNED_IN"/,
+  "An invited user's authenticated link must open password setup."
+);
+assert.match(
+  access,
   /updateMemberPassword\(password\)/,
   "The private gate must save the recovered password."
 );
