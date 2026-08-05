@@ -12,6 +12,14 @@
   const get = id =>
     document.getElementById(id);
   let passwordRecoveryActive = false;
+  const inviteSetupRequested = (() => {
+    try {
+      return new URL(window.location.href)
+        .searchParams.get("invite") === "1";
+    } catch (error) {
+      return false;
+    }
+  })();
 
   function setMessage(message, failed = false) {
     const element = get("accessGateMessage");
@@ -172,13 +180,25 @@
     }
   }
 
-  function beginPasswordRecovery() {
+  function beginPasswordRecovery({
+    message =
+      "Choose and confirm your new Noir password."
+  } = {}) {
     passwordRecoveryActive = true;
-    show({
-      message:
-        "Choose and confirm your new Noir password."
-    });
+    show({ message });
     get("accessGateNewPassword")?.focus();
+  }
+
+  function beginInvitedAccountSetup(session) {
+    if (
+      inviteSetupRequested &&
+      session?.user
+    ) {
+      beginPasswordRecovery({
+        message:
+          "Your Noir invitation is confirmed. Create and confirm your password to finish setting up your account."
+      });
+    }
   }
 
   async function saveRecoveredPassword() {
@@ -277,12 +297,33 @@
 
   window.chestSupabase?.auth
     ?.onAuthStateChange?.(
-      event => {
+      (event, session) => {
         if (event === "PASSWORD_RECOVERY") {
           beginPasswordRecovery();
+          return;
+        }
+
+        if (
+          event === "INITIAL_SESSION" ||
+          event === "SIGNED_IN"
+        ) {
+          beginInvitedAccountSetup(session);
         }
       }
     );
+
+  if (inviteSetupRequested) {
+    window.chestSupabase?.auth
+      ?.getSession?.()
+      .then(({ data }) => {
+        beginInvitedAccountSetup(
+          data?.session
+        );
+      })
+      .catch(() => {
+        /* The Auth state listener remains the fallback. */
+      });
+  }
 
   window.NoirAccessControl =
     Object.freeze({
@@ -291,6 +332,8 @@
       hide,
       beginPasswordRecovery,
       isPasswordRecoveryActive: () =>
-        passwordRecoveryActive
+        passwordRecoveryActive,
+      isInviteSetupRequested: () =>
+        inviteSetupRequested
     });
 })(window);
