@@ -50,14 +50,14 @@ LivePredictorEngine.publishEventData(event, {
 });
 
 const sequence = [
-  ["12-Hour Speedups", 15],
-  ["3-Hour Speedups", 40],
-  ["3-Hour Speedups", 40],
-  ["12-Hour Speedups", 15],
+  ["12 Hr Speedup", 15],
+  ["3 Hr Speedup", 40],
+  ["3 Hr Speedup", 40],
+  ["12 Hr Speedup", 15],
   ["Elemental Embers", 600],
   ["Ice Shards", 2500],
   ["Egg Tokens", 2800],
-  ["3-Hour Speedups", 40],
+  ["3 Hr Speedup", 40],
   ["Egg Tokens", 2800]
 ];
 

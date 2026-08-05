@@ -97,24 +97,30 @@
    */
   const DISPLAY_NAMES = {
     chest0: "Bronze Chests",
+    chest1: "Silver Chests",
     chest2: "Gold Chests",
     chest6: "Special Event Chests",
+    chest11: "Platinum Chests",
+    chest27: "Draconic Chests",
+    chest33: "Freedom Chests",
     chest4: "Gold Bonus Chest",
     chest12: "Platinum Bonus Chest",
     chest34: "Freedom Bonus Chest",
-    chest37: "Arcane Chest",
+    chest37: "Arcane Chests",
 
     rubies: "Rubies",
     sigil: "Sigils",
     eggToken: "Egg Tokens",
     breedingToken: "Egg Tokens",
 
-    expediteConsumable1: "15 Minute Speedup",
-    expediteConsumable2: "1 Hour Speedup",
-    expediteConsumable3: "3 Hour Speedup",
-    expediteConsumable4: "12 Hour Speedup",
+    expediteConsumable1: "15 Min Speedup",
+    expediteConsumable1a: "30 Min Speedup",
+    expediteConsumable2: "1 Hr Speedup",
+    expediteConsumable3: "3 Hr Speedup",
+    expediteConsumable4: "12 Hr Speedup",
 
     repairConsumable: "Defense Hammer",
+    energyPack: "Energy Packs",
     lumberConsumable2: "Lumber Packs",
     lumberPack_1400000: "1.4M Lumber Packs",
     elementalEmber: "Elemental Embers",
@@ -122,12 +128,23 @@
     mysticFragment: "Mystic Fragments",
     electrumBar: "Electrum Bars",
     cosmicCharge: "Cosmic Charge",
+    urbanflareSigil: "Urbanflare Sigil",
+    innerFire01: "Inner Fire",
+    innerFireConsumable: "Inner Fire",
+    cmCrystaldarkGemstone: "Dark Crafting Gemstones",
+    cmCrystalearthGemstone: "Earth Crafting Gemstones",
+    cmCrystalfireGemstone: "Fire Crafting Gemstones",
+    cmCrystaliceGemstone: "Ice Crafting Gemstones",
+    cmCrystalwindGemstone: "Wind Crafting Gemstones",
     E26Q2FestiveHunterDragonEvolutionFragment: "Seasonal Hunter Shards",
 
-    increaseBuildingAttack1: "+30% Tower Attack",
-    increaseBuildingHP1: "+30% Tower HP",
+    increaseAttack1: "Dragon Attack Boost",
+    increaseHP1: "Dragon HP Boost",
+    increaseBuildingAttack1: "Tower Attack Boost",
+    increaseBuildingHP1: "Tower HP Boost",
     fullHeal: "Healing Potions",
-    xpMultiplierSpellConsumable01: "XP Boost"
+    xpMultiplierSpellConsumable01: "Dragon XP Boost",
+    xpMultiplierSpellConsumable02: "Dragon XP Boost"
   };
 
   function isObject(value) {

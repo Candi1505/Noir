@@ -27,7 +27,7 @@
   const CATEGORIES = [
     {
       key: "sigils",
-      label: "Urbanflare Sigils",
+      label: "Urbanflare Sigil",
       test: name => /sigil/i.test(name)
     },
     {

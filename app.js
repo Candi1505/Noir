@@ -98,7 +98,7 @@
             "gold-breeding-tokens",
 
           name:
-            "Breeding Tokens",
+            "Egg Tokens",
 
           quantity:
             "",
@@ -190,7 +190,7 @@
             "platinum-breeding-tokens",
 
           name:
-            "Breeding Tokens",
+            "Egg Tokens",
 
           quantity:
             "",
@@ -280,7 +280,7 @@
             "draconic-breeding-tokens",
 
           name:
-            "Breeding Tokens",
+            "Egg Tokens",
 
           quantity:
             "",
@@ -372,7 +372,7 @@
             "freedom-breeding-tokens",
 
           name:
-            "Breeding Tokens",
+            "Egg Tokens",
 
           quantity:
             "",
