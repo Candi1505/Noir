@@ -1393,6 +1393,24 @@
             session?.user?.id || null;
           const currentUserId =
             currentUser?.id || null;
+          const passwordSetupActive =
+            window.NoirAccessControl
+              ?.isInviteSetupRequested?.() ||
+            window.NoirAccessControl
+              ?.isPasswordRecoveryActive?.();
+
+          /*
+            Supabase emits SIGNED_IN while consuming an invite
+            or recovery link. Reloading at that point can interrupt
+            browser session persistence and replace the password form
+            with the ordinary sign-in gate.
+          */
+          if (
+            event === "SIGNED_IN" &&
+            passwordSetupActive
+          ) {
+            return;
+          }
 
           if (
             (

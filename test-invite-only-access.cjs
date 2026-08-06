@@ -52,6 +52,11 @@ assert.match(
   "Startup must not cover the active recovery form with the app shell."
 );
 assert.match(
+  app,
+  /isInviteSetupRequested[\s\S]*?event === "SIGNED_IN"[\s\S]*?passwordSetupActive[\s\S]*?return;/,
+  "Invite sign-in must not reload before the player saves a password."
+);
+assert.match(
   html,
   /noindex, nofollow, noarchive/,
   "Search engines must receive no-index instructions."
