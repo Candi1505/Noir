@@ -6,6 +6,27 @@
 
 begin;
 
+-- Older Noir projects restricted the table to four chest types even though
+-- the publisher already accepted Arcane. Keep the storage constraint aligned
+-- with the five-chest payload so an Arcane insert cannot roll back the whole
+-- event and leave players on the previous week's sequence.
+alter table public.predictors
+drop constraint if exists predictors_chest_type_check;
+
+alter table public.predictors
+add constraint predictors_chest_type_check
+check (
+  chest_type = any (
+    array[
+      'gold'::text,
+      'platinum'::text,
+      'draconic'::text,
+      'freedom'::text,
+      'arcane'::text
+    ]
+  )
+);
+
 create or replace function public.publish_noir_event(
   p_version bigint,
   p_predictors jsonb

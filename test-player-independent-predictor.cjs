@@ -49,28 +49,50 @@ LivePredictorEngine.publishEventData(event, {
   sourceFile: "player-independent-test.har"
 });
 
-const sequence = [
-  ["12 Hr Speedup", 15],
-  ["3 Hr Speedup", 40],
-  ["3 Hr Speedup", 40],
-  ["12 Hr Speedup", 15],
-  ["Elemental Embers", 600],
-  ["Ice Shards", 2500],
-  ["Egg Tokens", 2800],
-  ["3 Hr Speedup", 40],
-  ["Egg Tokens", 2800]
-];
+function buildIndependentPlatinumSequence(limit = 200) {
+  const mainDeckKey = "platinum_chest";
+  const mainDeck = event.decks[mainDeckKey] || [];
+  const mainDrops = event.drops[mainDeckKey] || [];
+  const poolCursors = {};
+  const sequence = [];
+  const mainStart = Math.min(17, Math.max(0, mainDeck.length - 1));
 
-function findReward(name, amount) {
+  for (let offset = 0; offset < limit; offset += 1) {
+    const mainValue =
+      mainDeck[(mainStart + offset) % mainDeck.length];
+    const poolKey = mainDrops[mainValue]?.id;
+    const poolDeck = event.decks[poolKey] || [];
+    const poolDrops = event.drops[poolKey] || [];
+    const poolCursor = poolCursors[poolKey] || 0;
+    const poolValue = poolDeck[poolCursor % poolDeck.length];
+    const definition = poolDrops[poolValue];
+
+    if (!poolKey || !poolDeck.length || !definition) {
+      throw new Error("The Platinum nested deck could not build a test sequence.");
+    }
+
+    sequence.push({
+      code: definition.id,
+      amount: Number(definition.mu)
+    });
+    poolCursors[poolKey] = poolCursor + 1;
+  }
+
+  return sequence;
+}
+
+const sequence = buildIndependentPlatinumSequence();
+
+function findReward(code, amount) {
   const matches = LivePredictorEngine
     .getRewards("platinum")
     .filter(reward =>
-      reward.name.toLowerCase() === name.toLowerCase() &&
+      reward.code === code &&
       Number(reward.amount) === amount
     );
 
   if (!matches.length) {
-    throw new Error(`Missing reward option: ${name} ${amount}`);
+    throw new Error(`Missing reward option: ${code} ${amount}`);
   }
 
   return matches[0];
@@ -79,22 +101,35 @@ function findReward(name, amount) {
 LivePredictorEngine.setPlayerIdentity("player-a");
 LivePredictorEngine.resetHistory("platinum");
 
-for (const [name, amount] of sequence) {
-  const reward = findReward(name, amount);
+let playerASolution = null;
+let recordedSequence = [];
+
+for (const entry of sequence) {
+  const reward = findReward(entry.code, entry.amount);
   LivePredictorEngine.recordReward("platinum", {
     reward: reward.raw
   });
 
-  const solution = LivePredictorEngine.solvePosition("platinum");
-  if (!solution.matched) {
+  playerASolution = LivePredictorEngine.solvePosition("platinum");
+  recordedSequence.push(entry);
+
+  if (!playerASolution.matched) {
     throw new Error(
-      `Player A stopped matching after ${name} ${amount}: ${solution.message}`
+      `Player A stopped matching after ${entry.code} ${entry.amount}: ${playerASolution.message}`
     );
+  }
+
+  if (playerASolution.solved) {
+    break;
   }
 }
 
-const playerASolution =
-  LivePredictorEngine.solvePosition("platinum");
+if (!playerASolution?.solved) {
+  throw new Error(
+    "Player A did not solve its independent Platinum position within 200 rewards."
+  );
+}
+
 const playerAPredictions =
   LivePredictorEngine.predictUpcoming(20, "platinum");
 
@@ -110,7 +145,10 @@ if (LivePredictorEngine.getObservations("platinum").length) {
   throw new Error("Player A history leaked into Player B.");
 }
 
-const firstReward = findReward(...sequence[0]);
+const firstReward = findReward(
+  recordedSequence[0].code,
+  recordedSequence[0].amount
+);
 LivePredictorEngine.recordReward("platinum", {
   reward: firstReward.raw
 });
@@ -123,7 +161,7 @@ LivePredictorEngine.setPlayerIdentity("player-a");
 
 if (
   LivePredictorEngine.getObservations("platinum").length !==
-  sequence.length
+  recordedSequence.length
 ) {
   throw new Error("Player A progress was not restored after account switch.");
 }
@@ -132,7 +170,7 @@ console.log(JSON.stringify({
   event: event.event,
   poisonedPublishedCursors: Object.keys(event.deckIndices).length,
   playerA: {
-    observations: sequence.length,
+    observations: recordedSequence.length,
     matched: playerASolution.matched,
     confidence: playerASolution.confidence,
     predictions: playerAPredictions.length

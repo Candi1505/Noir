@@ -36,6 +36,34 @@ const eventData = {
   spinTypes: []
 };
 
+function runMigrationCoverageTest() {
+  const sql = fs.readFileSync(
+    "supabase/atomic_event_publish.sql",
+    "utf8"
+  );
+
+  if (
+    !/drop constraint if exists predictors_chest_type_check/i.test(sql) ||
+    !/add constraint predictors_chest_type_check/i.test(sql)
+  ) {
+    throw new Error(
+      "The event migration must replace the legacy four-chest table constraint."
+    );
+  }
+
+  const constraintBlock = sql.match(
+    /add constraint predictors_chest_type_check[\s\S]*?\);/i
+  )?.[0] || "";
+
+  chestTypes.forEach(chestType => {
+    if (!constraintBlock.includes(`'${chestType}'`)) {
+      throw new Error(
+        `The predictor table constraint is missing ${chestType}.`
+      );
+    }
+  });
+}
+
 async function runSuccessfulPublishTest() {
   const rpcCalls = [];
   global.chestSupabase = {
@@ -139,6 +167,7 @@ vm.runInThisContext(
 );
 
 Promise.resolve()
+  .then(runMigrationCoverageTest)
   .then(runSuccessfulPublishTest)
   .then(runMissingFunctionTest)
   .then(() => {

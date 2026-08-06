@@ -83,6 +83,37 @@ for (const [chestType, expectedRewards] of
   }
 }
 
+// Lax's first four visible Platinum results must remain a valid sequence for
+// the freshly published Archipelago deck. This catches stale-event and nested
+// reward matching regressions without borrowing the capture owner's cursor.
+LivePredictorEngine.setPlayerIdentity("lax-archipelago-regression");
+LivePredictorEngine.resetHistory("platinum");
+
+for (const [name, amount] of
+  expectedScreenshotRewards.platinum.slice(0, 4)) {
+  const reward = catalogues.platinum.find(
+    option =>
+      option.name === name &&
+      Number(option.amount) === amount
+  );
+
+  LivePredictorEngine.recordReward("platinum", {
+    reward: reward.raw
+  });
+
+  const solution =
+    LivePredictorEngine.solvePosition("platinum");
+
+  if (!solution.matched || solution.candidateCount < 1) {
+    throw new Error(
+      `Lax's Platinum sequence stopped matching after ${name} ${amount}.`
+    );
+  }
+}
+
+const laxPlatinumSolution =
+  LivePredictorEngine.solvePosition("platinum");
+
 const technicalNamePattern =
   /consumable|^e\d+q\d+|crystal(?:dark|earth|fire|ice|wind)gemstone|innerfire\d*|^chest\d+$/i;
 
@@ -147,5 +178,10 @@ console.log(JSON.stringify({
   screenshotRewardsVerified:
     Object.values(expectedScreenshotRewards)
       .flat().length,
+  laxPlatinumVisibleSequence: {
+    matched: laxPlatinumSolution.matched,
+    observations: 4,
+    candidateCount: laxPlatinumSolution.candidateCount
+  },
   capturedOpeningNames: capturedNames
 }, null, 2));
