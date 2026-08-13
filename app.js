@@ -1473,7 +1473,7 @@
       if (!player?.user) {
         window.NoirAccessControl?.show?.({
           message:
-            "NOIR • I ZI is private. Sign in with an approved invitation to enter."
+            "Sign in or create a player account to enter NOIR • I ZI."
         });
         return;
       }
@@ -1482,7 +1482,7 @@
         currentUser = player.user;
         window.NoirAccessControl?.show?.({
           message:
-            "Your account is signed in but has not been approved for Noir. Ask the administrator to approve your invitation.",
+            "This player account is blocked. Ask a NOIR administrator if you think this is a mistake.",
           failed: true,
           signedIn: true
         });

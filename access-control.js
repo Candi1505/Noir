@@ -1,5 +1,5 @@
 /* ============================================================
-   NOIR • I ZI — INVITE-ONLY ACCESS GATE
+   NOIR • I ZI — AUTHENTICATED PLAYER GATE
 
    The application shell is never opened by this module. It only
    verifies access and presents the private sign-in boundary.
@@ -12,6 +12,7 @@
   const get = id =>
     document.getElementById(id);
   let passwordRecoveryActive = false;
+  let showingSignUp = false;
   const inviteSetupRequested = (() => {
     try {
       return new URL(window.location.href)
@@ -35,7 +36,7 @@
 
   function show({
     message =
-      "Sign in with an approved invitation to enter.",
+      "Sign in or create a player account to enter.",
     failed = false,
     signedIn = false
   } = {}) {
@@ -59,9 +60,33 @@
     get("accessGatePassword")
       ?.classList.toggle("hidden", signedIn);
     get("accessGateSignIn")
+      ?.classList.toggle(
+        "hidden",
+        signedIn || showingSignUp
+      );
+    get("accessGateSignUpFields")
+      ?.classList.toggle(
+        "hidden",
+        signedIn || !showingSignUp
+      );
+    get("accessGateSignUp")
       ?.classList.toggle("hidden", signedIn);
+    get("accessGateBackToSignIn")
+      ?.classList.toggle(
+        "hidden",
+        signedIn || !showingSignUp
+      );
     get("accessGateResetPassword")
-      ?.classList.toggle("hidden", signedIn);
+      ?.classList.toggle(
+        "hidden",
+        signedIn || showingSignUp
+      );
+    if (get("accessGateSignUp")) {
+      get("accessGateSignUp").textContent =
+        showingSignUp
+          ? "Create player account"
+          : "Create account";
+    }
     setMessage(message, failed);
   }
 
@@ -107,7 +132,7 @@
 
     if (!email || !password) {
       setMessage(
-        "Enter your invited email and password.",
+        "Enter your email and password.",
         true
       );
       return;
@@ -124,7 +149,7 @@
       if (!access.isApproved) {
         show({
           message:
-            "Your account is signed in but has not been approved for Noir. Ask the administrator to approve your invitation.",
+            "This player account is blocked. Ask a NOIR administrator if you think this is a mistake.",
           failed: true,
           signedIn: true
         });
@@ -141,7 +166,7 @@
 
       setMessage(
         invalidCredentials
-          ? "Email or password not recognised. Use the email your invitation was sent to, or choose Forgot password."
+          ? "Email or password not recognised. Check your details, create an account, or choose Forgot password."
           : error?.message ||
         "Sign-in failed.",
         true
@@ -150,6 +175,124 @@
       button.disabled = false;
       button.textContent = "Sign in";
     }
+  }
+
+  function beginSignUp() {
+    showingSignUp = true;
+    show({
+      message:
+        "Create a player account with your email and a password."
+    });
+    get("accessGateSignUpNickname")
+      ?.focus();
+  }
+
+  function returnToSignIn() {
+    showingSignUp = false;
+    show({
+      message:
+        "Sign in or create a player account to enter."
+    });
+    get("accessGateEmail")?.focus();
+  }
+
+  async function submitSignUp() {
+    const email =
+      get("accessGateEmail")?.value;
+    const password =
+      get("accessGatePassword")?.value || "";
+    const confirmation =
+      get("accessGateSignUpConfirm")?.value || "";
+    const nickname =
+      get("accessGateSignUpNickname")?.value;
+    const button =
+      get("accessGateSignUp");
+
+    if (!email) {
+      setMessage(
+        "Enter your email address.",
+        true
+      );
+      return;
+    }
+
+    if (password.length < 8) {
+      setMessage(
+        "Use a password with at least 8 characters.",
+        true
+      );
+      return;
+    }
+
+    if (password !== confirmation) {
+      setMessage(
+        "The two passwords do not match.",
+        true
+      );
+      return;
+    }
+
+    button.disabled = true;
+    button.textContent = "Creating account...";
+
+    try {
+      const access =
+        await window.ChestDatabase
+          .signUpMember(
+            email,
+            password,
+            nickname
+          );
+
+      if (access.confirmationRequired) {
+        showingSignUp = false;
+        show({
+          message:
+            "Account created. Check your email to confirm it, then return here and sign in."
+        });
+        return;
+      }
+
+      if (!access.isApproved) {
+        show({
+          message:
+            "Your account was created but could not be opened. Ask a NOIR administrator to check it.",
+          failed: true,
+          signedIn: true
+        });
+        return;
+      }
+
+      window.location.reload();
+    } catch (error) {
+      const signUpDisabled =
+        error?.code === "signup_disabled" ||
+        /signups? (?:are|is) disabled|signup.*not allowed/i
+          .test(String(error?.message || ""));
+
+      setMessage(
+        signUpDisabled
+          ? "New account registration is temporarily unavailable. Please try again shortly."
+          : error?.message ||
+            "Your account could not be created.",
+        true
+      );
+    } finally {
+      button.disabled = false;
+      button.textContent =
+        showingSignUp
+          ? "Create player account"
+          : "Create account";
+    }
+  }
+
+  async function signUp() {
+    if (!showingSignUp) {
+      beginSignUp();
+      return;
+    }
+
+    await submitSignUp();
   }
 
   async function signOut() {
@@ -262,6 +405,13 @@
   function bind() {
     get("accessGateSignIn")
       ?.addEventListener("click", signIn);
+    get("accessGateSignUp")
+      ?.addEventListener("click", signUp);
+    get("accessGateBackToSignIn")
+      ?.addEventListener(
+        "click",
+        returnToSignIn
+      );
     get("accessGateSignOut")
       ?.addEventListener("click", signOut);
     get("accessGateResetPassword")
@@ -279,7 +429,20 @@
         "keydown",
         event => {
           if (event.key === "Enter") {
-            signIn();
+            if (showingSignUp) {
+              submitSignUp();
+            } else {
+              signIn();
+            }
+          }
+        }
+      );
+    get("accessGateSignUpConfirm")
+      ?.addEventListener(
+        "keydown",
+        event => {
+          if (event.key === "Enter") {
+            submitSignUp();
           }
         }
       );

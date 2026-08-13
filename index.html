@@ -77,15 +77,15 @@
   </section>
 
   <!-- ==========================================
-       INVITE-ONLY ACCESS GATE
+       AUTHENTICATED PLAYER ACCESS GATE
   =========================================== -->
 
   <section id="accessGate" class="access-gate hidden">
     <div class="access-gate-card glass-panel">
       <p class="eyebrow">NOIR • I ZI</p>
-      <h1>Private access</h1>
+      <h1>Player access</h1>
       <p id="accessGateMessage" class="muted-text">
-        Sign in with an approved invitation to enter.
+        Sign in or create a player account to enter.
       </p>
 
       <div id="accessGateCredentials" class="profile-form">
@@ -107,6 +107,39 @@
           type="button"
         >
           Sign in
+        </button>
+        <div
+          id="accessGateSignUpFields"
+          class="profile-form hidden"
+        >
+          <input
+            id="accessGateSignUpNickname"
+            type="text"
+            maxlength="30"
+            autocomplete="nickname"
+            placeholder="Player name (optional)"
+          >
+          <input
+            id="accessGateSignUpConfirm"
+            type="password"
+            minlength="8"
+            autocomplete="new-password"
+            placeholder="Confirm password"
+          >
+        </div>
+        <button
+          id="accessGateSignUp"
+          class="button secondary-button full-width-button"
+          type="button"
+        >
+          Create account
+        </button>
+        <button
+          id="accessGateBackToSignIn"
+          class="button secondary-button full-width-button hidden"
+          type="button"
+        >
+          Back to sign in
         </button>
         <button
           id="accessGateResetPassword"
@@ -159,7 +192,7 @@
       </div>
 
       <p class="access-gate-note">
-        NOIR • I ZI is invitation-only. Public registration is unavailable.
+        Email and password are required. New accounts are player-only and cannot publish event data.
       </p>
     </div>
   </section>
@@ -1531,8 +1564,8 @@
   =========================================== -->
 
 <script src="supabase.js"></script>
-<script src="database.js?v=20260813-six-chest"></script>
-<script src="access-control.js?v=20260805-invite-setup"></script>
+<script src="database.js?v=20260813-open-signup"></script>
+<script src="access-control.js?v=20260813-open-signup"></script>
 
 <script src="predictor-cloud.js?v=20260813-six-chest"></script>
   <script src="event-parser.js?v=20260730-arcane"></script>
@@ -1556,7 +1589,7 @@
 <script src="base-adviser-catalog-people.js?v=20260727-2"></script>
     <script src="base-planner.js?v=20260729-2"></script>
 
-  <script src="app.js?v=20260806-invite-password-race"></script>
+  <script src="app.js?v=20260813-open-signup"></script>
 
 </body>
 </html>

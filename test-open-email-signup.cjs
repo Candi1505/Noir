@@ -15,16 +15,15 @@ function element() {
       remove: name => classes.delete(name),
       contains: name => classes.has(name),
       toggle(name, force) {
-        const enabled =
-          force === undefined
-            ? !classes.has(name)
-            : force;
+        const enabled = force === undefined
+          ? !classes.has(name)
+          : force;
         if (enabled) classes.add(name);
         else classes.delete(name);
         return enabled;
       }
     },
-    addEventListener: (name, handler) => {
+    addEventListener(name, handler) {
       listeners[name] = handler;
     },
     focus() {},
@@ -57,25 +56,34 @@ const elements = Object.fromEntries(
   ids.map(id => [id, element()])
 );
 
-let authListener;
-let savedPassword;
+let signUpRequest;
 let reloaded = false;
 
 const window = {
   ChestDatabase: {
-    updateMemberPassword: async password => {
-      savedPassword = password;
+    signUpMember: async (
+      email,
+      password,
+      nickname
+    ) => {
+      signUpRequest = {
+        email,
+        password,
+        nickname
+      };
+      return {
+        isApproved: true,
+        confirmationRequired: false
+      };
     }
   },
   chestSupabase: {
     auth: {
-      onAuthStateChange: listener => {
-        authListener = listener;
-      }
+      onAuthStateChange() {}
     }
   },
   location: {
-    href: "https://candi1505.github.io/Noir/?invite=1#access_token=test",
+    href: "https://candi1505.github.io/Noir/",
     reload: () => {
       reloaded = true;
     }
@@ -96,43 +104,47 @@ vm.runInNewContext(
   { window, document, URL }
 );
 
-assert.equal(
-  typeof authListener,
-  "function",
-  "Supabase recovery listener must be registered."
-);
-
-authListener(
-  "SIGNED_IN",
-  { user: { id: "invited-player" } }
-);
+elements.accessGateSignUp.listeners.click();
 
 assert.equal(
-  elements.accessGateRecovery.classList.contains("hidden"),
+  elements.accessGateSignUpFields
+    .classList.contains("hidden"),
   false,
-  "Password setup must be visible after an invited user signs in."
+  "Create account must reveal player registration fields."
 );
 assert.equal(
-  elements.accessGateCredentials.classList.contains("hidden"),
+  elements.accessGateSignIn
+    .classList.contains("hidden"),
   true,
-  "Credential form must be hidden during password recovery."
-);
-assert.equal(
-  window.NoirAccessControl.isPasswordRecoveryActive(),
-  true
+  "Sign-in action must be hidden while registering."
 );
 
-elements.accessGateNewPassword.value = "new-secret-123";
-elements.accessGateConfirmPassword.value = "new-secret-123";
+elements.accessGateEmail.value =
+  "new.player@example.com";
+elements.accessGatePassword.value =
+  "safe-password-123";
+elements.accessGateSignUpConfirm.value =
+  "safe-password-123";
+elements.accessGateSignUpNickname.value =
+  "New Player";
 
 Promise.resolve(
-  elements.accessGateSavePassword.listeners.click()
+  elements.accessGateSignUp.listeners.click()
 ).then(() => {
-  assert.equal(savedPassword, "new-secret-123");
-  assert.equal(reloaded, true);
-  assert.equal(
-    window.NoirAccessControl.isPasswordRecoveryActive(),
-    false
+  assert.deepEqual(
+    signUpRequest,
+    {
+      email: "new.player@example.com",
+      password: "safe-password-123",
+      nickname: "New Player"
+    }
   );
-  console.log("Password recovery gate checks passed.");
+  assert.equal(
+    reloaded,
+    true,
+    "An immediately authenticated player must enter NOIR."
+  );
+  console.log(
+    "Open email/password sign-up checks passed."
+  );
 });
