@@ -9,7 +9,7 @@
 (function initialiseNoirChestTools(window, document) {
   "use strict";
 
-  const CHEST_ORDER = ["gold", "platinum", "draconic", "freedom", "arcane"];
+  const CHEST_ORDER = ["gold", "platinum", "draconic", "freedom", "arcane", "super_sigil"];
   const CHEST_META = {
     gold: {
       label: "Gold", icon: "◆", bonusEvery: 30,
@@ -30,6 +30,10 @@
     arcane: {
       label: "Arcane", icon: "🔮", bonusEvery: 15,
       singleCost: 1350, tenPackCost: 12000
+    },
+    super_sigil: {
+      label: "Super Sigil", icon: "✨", bonusEvery: 30,
+      singleCost: 625, tenPackCost: 8000
     }
   };
   const EVENT_KEY = "noirChestToolsEvent";
