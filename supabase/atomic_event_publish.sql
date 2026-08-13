@@ -1,4 +1,4 @@
--- NOIR • I ZI atomic five-chest event publishing
+-- NOIR • I ZI atomic six-chest event publishing
 --
 -- Run this once in Supabase SQL Editor before publishing an Arcane event.
 -- It validates every predictor first, then replaces all supplied chest
@@ -22,7 +22,8 @@ check (
       'platinum'::text,
       'draconic'::text,
       'freedom'::text,
-      'arcane'::text
+      'arcane'::text,
+      'super_sigil'::text
     ]
   )
 );
@@ -40,7 +41,7 @@ declare
   predictor jsonb;
   predictor_chest_type text;
   allowed_chest_types constant text[] :=
-    array['gold', 'platinum', 'draconic', 'freedom', 'arcane'];
+    array['gold', 'platinum', 'draconic', 'freedom', 'arcane', 'super_sigil'];
 begin
   if auth.uid() is null or not public.is_noir_admin() then
     raise exception 'Administrator access is required to publish predictor data';
@@ -53,7 +54,7 @@ begin
   if jsonb_typeof(p_predictors) <> 'array'
      or jsonb_array_length(p_predictors) = 0
      or jsonb_array_length(p_predictors) > array_length(allowed_chest_types, 1) then
-    raise exception 'Between one and five predictor records are required';
+    raise exception 'Between one and six predictor records are required';
   end if;
 
   -- Validate the whole request before changing any active rows.
