@@ -23,6 +23,11 @@
    * WD event traffic.
    */
   const CHEST_TYPES = {
+    "7": {
+      key: "super_sigil",
+      label: "Super Sigil Chest"
+    },
+
     "2": {
       key: "gold",
       label: "Gold Chest"
@@ -100,6 +105,7 @@
     chest1: "Silver Chests",
     chest2: "Gold Chests",
     chest6: "Special Event Chests",
+    chest8: "Super Sigil Bonus Chests",
     chest11: "Platinum Chests",
     chest27: "Draconic Chests",
     chest33: "Freedom Chests",
@@ -121,6 +127,8 @@
 
     repairConsumable: "Defense Hammer",
     energyPack: "Energy Packs",
+    foodPack_1400000: "1.4M Food Pack",
+    foodConsumable2: "Food Packs",
     lumberConsumable2: "Lumber Packs",
     lumberPack_1400000: "1.4M Lumber Packs",
     elementalEmber: "Elemental Embers",
@@ -136,7 +144,7 @@
     cmCrystalfireGemstone: "Fire Crafting Gemstones",
     cmCrystaliceGemstone: "Ice Crafting Gemstones",
     cmCrystalwindGemstone: "Wind Crafting Gemstones",
-    E26Q2FestiveHunterDragonEvolutionFragment: "Seasonal Hunter Shards",
+    E26Q2FestiveHunterDragonEvolutionFragment: "Festive Hunter Dragon Shards",
 
     increaseAttack1: "Dragon Attack Boost",
     increaseHP1: "Dragon HP Boost",
