@@ -8,7 +8,7 @@
 
    Responsibilities:
    - Reads published WD event data
-   - Supports Gold, Platinum, Draconic, Freedom and Arcane decks
+   - Supports Gold, Platinum, Draconic, Freedom, Arcane and Super Sigil decks
    - Creates a searchable reward catalogue
    - Records each player's observations locally
    - Solves the player's position
@@ -44,7 +44,8 @@
     "platinum",
     "draconic",
     "freedom",
-    "arcane"
+    "arcane",
+    "super_sigil"
   ];
 
   const CHEST_LABELS = {
@@ -52,7 +53,8 @@
     platinum: "Platinum",
     draconic: "Draconic",
     freedom: "Freedom",
-    arcane: "Arcane"
+    arcane: "Arcane",
+    super_sigil: "Super Sigil"
   };
   
   const CHEST_DECK_KEYS = {
@@ -60,7 +62,8 @@
   platinum: "platinum_chest",
   draconic: "dragfrag_chest_tier3",
   freedom: "freedom_chest",
-  arcane: "arcane_chest"
+  arcane: "arcane_chest",
+  super_sigil: "sigil_chest"
 };
 
   const BONUS_DECK_KEYS = {
@@ -68,7 +71,8 @@
     platinum: "platinum_chest_bonus",
     draconic: "dragfrag_chest_tier3_bonus",
     freedom: "freedom_chest_bonus",
-    arcane: "arcane_chest_bonus"
+    arcane: "arcane_chest_bonus",
+    super_sigil: "Legendary_sigil_drop"
   };
 
   const BONUS_FREQUENCIES = {
@@ -76,7 +80,8 @@
     platinum: 30,
     draconic: 30,
     freedom: 15,
-    arcane: 15
+    arcane: 15,
+    super_sigil: 30
   };
 
   let state =
@@ -273,7 +278,8 @@
       platinum: [],
       draconic: [],
       freedom: [],
-      arcane: []
+      arcane: [],
+      super_sigil: []
     },
 
     bonusProgress: {
@@ -281,7 +287,8 @@
       platinum: null,
       draconic: null,
       freedom: null,
-      arcane: null
+      arcane: null,
+      super_sigil: null
     },
 
     importedGachaIds: [],
@@ -1390,6 +1397,12 @@ function getBonusDeckKey(
       "bonus_arcane_chest",
       "arcane_bonus",
       "chest37"
+    ],
+    super_sigil: [
+      "Legendary_sigil_drop",
+      "super_sigil_bonus",
+      "sigil_bonus",
+      "chest8"
     ]
   }[normalised] || [];
 
@@ -1428,6 +1441,12 @@ function getBonusDeckKey(
     arcane: [
       "arcane",
       "chest37"
+    ],
+    super_sigil: [
+      "super sigil",
+      "super_sigil",
+      "sigil",
+      "chest8"
     ]
   }[normalised] || [];
 
