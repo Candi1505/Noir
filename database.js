@@ -484,7 +484,8 @@ async savePredictor({
     "platinum",
     "draconic",
     "freedom",
-    "arcane"
+    "arcane",
+    "super_sigil"
   ].includes(
     normalisedChestType
   )
@@ -737,7 +738,8 @@ async publishLiveEvent(
     "platinum",
     "draconic",
     "freedom",
-    "arcane"
+    "arcane",
+    "super_sigil"
   ].filter(
     chestType =>
       sanitisedEvent.chests[
