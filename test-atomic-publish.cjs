@@ -8,12 +8,13 @@ const chestTypes = [
   "platinum",
   "draconic",
   "freedom",
-  "arcane"
+  "arcane",
+  "super_sigil"
 ];
 const eventData = {
   event: "Upgrade Buildings",
   ready: true,
-  readyChestCount: 5,
+  readyChestCount: 6,
   chests: Object.fromEntries(
     chestTypes.map(chestType => [
       chestType,
@@ -95,8 +96,8 @@ async function runSuccessfulPublishTest() {
   if (rpcCalls[0].name !== "publish_noir_event") {
     throw new Error("The atomic event publisher was not used.");
   }
-  if (result.records.length !== 5) {
-    throw new Error("Five published records were expected.");
+  if (result.records.length !== 6) {
+    throw new Error("Six published records were expected.");
   }
 
   const publishedEvent =
@@ -172,6 +173,6 @@ Promise.resolve()
   .then(runMissingFunctionTest)
   .then(() => {
     console.log(
-      "Atomic five-chest publishing and safe missing-SQL failure passed."
+      "Atomic six-chest publishing and safe missing-SQL failure passed."
     );
   });

@@ -47,6 +47,13 @@
     return "arcane";
   }
 
+  if (
+    chest.includes("super sigil") ||
+    chest.includes("sigil")
+  ) {
+    return "super_sigil";
+  }
+
   return chest;
 }
 
