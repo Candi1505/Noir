@@ -54,8 +54,43 @@ if (!report.ready) {
   );
 }
 
-if (Object.keys(report.chests).length !== 5) {
-  throw new Error("Expected five chest readiness results.");
+if (Object.keys(report.chests).length !== 6) {
+  throw new Error("Expected six chest readiness results.");
+}
+
+if (!report.chests.gold.ready) {
+  throw new Error("The Gold regular and bonus decks should be ready.");
+}
+
+if (
+  report.chests.gold.regularRewards !== 20 ||
+  report.chests.gold.bonusRewards !== 9
+) {
+  throw new Error(
+    `Expected Gold to contain 20 regular and 9 bonus rewards, found ${report.chests.gold.regularRewards} and ${report.chests.gold.bonusRewards}.`
+  );
+}
+
+const foodPackRows = NoirChestTools.findRewards("1.4M Food Pack")
+  .filter(row => row.chestType === "gold");
+
+if (foodPackRows.length !== 2) {
+  throw new Error(
+    `Expected the Gold regular and bonus pools to expose the friendly 1.4M Food Pack name, found ${foodPackRows.length} matches.`
+  );
+}
+
+if (!report.chests.super_sigil.ready) {
+  throw new Error("The Super Sigil regular and bonus decks should be ready.");
+}
+
+if (
+  report.chests.super_sigil.regularRewards !== 8 ||
+  report.chests.super_sigil.bonusRewards !== 4
+) {
+  throw new Error(
+    `Expected Super Sigil to contain 8 regular and 4 bonus rewards, found ${report.chests.super_sigil.regularRewards} and ${report.chests.super_sigil.bonusRewards}.`
+  );
 }
 
 if (!report.chests.arcane.ready) {
@@ -90,6 +125,15 @@ console.log(
       readyChestCount: Object.values(
         report.chests
       ).filter(chest => chest.ready).length,
+      goldRewards: {
+        regular: report.chests.gold.regularRewards,
+        bonus: report.chests.gold.bonusRewards,
+        foodPackName: foodPackRows[0].name
+      },
+      superSigilRewards: {
+        regular: report.chests.super_sigil.regularRewards,
+        bonus: report.chests.super_sigil.bonusRewards
+      },
       arcaneWarnings:
         report.chests.arcane.warnings
     },
