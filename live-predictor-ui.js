@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 33062)
-Total output lines: 6559
-
 /* ============================================================
    CHEST COMPANION BETA
    LIVE PREDICTOR UI
@@ -2994,7 +2991,616 @@ Total output lines: 6559
 
     grid.innerHTML = `
       <div class="lp-selected-stat">
-        <spa…3062 tokens truncated… value !== null &&
+        <span>
+          Deck loaded
+        </span>
+
+        <strong>
+          ${
+            selected.loaded
+              ? "Yes"
+              : "No"
+          }
+        </strong>
+      </div>
+
+      <div class="lp-selected-stat">
+        <span>
+          Deck length
+        </span>
+
+        <strong>
+          ${formatNumber(
+            selected.length
+          )}
+        </strong>
+      </div>
+
+      <div class="lp-selected-stat">
+        <span>
+          Recorded rewards
+        </span>
+
+        <strong>
+          ${formatNumber(
+            history.length
+          )}
+        </strong>
+      </div>
+
+      <div class="lp-selected-stat">
+        <span>
+          Player position
+        </span>
+
+        <strong>
+          ${
+            playerPosition === null
+              ? "Not solved"
+              : formatNumber(
+                  playerPosition
+                )
+          }
+        </strong>
+      </div>
+
+      <div class="lp-selected-stat">
+        <span>
+          Matching positions
+        </span>
+
+        <strong>
+          ${
+            matchCount === null
+              ? "—"
+              : formatNumber(
+                  matchCount
+                )
+          }
+        </strong>
+      </div>
+
+      <div class="lp-selected-stat">
+        <span>
+          Confidence
+        </span>
+
+        <strong>
+          ${
+            confidence === null
+              ? "—"
+              : `${confidence}%`
+          }
+        </strong>
+      </div>
+
+      <div
+        class="
+          lp-selected-stat
+          lp-wide
+        "
+      >
+        <span>
+          Upcoming predictions
+        </span>
+
+        <strong>
+          ${formatNumber(
+            predictions.length
+          )}
+        </strong>
+      </div>
+    `;
+
+    if (!selected.loaded) {
+      message.className =
+        "lp-message lp-message-error";
+
+      message.textContent =
+        `${selected.label} deck data was not found ` +
+        "in the imported event file.";
+
+      return;
+    }
+
+    if (playerPosition !== null) {
+      message.className =
+        "lp-message lp-message-success";
+
+      message.textContent =
+        `${selected.label} position solved at ` +
+        `${formatNumber(playerPosition)}. ` +
+        `${predictions.length} upcoming reward(s) ` +
+        "are ready.";
+
+      return;
+    }
+
+    if (history.length > 0) {
+      message.className =
+        "lp-message";
+
+      message.textContent =
+        `${history.length} reward(s) recorded. ` +
+        "Continue recording consecutive chest drops " +
+        "until only one matching position remains.";
+
+      return;
+    }
+
+    message.className =
+      "lp-message lp-message-success";
+
+    message.textContent =
+      `${selected.label} live deck data is connected. ` +
+      "Record your first chest reward below to begin solving.";
+  }
+  
+    let selectedRewardState = {
+    chestType: null,
+    key: null
+  };
+
+  function getRawRewardList(chest) {
+    if (!chest) {
+      return [];
+    }
+
+    /*
+     * Always ask the engine for its resolved catalogue first.
+     * A chest status also contains the raw deck, which can be a list of
+     * numeric drop indexes. Treating that raw list as rewards makes the
+     * search box look populated internally while names such as "Egg",
+     * "Breeding" and "Sigil" can never match.
+     */
+    if (
+      typeof Engine.getRewards ===
+      "function"
+    ) {
+      try {
+        const resolvedRewards =
+          Engine.getRewards(
+            chest.chestType
+          );
+
+        if (
+          Array.isArray(
+            resolvedRewards
+          ) &&
+          resolvedRewards.length
+        ) {
+          return resolvedRewards;
+        }
+      } catch (error) {
+        console.warn(
+          "[Chest Companion] Could not read the resolved reward catalogue.",
+          error
+        );
+      }
+    }
+
+    const directCandidates = [
+      chest.rewards,
+      chest.entries,
+      chest.items,
+      chest.sequence,
+      chest.data,
+      chest.deck
+    ];
+
+    for (
+      const candidate of
+      directCandidates
+    ) {
+      if (Array.isArray(candidate)) {
+        return candidate;
+      }
+    }
+
+    const engineMethods = [
+      "getDeck",
+      "getChestDeck",
+      "getChestData"
+    ];
+
+    for (
+      const methodName of
+      engineMethods
+    ) {
+      const method =
+        Engine[methodName];
+
+      if (
+        typeof method !== "function"
+      ) {
+        continue;
+      }
+
+      try {
+        const result =
+          method.call(
+            Engine,
+            chest.chestType
+          );
+
+        if (Array.isArray(result)) {
+          return result;
+        }
+
+        if (
+          result &&
+          typeof result === "object"
+        ) {
+          const nestedCandidates = [
+            result.rewards,
+            result.deck,
+            result.entries,
+            result.items,
+            result.sequence,
+            result.data
+          ];
+
+          const nestedList =
+            nestedCandidates.find(
+              Array.isArray
+            );
+
+          if (nestedList) {
+            return nestedList;
+          }
+        }
+      } catch (error) {
+        console.warn(
+          `[Chest Companion] Could not read ${methodName}.`,
+          error
+        );
+      }
+    }
+
+    return [];
+  }
+
+  function normaliseReward(
+    reward,
+    index
+  ) {
+    if (
+      reward === null ||
+      reward === undefined
+    ) {
+      return null;
+    }
+
+    if (
+      typeof reward === "string" ||
+      typeof reward === "number"
+    ) {
+      const name =
+        String(reward);
+
+      return {
+        key:
+          `${index}:${name}`,
+        name,
+        code: "",
+        amount: null,
+        raw: reward
+      };
+    }
+
+    if (
+      typeof reward !== "object"
+    ) {
+      return null;
+    }
+
+    const name =
+      reward.name ??
+      reward.label ??
+      reward.rewardName ??
+      reward.reward_name ??
+      reward.title ??
+      reward.displayName ??
+      reward.display_name ??
+      reward.type ??
+      reward.reward ??
+      reward.item ??
+      reward.code ??
+      reward.id ??
+      `Reward ${index + 1}`;
+
+    const code =
+      reward.code ??
+      reward.rewardCode ??
+      reward.reward_code ??
+      reward.key ??
+      reward.id ??
+      reward.typeId ??
+      reward.type_id ??
+      "";
+
+    const rawAmount =
+      reward.amount ??
+      reward.quantity ??
+      reward.value ??
+      reward.count ??
+      reward.qty ??
+      reward.rewardAmount ??
+      reward.reward_amount ??
+      null;
+
+    const numericAmount =
+      Number(rawAmount);
+
+    const amount =
+      rawAmount !== null &&
+      rawAmount !== "" &&
+      Number.isFinite(
+        numericAmount
+      )
+        ? numericAmount
+        : null;
+
+    const key = [
+      String(code),
+      String(name),
+      amount === null
+        ? ""
+        : String(amount)
+    ].join("::");
+
+    return {
+      key:
+        key === "::::"
+          ? `reward-${index}`
+          : key,
+      name:
+        String(name),
+      code:
+        String(code),
+      amount,
+      raw: reward
+    };
+  }
+
+  function getRewardCatalogue(chest) {
+    const rawRewards =
+      getRawRewardList(chest);
+
+    const seen =
+      new Set();
+
+    const catalogue = [];
+
+    rawRewards.forEach(
+      (reward, index) => {
+        const normalised =
+          normaliseReward(
+            reward,
+            index
+          );
+
+        if (
+          !normalised ||
+          seen.has(
+            normalised.key
+          )
+        ) {
+          return;
+        }
+
+        seen.add(
+          normalised.key
+        );
+
+        catalogue.push(
+          normalised
+        );
+      }
+    );
+
+    return catalogue.sort(
+      (first, second) =>
+        first.name.localeCompare(
+          second.name,
+          undefined,
+          {
+            numeric: true,
+            sensitivity: "base"
+          }
+        )
+    );
+  }
+
+  function getSelectedReward(
+    chest,
+    catalogue
+  ) {
+    if (
+      !chest ||
+      selectedRewardState.chestType !==
+        chest.chestType
+    ) {
+      return null;
+    }
+
+    return (
+      catalogue.find(
+        reward =>
+          reward.key ===
+          selectedRewardState.key
+      ) || null
+    );
+  }
+
+  function renderRewardOptions(
+    status
+  ) {
+    const selectedChest =
+      getSelectedChest(status);
+
+    const container =
+      document.getElementById(
+        "lpRewardOptions"
+      );
+
+    const searchInput =
+      document.getElementById(
+        "lpRewardSearch"
+      );
+
+    if (
+      !container ||
+      !searchInput
+    ) {
+      return [];
+    }
+
+    if (
+      !selectedChest ||
+      !selectedChest.loaded
+    ) {
+      searchInput.disabled = true;
+
+      container.innerHTML = `
+        <div class="lp-empty-state">
+          Select a chest with live deck data
+          to view available rewards.
+        </div>
+      `;
+
+      return [];
+    }
+
+    searchInput.disabled = false;
+
+    const catalogue =
+      getRewardCatalogue(
+        selectedChest
+      );
+
+    if (!catalogue.length) {
+      container.innerHTML = `
+        <div class="lp-empty-state">
+          The live deck is connected, but no
+          readable reward entries were found.
+        </div>
+      `;
+
+      return [];
+    }
+
+    const searchTerm =
+      searchInput.value
+        .trim()
+        .toLowerCase();
+
+    const filteredRewards =
+      catalogue.filter(
+        reward => {
+          if (!searchTerm) {
+            return true;
+          }
+
+          const aliases = [];
+
+          if (reward.code === "breedingToken") {
+            aliases.push(
+                  "egg",
+                  "eggs",
+                  "egg token",
+                  "egg tokens",
+                  "breeding token",
+                  "breeding tokens"
+            );
+          }
+
+          const rewardAliases = {
+            innerFire01: [
+              "inner fire",
+              "inner fires",
+              "innerfire"
+            ],
+            innerFireConsumable: [
+              "inner fire",
+              "inner fires",
+              "innerfire"
+            ],
+            urbanflareSigil: [
+              "urbanflare sigil",
+              "urbanflare sigils"
+            ],
+            energyPack: [
+              "energy pack",
+              "energy packs"
+            ],
+            cmCrystaldarkGemstone: [
+              "dark gemstone",
+              "dark gemstones",
+              "dark crafting gemstone",
+              "dark crafting gemstones"
+            ],
+            cmCrystalearthGemstone: [
+              "earth gemstone",
+              "earth gemstones",
+              "earth crafting gemstone",
+              "earth crafting gemstones"
+            ],
+            cmCrystalfireGemstone: [
+              "fire gemstone",
+              "fire gemstones",
+              "fire crafting gemstone",
+              "fire crafting gemstones"
+            ],
+            cmCrystaliceGemstone: [
+              "ice gemstone",
+              "ice gemstones",
+              "ice crafting gemstone",
+              "ice crafting gemstones"
+            ],
+            cmCrystalwindGemstone: [
+              "wind gemstone",
+              "wind gemstones",
+              "wind crafting gemstone",
+              "wind crafting gemstones"
+            ]
+          }[reward.code];
+
+          if (rewardAliases) {
+            aliases.push(
+              ...rewardAliases
+            );
+          }
+
+          const speedupAliases = {
+            expediteConsumable1: ["15 min", "15min"],
+            expediteConsumable1a: ["30 min", "30min"],
+            expediteConsumable2: ["1 hour", "1hr"],
+            expediteConsumable3: ["3 hour", "3hr"],
+            expediteConsumable4: ["12 hour", "12hr"]
+          }[reward.code];
+
+          if (speedupAliases) {
+            aliases.push(
+              ...speedupAliases,
+              ...speedupAliases.map(
+                value => `${value} speedup`
+              ),
+              ...speedupAliases.map(
+                value => `${value} speedups`
+              )
+            );
+          }
+
+          const searchableText = [
+            reward.name,
+            reward.code,
+            reward.amount,
+            ...aliases
+          ]
+            .filter(
+              value =>
+                value !== null &&
                 value !== undefined
             )
             .join(" ")
