@@ -29,14 +29,15 @@ const chestConfig = {
   platinum: ["platinum_chest", "platinum_chest_bonus", 30],
   draconic: ["dragfrag_chest_tier3", "dragfrag_chest_tier3_bonus", 30],
   freedom: ["freedom_chest", "freedom_chest_bonus", 15],
-  arcane: ["arcane_chest", "arcane_chest_bonus", 15]
+  arcane: ["arcane_chest", "arcane_chest_bonus", 15],
+  super_sigil: ["sigil_chest", "Legendary_sigil_drop", 30]
 };
 
 const event = {
   schema: "noir-live-event-v1",
   event: "Player isolation regression",
   ready: true,
-  readyChestCount: 5,
+  readyChestCount: 6,
   chests: {},
   decks: {},
   drops: {},
@@ -88,7 +89,7 @@ for (const [chestType, [, , cadence]] of Object.entries(chestConfig)) {
   const regularReward = LivePredictorEngine
     .getRewards(chestType)
     .find(reward =>
-      reward.name.toLowerCase().includes(`${chestType} regular 1`)
+      reward.name.toLowerCase().includes(`${chestType.replaceAll("_", " ")} regular 1`)
     );
 
   if (!regularReward) {
