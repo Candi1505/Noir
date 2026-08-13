@@ -90,6 +90,7 @@
     expediteConsumable4: "12 Hr Speedup",
     energyPack: "Energy Packs",
     foodConsumable2: "Food Packs",
+    foodPack_1400000: "1.4M Food Pack",
     cmCrystaldarkGemstone: "Dark Crafting Gemstones",
     cmCrystalearthGemstone: "Earth Crafting Gemstones",
     cmCrystalfireGemstone: "Fire Crafting Gemstones",
