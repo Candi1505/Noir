@@ -59,6 +59,13 @@
         "arcane_chest_bonus",
         "arcane_bonus_chest"
       ]
+    },
+    super_sigil: {
+      label: "Super Sigil",
+      icon: "✨",
+      mainKey: "sigil_chest",
+      bonusEvery: 30,
+      bonusKeys: ["Legendary_sigil_drop"]
     }
   };
 
@@ -101,6 +108,7 @@
     chest1: "Silver Chests",
     chest2: "Gold Chests",
     chest6: "Special Event Chests",
+    chest8: "Super Sigil Bonus Chests",
     chest11: "Platinum Chests",
     chest27: "Draconic Chests",
     chest33: "Freedom Chests",

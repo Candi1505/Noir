@@ -9,9 +9,8 @@
  * - Gold chest deck
  * - Platinum chest deck
  * - Draconic chest deck
- * - Freedom and Arcane chest decks
- * - Freedom and Arcane reward pools
- * - 15-opening bonus-drop information
+ * - Freedom, Arcane and Super Sigil chest decks
+ * - Their nested reward pools and bonus-drop information
  */
 
 class EventParser {
@@ -193,6 +192,12 @@ class EventParser {
         mainKey: "arcane_chest",
         bonusEvery: 15,
         keyPatterns: [/^arcane_chest(?:_bonus)?$/, /^(?:epic|legendary|mythic)_arcane_items$/]
+      },
+      super_sigil: {
+        label: "Super Sigil",
+        mainKey: "sigil_chest",
+        bonusEvery: 30,
+        keyPatterns: [/^sigil_chest$/, /^(?:Epic|Legendary)_sigil_drop$/i]
       }
     };
     const sides = {};
@@ -632,6 +637,12 @@ const deckIndices =
         freedom: this.getFreedomData(),
 
         arcane: this.getArcaneData()
+        ,
+        super_sigil: {
+          ...this.getChest("sigil_chest", "Super Sigil"),
+          bonusEvery: 30,
+          bonusDescription: "Open 30 for a Super Sigil bonus drop."
+        }
       },
 
       decks:

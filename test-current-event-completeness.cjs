@@ -29,7 +29,7 @@ if (!harPath) throw new Error("Provide the current event HAR path.");
 const harText = fs.readFileSync(harPath, "utf8");
 const event = EventParser.parse(harText);
 const captured = HarGachaParser.parse(harText);
-const chestTypes = ["gold", "platinum", "draconic", "freedom", "arcane"];
+const chestTypes = ["gold", "platinum", "draconic", "freedom", "arcane", "super_sigil"];
 
 if (event.readyChestCount !== chestTypes.length || !event.ready) {
   throw new Error(`Expected ${chestTypes.length} ready chests; found ${event.readyChestCount}.`);

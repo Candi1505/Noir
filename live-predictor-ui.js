@@ -33,7 +33,8 @@
     platinum: "💎",
     draconic: "🐉",
     freedom: "🦅",
-    arcane: "🔮"
+    arcane: "🔮",
+    super_sigil: "✨"
   };
 
   let bonusProgressRenderTimer =
@@ -44,7 +45,8 @@
     platinum: "",
     draconic: "",
     freedom: "",
-    arcane: ""
+    arcane: "",
+    super_sigil: ""
   };
 
   function escapeHTML(value) {
@@ -5341,6 +5343,13 @@
       .filter(Boolean)
       .join(" ")
       .toLowerCase();
+
+    if (
+      text.includes("super sigil") ||
+      text.includes("super_sigil")
+    ) {
+      return "super_sigil";
+    }
 
     if (
       text.includes("arcane")
