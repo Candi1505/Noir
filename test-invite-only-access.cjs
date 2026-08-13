@@ -14,12 +14,18 @@ const access = read("access-control.js");
 const sql = read(
   "supabase/invite_only_access.sql"
 );
+const openSignupSql = read(
+  "supabase/open_email_signup.sql"
+);
+const registrationFunction = read(
+  "supabase/functions/noir-register/index.ts"
+);
 const robots = read("robots.txt");
 
 assert.match(
   html,
   /id="accessGate"/,
-  "Private sign-in gate must exist."
+  "Authenticated sign-in gate must exist."
 );
 assert.match(
   html,
@@ -61,15 +67,30 @@ assert.match(
   /noindex, nofollow, noarchive/,
   "Search engines must receive no-index instructions."
 );
-assert.doesNotMatch(
+assert.match(
   html,
   /Create (?:player )?account/i,
-  "Public account creation must not be offered."
+  "Email/password account creation must be offered."
+);
+assert.match(
+  database,
+  /\.invoke\([\s\S]*?"noir-register"/,
+  "The browser must call NOIR's controlled registration endpoint."
 );
 assert.doesNotMatch(
   database,
-  /\.signUp\s*\(/,
-  "The browser must not call public sign-up."
+  /\.auth\s*\.signUp\s*\(/,
+  "The browser must not depend on invitation or confirmation email limits."
+);
+assert.match(
+  access,
+  /signUpMember/,
+  "The authenticated gate must submit new player accounts."
+);
+assert.match(
+  access,
+  /password !== confirmation/,
+  "The account form must verify matching passwords."
 );
 assert.match(
   database,
@@ -94,7 +115,7 @@ assert.doesNotMatch(
 assert.match(
   access,
   /if \(!access\.isApproved\)/,
-  "The sign-in gate must verify approval."
+  "Blocked accounts must still be rejected."
 );
 assert.match(
   sql,
@@ -112,9 +133,64 @@ assert.match(
   "Approval fields must be protected from self-promotion."
 );
 assert.doesNotMatch(
-  sql,
+  openSignupSql,
   /update public\.profiles\s+set access_approved = true\s+where access_approved is false/i,
   "Existing non-admin profiles must not be approved in bulk."
+);
+assert.match(
+  openSignupSql,
+  /after insert on auth\.users/i,
+  "Only newly created Auth users should enter the open registration path."
+);
+assert.match(
+  openSignupSql,
+  /coalesce\(new\.is_anonymous, false\) is true/i,
+  "Anonymous users must not be approved."
+);
+assert.match(
+  openSignupSql,
+  /'player'[\s\S]*?false[\s\S]*?true/i,
+  "New accounts must be player-only, non-admin and approved."
+);
+assert.match(
+  openSignupSql,
+  /revoke all on function public\.register_new_noir_player\(\)[\s\S]*?from public, anon, authenticated/i,
+  "The registration trigger function must not be callable by browsers."
+);
+assert.match(
+  openSignupSql,
+  /create table if not exists public\.noir_registration_attempts/i,
+  "Public registration must have a server-side rate-limit ledger."
+);
+assert.match(
+  openSignupSql,
+  /grant execute on function public\.claim_noir_registration\(text\)[\s\S]*?to service_role/i,
+  "Only the server role may claim a registration attempt."
+);
+assert.match(
+  openSignupSql,
+  /pg_advisory_xact_lock/i,
+  "Concurrent registration attempts must be counted atomically."
+);
+assert.match(
+  registrationFunction,
+  /const allowedOrigin = "https:\/\/candi1505\.github\.io"/,
+  "Registration must be restricted to NOIR's live origin."
+);
+assert.match(
+  registrationFunction,
+  /SUPABASE_SERVICE_ROLE_KEY/,
+  "Account creation must stay inside the server function."
+);
+assert.doesNotMatch(
+  registrationFunction,
+  /eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/,
+  "The server function must not contain a hard-coded Supabase key."
+);
+assert.match(
+  registrationFunction,
+  /email_confirm: true/,
+  "New accounts must work without consuming confirmation emails."
 );
 assert.equal(
   robots.trim(),
@@ -123,5 +199,5 @@ assert.equal(
 );
 
 console.log(
-  "Invite-only access checks passed."
+  "Authenticated email/password access checks passed."
 );

@@ -117,6 +117,84 @@ window.ChestDatabase = {
     return this.getCurrentAccess();
   },
 
+  async signUpMember(
+    email,
+    password,
+    nickname = ""
+  ) {
+    const cleanEmail =
+      String(email || "").trim();
+    const cleanPassword =
+      String(password || "");
+    const cleanNickname =
+      String(nickname || "")
+        .trim()
+        .slice(0, 30);
+
+    if (!cleanEmail) {
+      throw new Error(
+        "Enter your email address."
+      );
+    }
+
+    if (cleanPassword.length < 8) {
+      throw new Error(
+        "Use a password with at least 8 characters."
+      );
+    }
+
+    const { data, error } =
+      await window.chestSupabase.functions
+        .invoke(
+          "noir-register",
+          {
+            body: {
+              email: cleanEmail,
+              password: cleanPassword,
+              nickname:
+                cleanNickname || "Player"
+            }
+          }
+        );
+
+    if (error) {
+      let responseMessage = "";
+
+      try {
+        const responseBody =
+          await error.context?.json?.();
+        responseMessage =
+          String(responseBody?.message || "");
+      } catch (readError) {
+        /* Use the safe fallback below. */
+      }
+
+      throw new Error(
+        responseMessage ||
+        error.message ||
+        "Your account could not be created."
+      );
+    }
+
+    if (!data?.ok) {
+      throw new Error(
+        data?.message ||
+        "Your account could not be created."
+      );
+    }
+
+    const access =
+      await this.signInMember(
+        cleanEmail,
+        cleanPassword
+      );
+
+    return {
+      ...access,
+      confirmationRequired: false
+    };
+  },
+
   async sendPasswordReset(email) {
     const cleanEmail =
       String(email || "").trim();
@@ -177,7 +255,7 @@ window.ChestDatabase = {
     Gets the current Supabase session.
 
     Chest Companion never creates anonymous accounts. A player
-    must explicitly sign in with an approved invited account.
+    must explicitly sign in with an email and password.
   */
 
   async getOrCreateSession() {
