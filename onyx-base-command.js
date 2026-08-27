@@ -79,9 +79,9 @@
 
   function formatCost(cost) {
     const [rawName, rawAmount] = String(cost || "").split(":");
-    if (!rawName || !rawAmount) return "Not captured";
+    if (!rawName || !rawAmount) return "Not available";
     const name = RESOURCE_NAMES[rawName];
-    return name ? `${formatNumber(rawAmount)} ${name}` : `${formatNumber(rawAmount)} · resource label not captured`;
+    return name ? `${formatNumber(rawAmount)} ${name}` : `${formatNumber(rawAmount)} · resource type unavailable`;
   }
 
   function userId() {
@@ -101,7 +101,7 @@
   }
 
   function descriptionFor(type) {
-    return catalogue().towers?.find(item => item?.name === type)?.description || "No player-facing description was captured for this tower.";
+    return catalogue().towers?.find(item => item?.name === type)?.description || "No verified description is available for this tower.";
   }
 
   function rowsFor(type) {
@@ -212,13 +212,13 @@
   function renderRestriction(rule) {
     const parts = [];
     if (Number(rule.maximumPerIsland) > 0) {
-      parts.push(`Captured maximum per island: ${rule.maximumPerIsland}`);
+      parts.push(`Verified maximum per island: ${rule.maximumPerIsland}`);
     }
     const conflicts = Array.isArray(rule.conflicts)
       ? rule.conflicts.map(id => RULE_NAMES[id]).filter(Boolean)
       : [];
     if (conflicts.length) parts.push(`Recorded conflicts: ${conflicts.join(", ")}`);
-    return parts.length ? parts.join(" · ") : "A tower rule is present, but the capture does not provide a safe player-facing limit to state.";
+    return parts.length ? parts.join(" · ") : "A tower restriction is recorded, but no verified player-facing limit is available.";
   }
 
   function renderIntelligence() {
@@ -237,8 +237,8 @@
 
     return `
       <section class="obc-source-banner">
-        <strong>HAR-powered Tower Intelligence</strong>
-        <p>Uses tower data that is actually present: names, descriptions, captured level rows, costs, build time, unlocks and recorded restrictions.</p>
+        <strong>Verified Tower Intelligence</strong>
+        <p>Uses verified tower names, descriptions, level data, costs, build times, unlocks and restrictions.</p>
       </section>
 
       <section class="obc-panel">
@@ -258,7 +258,7 @@
 
       <section class="obc-panel obc-tower-card">
         <div class="obc-section-heading">
-          <div><p>CAPTURED TOWER</p><h3>${escapeHtml(selectedTower || "No tower selected")}</h3></div>
+          <div><p>TOWER INTELLIGENCE</p><h3>${escapeHtml(selectedTower || "No tower selected")}</h3></div>
           <span>${rows.length ? `Levels ${minimum}–${maximum}` : "No level table"}</span>
         </div>
         <p class="obc-description">${escapeHtml(descriptionFor(selectedTower))}</p>
@@ -277,7 +277,7 @@
             <div><small>Build time</small><strong>${escapeHtml(formatDuration(row.seconds))}</strong></div>
             <div><small>Building XP</small><strong>${formatNumber(row.xp)}</strong></div>
           </div>
-          ${next ? `<p class="obc-next-level">Next captured level: ${next.level} · ${escapeHtml(formatCost(next.cost))} · ${escapeHtml(formatDuration(next.seconds))}</p>` : `<p class="obc-next-level">No next-level row is present in this captured catalogue.</p>`}
+          ${next ? `<p class="obc-next-level">Next available level: ${next.level} · ${escapeHtml(formatCost(next.cost))} · ${escapeHtml(formatDuration(next.seconds))}</p>` : `<p class="obc-next-level">No next-level data is available.</p>`}
         ` : `
           <div class="obc-no-evidence">
             <strong>No verified row for level ${escapeHtml(selectedLevel)}</strong>
@@ -294,7 +294,7 @@
       </section>
 
       <section class="obc-honesty-note">
-        <strong>No home-base layout was found in the HAR.</strong>
+        <strong>Your home-base layout must be added manually.</strong>
         <p>Tower Intelligence does not infer where your towers are placed and does not generate a defensive-power estimate from missing geometry.</p>
       </section>
     `;
@@ -308,7 +308,7 @@
     return `
       <section class="obc-builder-empty">
         <span data-onyx-icon="layout" aria-hidden="true"></span>
-        <p>YOUR LAYOUT IS NOT IN THE HAR</p>
+        <p>ADD YOUR BASE LAYOUT</p>
         <h3>Build your base manually</h3>
         <p>Select and save the towers you actually have. Onyx will never fill empty slots with guessed data.</p>
         <label>Base name
@@ -405,7 +405,7 @@
 
       <section class="obc-honesty-note">
         <strong>No fake layout score or DP forecast</strong>
-        <p>Onyx can show exact captured stats for the towers you entered. It will not claim a best placement or calculate absolute defensive power without verified geometry and battle mechanics.</p>
+        <p>Onyx can show exact verified stats for the towers you entered. It will not claim a best placement or calculate absolute defensive power without verified geometry and battle mechanics.</p>
       </section>
 
       <section class="obc-delete-panel">

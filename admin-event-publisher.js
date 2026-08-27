@@ -43,7 +43,7 @@
     const recoveryPanel =
       get("passwordRecoveryPanel");
     const controls =
-      get("adminHarControls");
+      get("adminDataControls");
     const importButton =
       get("importEventDataButton");
 

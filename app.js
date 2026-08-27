@@ -3032,7 +3032,7 @@
         );
 
       title =
-        "Sequence Captured";
+        "Sequence Recorded";
 
       prediction =
         `${recordedDrops.length} drops recorded. Exact prediction will activate once the full sequence table has been loaded.`;

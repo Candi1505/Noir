@@ -2697,8 +2697,8 @@
             id="lpPredictionWarning"
             class="lp-prediction-warning"
           >
-            Predictions depend on the imported event
-            data and the accuracy of recorded rewards.
+            Predictions depend on current event
+            intelligence and accurately recorded rewards.
           </div>
         </section>
       </div>
@@ -2961,7 +2961,7 @@
         "lp-message lp-message-error";
 
       message.textContent =
-        "Import an about_v2 event file to begin.";
+        "Current chest intelligence is not available yet.";
 
       return;
     }
@@ -3098,7 +3098,7 @@
 
       message.textContent =
         `${selected.label} deck data was not found ` +
-        "in the imported event file.";
+        "for the current event.";
 
       return;
     }
@@ -5209,7 +5209,7 @@
             `of ${predictions.length} predicted rewards.`
           )
         : (
-            "Predictions depend on the imported event data and the accuracy of recorded rewards."
+            "Predictions depend on current event intelligence and accurately recorded rewards."
           );
   }
 
@@ -5227,7 +5227,7 @@
     ).textContent =
       status.ready
         ? `${status.readyChestCount} live deck(s) connected`
-        : "Import an about_v2 file to begin";
+        : "Waiting for current event intelligence";
 
     document.getElementById(
       "lpEventDetails"

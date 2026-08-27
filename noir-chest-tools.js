@@ -165,7 +165,7 @@
       if (!bonus?.rootKey || !bonusRewards.length) {
         if (chestType === "arcane" && regular?.rootKey && regularRewards.length) {
           chestWarnings.push(
-            "bonus rewards unverified until an Arcane bonus claim is captured"
+            "bonus rewards remain unverified until the bonus is confirmed"
           );
         } else {
           chestIssues.push("bonus rewards missing");
