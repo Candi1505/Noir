@@ -10,8 +10,8 @@
   const MAP_HEIGHT = 500;
 
   const ISLANDS = Object.freeze([
-    { name: "Gateway", form: "long", zone: "lower-right", x: 445, y: 260, width: 180, height: 108, tilt: -5 },
-    { name: "Ember Bend", form: "bend-left", zone: "lower-right", x: 321, y: 340, width: 180, height: 108, tilt: 5 },
+    { name: "Gateway", form: "long", zone: "lower-right", x: 321, y: 340, width: 180, height: 108, tilt: 5 },
+    { name: "Ember Bend", form: "bend-left", zone: "lower-right", x: 445, y: 260, width: 180, height: 108, tilt: -5 },
     { name: "Veil", form: "short", zone: "upper-right", x: 518, y: 92, width: 170, height: 104, tilt: 4 },
     { name: "Northglass Bend", form: "bend-right", zone: "upper-right", x: 338, y: 140, width: 170, height: 106, tilt: -5 },
     { name: "Pivot Reach", form: "long", zone: "upper-right", x: 293, y: 220, width: 176, height: 108, tilt: 6 },

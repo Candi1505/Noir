@@ -31,8 +31,8 @@ assert.match(
   /live-predictor-ui\.js\?v=20260827-onyx-predictor-1/
 );
 assert.match(html, /onyx-tower-inventory-bridge\.js\?v=20260827-base-command-1/);
-assert.match(html, /onyx-base-command\.js\?v=20260827-reference-layout-1/);
-assert.match(html, /onyx-command\.css\?v=20260827-reference-layout-1/);
+assert.match(html, /onyx-base-command\.js\?v=20260827-swap-gateway-ember-1/);
+assert.match(html, /onyx-command\.css\?v=20260827-swap-gateway-ember-1/);
 assert.match(livePredictorSource, /ONYX COMMAND · CHEST INTELLIGENCE/);
 assert.match(livePredictorSource, /aria-pressed/);
 assert.match(livePredictorSource, /data-lp-chest-type/);
@@ -55,7 +55,8 @@ assert.match(baseSource, /zone: "lower-right"/);
 assert.equal((baseSource.match(/zone: "left-run"/g) || []).length, 3);
 assert.equal((baseSource.match(/zone: "upper-right"/g) || []).length, 3);
 assert.equal((baseSource.match(/zone: "lower-right"/g) || []).length, 2);
-assert.match(baseSource, /name: "Gateway"[^\n]+zone: "lower-right"[^\n]+x: 445[^\n]+y: 260/);
+assert.match(baseSource, /name: "Gateway"[^\n]+zone: "lower-right"[^\n]+x: 321[^\n]+y: 340/);
+assert.match(baseSource, /name: "Ember Bend"[^\n]+zone: "lower-right"[^\n]+x: 445[^\n]+y: 260/);
 assert.match(baseSource, /name: "Northglass Bend"[^\n]+zone: "upper-right"[^\n]+x: 338[^\n]+y: 140/);
 assert.match(baseSource, /name: "Command Crown"[^\n]+zone: "left-run"[^\n]+x: 134[^\n]+y: 78/);
 assert.match(commandCss, /--island-floor:/);
