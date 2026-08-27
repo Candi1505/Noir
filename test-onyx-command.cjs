@@ -8,6 +8,7 @@ const seasonSource = fs.readFileSync("onyx-season-data.js", "utf8");
 const riderDataSource = fs.readFileSync("onyx-rider-intelligence-data.js", "utf8");
 const baseSource = fs.readFileSync("onyx-base-command.js", "utf8");
 const fortificationSource = fs.readFileSync("onyx-fortification-command.js", "utf8");
+const warDragonsApiSource = fs.readFileSync("onyx-war-dragons-api.js", "utf8");
 const commandCss = fs.readFileSync("onyx-command.css", "utf8");
 const chestToolsSource = fs.readFileSync("noir-chest-tools.js", "utf8");
 const livePredictorSource = fs.readFileSync("live-predictor-ui.js", "utf8");
@@ -38,7 +39,7 @@ assert.doesNotMatch(
   /"(?:sessionToken|cookie|email|playerId|request|response|headers?)"\s*:/i
 );
 assert.doesNotMatch(
-  html + commandSource + seasonSource + chestToolsSource + livePredictorSource + fortificationSource,
+  html + commandSource + seasonSource + chestToolsSource + livePredictorSource + fortificationSource + warDragonsApiSource,
   /\p{Extended_Pictographic}/u,
   "The Onyx mobile shell must use its SVG icon system instead of emoji."
 );
@@ -53,9 +54,10 @@ assert.match(html, /onyx-base-command\.js\?v=20260828-fortification-command-1/);
 assert.match(html, /onyx-season-data\.js\?v=20260827-season-branch-1/);
 assert.match(html, /onyx-rider-intelligence-data\.js\?v=20260828-rider-command-1/);
 assert.match(html, /onyx-atlas-command\.js\?v=20260828-atlas-terms-1/);
+assert.match(html, /onyx-war-dragons-api\.js\?v=20260828-war-dragons-link-1/);
 assert.match(html, /onyx-command\.js\?v=20260828-atlas-command-1/);
 assert.doesNotMatch(commandSource, /Private source boundary/);
-assert.match(html, /onyx-command\.css\?v=20260828-fortification-command-1/);
+assert.match(html, /onyx-command\.css\?v=20260828-war-dragons-link-1/);
 assert.match(html, /onyx-atlas-command\.css\?v=20260828-atlas-command-1/);
 assert.match(commandSource, /window\.OnyxAtlasCommand\?\.open\?\.\(\)/);
 assert.match(livePredictorSource, /ONYX COMMAND · CHEST INTELLIGENCE/);

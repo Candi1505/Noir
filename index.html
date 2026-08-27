@@ -17,7 +17,7 @@
   <title>Onyx Command — War Dragons Companion</title>
 
 <link rel="stylesheet" href="styles.css?v=20260730-arcane">
-<link rel="stylesheet" href="onyx-command.css?v=20260828-fortification-command-1">
+<link rel="stylesheet" href="onyx-command.css?v=20260828-war-dragons-link-1">
 <link rel="stylesheet" href="onyx-atlas-command.css?v=20260828-atlas-command-1">
 
   <style>
@@ -622,6 +622,43 @@
           <p>
             Verified game intelligence stays separate from the personal details you add yourself.
           </p>
+        </section>
+
+        <section class="onyx-api-link" aria-labelledby="onyxWdApiTitle">
+          <div class="onyx-api-orbit" aria-hidden="true">
+            <span data-onyx-icon="intel"></span>
+          </div>
+          <div class="onyx-api-link-copy">
+            <p class="onyx-command-kicker">OFFICIAL API LINK</p>
+            <h3 id="onyxWdApiTitle">War Dragons connection</h3>
+            <p id="onyxWdApiMessage">
+              Test the private Supabase gateway using your signed-in Onyx account.
+            </p>
+            <div class="onyx-api-actions">
+              <button id="onyxWdApiTest" type="button">
+                Verify official profile
+              </button>
+              <span id="onyxWdApiStatus" data-state="idle" role="status">
+                Ready to verify
+              </span>
+            </div>
+          </div>
+          <details id="onyxWdShapePanel" class="onyx-api-shape" hidden>
+            <summary>Safe response shape</summary>
+            <p>
+              Field names and data types only. No profile values, API keys or credentials.
+            </p>
+            <textarea
+              id="onyxWdShapeOutput"
+              rows="10"
+              readonly
+              spellcheck="false"
+              aria-label="Safe War Dragons API response shape"
+            ></textarea>
+            <button id="onyxWdCopyShape" type="button">
+              Copy safe field shape
+            </button>
+          </details>
         </section>
 
         <div class="onyx-intel-grid">
@@ -1464,6 +1501,7 @@
   <script src="onyx-rider-intelligence-data.js?v=20260828-rider-command-1"></script>
   <script src="onyx-tower-inventory-bridge.js?v=20260827-base-command-1"></script>
   <script src="app.js?v=20260828-onyx-parity-1"></script>
+  <script src="onyx-war-dragons-api.js?v=20260828-war-dragons-link-1"></script>
   <script src="onyx-fortification-command.js?v=20260828-fortification-command-1"></script>
   <script src="onyx-base-command.js?v=20260828-fortification-command-1"></script>
   <script src="onyx-atlas-command.js?v=20260828-atlas-terms-1"></script>

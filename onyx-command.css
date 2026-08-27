@@ -463,6 +463,190 @@ main {
   color: #999ba5;
 }
 
+.onyx-api-link {
+  position: relative;
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 16px;
+  margin-top: 12px;
+  padding: 20px;
+  overflow: hidden;
+  border: 1px solid rgba(218, 181, 82, .32);
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 11% 18%, rgba(130, 77, 213, .22), transparent 14rem),
+    linear-gradient(135deg, rgba(25, 22, 31, .97), rgba(8, 10, 14, .98));
+  box-shadow:
+    inset 0 1px rgba(255, 255, 255, .045),
+    0 18px 42px rgba(0, 0, 0, .28);
+}
+
+.onyx-api-link::after {
+  content: "";
+  position: absolute;
+  right: -32px;
+  top: -42px;
+  width: 150px;
+  height: 150px;
+  border: 1px solid rgba(216, 180, 80, .13);
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 22px rgba(132, 75, 207, .035),
+    0 0 0 46px rgba(216, 180, 80, .025);
+  pointer-events: none;
+}
+
+.onyx-api-orbit {
+  position: relative;
+  z-index: 1;
+  width: 70px;
+  height: 70px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(215, 179, 81, .42);
+  border-radius: 50%;
+  color: #d9b650;
+  background: radial-gradient(circle, rgba(126, 70, 199, .3), rgba(9, 10, 14, .9) 68%);
+  box-shadow: 0 0 28px rgba(128, 73, 205, .21), inset 0 0 18px rgba(220, 183, 80, .08);
+}
+
+.onyx-api-orbit::before {
+  content: "";
+  position: absolute;
+  inset: 7px;
+  border: 1px dashed rgba(225, 194, 108, .31);
+  border-radius: 50%;
+}
+
+.onyx-api-orbit span,
+.onyx-api-orbit svg {
+  width: 35px;
+  height: 35px;
+}
+
+.onyx-api-orbit svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+}
+
+.onyx-api-link-copy {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+}
+
+.onyx-api-link-copy h3 {
+  margin-top: 3px;
+  color: #ece8ec;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.48rem;
+  font-weight: 400;
+}
+
+.onyx-api-link-copy > p:last-of-type {
+  margin-top: 7px;
+  color: #9b9ca7;
+  font-size: .82rem;
+  line-height: 1.48;
+}
+
+.onyx-api-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.onyx-api-actions button,
+.onyx-api-shape button {
+  min-height: 42px;
+  padding: 9px 15px;
+  border: 1px solid rgba(222, 184, 80, .55);
+  border-radius: 12px;
+  color: #fff8e6;
+  background: linear-gradient(135deg, #a97931, #71469b);
+  font: inherit;
+  font-weight: 820;
+  cursor: pointer;
+  box-shadow: inset 0 1px rgba(255, 255, 255, .1);
+}
+
+.onyx-api-actions button:disabled {
+  cursor: wait;
+  opacity: .64;
+}
+
+.onyx-api-actions span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 6px 11px;
+  border: 1px solid rgba(172, 175, 187, .18);
+  border-radius: 999px;
+  color: #aaaab2;
+  background: rgba(4, 5, 8, .68);
+  font-size: .7rem;
+  font-weight: 800;
+}
+
+.onyx-api-actions span[data-state="working"] {
+  color: #d9bd75;
+  border-color: rgba(218, 184, 94, .34);
+}
+
+.onyx-api-actions span[data-state="connected"] {
+  color: #79d9ac;
+  border-color: rgba(92, 210, 157, .36);
+  box-shadow: 0 0 18px rgba(61, 194, 136, .1);
+}
+
+.onyx-api-actions span[data-state="error"] {
+  color: #e78a98;
+  border-color: rgba(224, 100, 120, .35);
+}
+
+.onyx-api-shape {
+  position: relative;
+  z-index: 1;
+  grid-column: 1 / -1;
+  padding-top: 15px;
+  border-top: 1px solid rgba(197, 199, 210, .12);
+}
+
+.onyx-api-shape summary {
+  color: #d9c58e;
+  font-size: .78rem;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.onyx-api-shape p {
+  margin: 8px 0;
+  color: #838590;
+  font-size: .7rem;
+  line-height: 1.45;
+}
+
+.onyx-api-shape textarea {
+  width: 100%;
+  min-height: 170px;
+  padding: 13px;
+  resize: vertical;
+  border: 1px solid rgba(185, 188, 201, .18);
+  border-radius: 13px;
+  color: #c7c8d0;
+  background: rgba(3, 4, 7, .82);
+  font: 600 .68rem/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.onyx-api-shape button {
+  width: 100%;
+  margin-top: 9px;
+  background: linear-gradient(135deg, rgba(164, 119, 47, .72), rgba(92, 56, 130, .88));
+}
+
 .onyx-intel-grid {
   display: grid;
   gap: 11px;
@@ -5937,6 +6121,39 @@ body.onyx-modal-open {
 }
 
 @media (max-width: 470px) {
+  .onyx-api-link {
+    grid-template-columns: 56px minmax(0, 1fr);
+    gap: 12px;
+    padding: 16px;
+    border-radius: 18px;
+  }
+
+  .onyx-api-orbit {
+    width: 54px;
+    height: 54px;
+  }
+
+  .onyx-api-orbit span,
+  .onyx-api-orbit svg {
+    width: 28px;
+    height: 28px;
+  }
+
+  .onyx-api-link-copy h3 {
+    font-size: 1.24rem;
+  }
+
+  .onyx-api-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .onyx-api-actions button,
+  .onyx-api-actions span {
+    justify-content: center;
+    width: 100%;
+  }
+
   .onyx-season-tabs button {
     min-height: 42px;
     padding: 6px 3px;
