@@ -56,6 +56,13 @@
     "bloodstone": 3
   });
   const MYTHIC_CHOICES = new Set(["", "Patchmaw", "Smirkle"]);
+  const RIDER_MISSIONS = new Set(["flight", "base", "economy"]);
+  const RIDER_DRAGON_CLASSES = new Set(["hunter", "warrior", "sorcerer", "invoker"]);
+  const RIDER_PRIORITIES = Object.freeze({
+    flight: new Set(["balanced", "damage", "endurance", "control"]),
+    base: new Set(["balanced", "damage", "endurance"]),
+    economy: new Set(["speed", "production", "training"])
+  });
 
   function defaultCommandState() {
     return {
@@ -71,8 +78,12 @@
 
   let commandState = defaultCommandState();
   let seasonTab = "planner";
+  let riderWorkspaceTab = "advisor";
   let riderCatalogueMode = "riders";
   let riderCatalogueQuery = "";
+  let riderMission = "flight";
+  let riderDragonClass = "hunter";
+  let riderPriority = "balanced";
 
   function escapeHtml(value) {
     return String(value ?? "")
@@ -85,6 +96,180 @@
 
   function formatNumber(value) {
     return new Intl.NumberFormat("en-AU").format(Number(value) || 0);
+  }
+
+  function riderIntelligenceData() {
+    return window.OnyxRiderIntelligenceData || {
+      riderCount: 0,
+      skillNodeCount: 0,
+      gearRecordCount: 0,
+      effectTypeCount: 0,
+      profiles: []
+    };
+  }
+
+  function riderEffectBucket(type, dragonClass) {
+    const value = String(type || "");
+    const lower = value.toLowerCase();
+    if (lower === "dragonattackmodifier") return "attack";
+    if (lower === `dragonclassattackmodifier_${dragonClass}`) return "classAttack";
+    if (lower.startsWith("dragonclassattackmodifier_")) return "otherClass";
+    if (lower === "dragonhpmodifier") return "health";
+    if (lower === `dragonclasshpmodifier_${dragonClass}`) return "classHealth";
+    if (lower.startsWith("dragonclasshpmodifier_")) return "otherClass";
+    if (lower.includes("ragegeneration")) return "rage";
+    if (dragonClass === "hunter" && lower.includes("totalammoincrease")) return "ammo";
+    if (lower.includes("resistability") || lower.includes("totemdebuffresist")) return "resist";
+    if (lower.startsWith("spell_") || lower.startsWith("spelldamage") || lower.startsWith("spellduration") || lower.startsWith("spellcooldown") || lower.startsWith("spellhealing")) return "spell";
+    if (lower.startsWith("buildingattackmodifier")) return "baseAttack";
+    if (lower.startsWith("buildinghpmodifier")) return "baseHealth";
+    if (lower.includes("buildingtimer") || lower.includes("researchtime")) return "speed";
+    if (lower.includes("production") || lower.includes("capacity") || lower.includes("currencyprotection")) return "production";
+    if (lower.includes("trainingcost") || lower.includes("healtime") || lower.includes("xpgain")) return "training";
+    return "other";
+  }
+
+  function riderScoreWeights(mission, priority) {
+    if (mission === "base") {
+      const weights = { defensive: 7, baseAttack: 10, baseHealth: 10, speed: 1, production: 1 };
+      if (priority === "damage") {
+        weights.baseAttack = 15;
+        weights.baseHealth = 6;
+      } else if (priority === "endurance") {
+        weights.baseAttack = 6;
+        weights.baseHealth = 15;
+      }
+      return weights;
+    }
+    if (mission === "economy") {
+      const weights = { speed: 8, production: 8, training: 8, baseAttack: 1, baseHealth: 1 };
+      weights[priority] = 15;
+      return weights;
+    }
+    const weights = {
+      attack: 6,
+      classAttack: 10,
+      health: 5,
+      classHealth: 9,
+      rage: 7,
+      ammo: 6,
+      resist: 3,
+      spell: 3,
+      training: 1
+    };
+    if (priority === "damage") {
+      weights.attack = 9;
+      weights.classAttack = 15;
+      weights.health = 3;
+      weights.classHealth = 5;
+    } else if (priority === "endurance") {
+      weights.attack = 3;
+      weights.classAttack = 6;
+      weights.health = 9;
+      weights.classHealth = 14;
+      weights.resist = 6;
+    } else if (priority === "control") {
+      weights.rage = 13;
+      weights.ammo = 10;
+      weights.spell = 7;
+    }
+    return weights;
+  }
+
+  function riderComponentLabel(bucket, dragonClass) {
+    const classLabel = dragonClass ? `${dragonClass[0].toUpperCase()}${dragonClass.slice(1)}` : "Dragon";
+    return {
+      defensive: "Defensive rider role",
+      attack: "Dragon attack",
+      classAttack: `${classLabel} attack`,
+      health: "Dragon health",
+      classHealth: `${classLabel} health`,
+      rage: "Rage generation",
+      ammo: "Hunter ammunition",
+      resist: "Tower resistance",
+      spell: "Rider spell utility",
+      baseAttack: "Tower attack coverage",
+      baseHealth: "Tower health coverage",
+      speed: "Build and research speed",
+      production: "Production and protection",
+      training: "Training, healing and XP"
+    }[bucket] || "Verified effect";
+  }
+
+  function riderTradeoff(groups, mission) {
+    if (mission === "base") {
+      if (!groups.has("baseAttack")) return "No verified tower-attack skill appears in this rider tree.";
+      if (!groups.has("baseHealth")) return "No verified tower-health skill appears in this rider tree.";
+      return "Exact tower coverage depends on the skill path you actually choose.";
+    }
+    if (mission === "economy") {
+      const missing = ["speed", "production", "training"].filter(bucket => !groups.has(bucket));
+      return missing.length
+        ? `No verified ${riderComponentLabel(missing[0]).toLowerCase()} effect appears in this tree.`
+        : "This ranks utility effects only; it does not measure combat strength.";
+    }
+    if (!groups.has("classAttack") && !groups.has("classHealth")) {
+      return "No class-specific attack or health effect appears in this rider tree.";
+    }
+    if (!groups.has("rage")) return "No verified rage-generation effect appears in this rider tree.";
+    return "The final build still depends on mutually exclusive skill-path choices.";
+  }
+
+  function scoreRiderProfile(profile, options = {}) {
+    const mission = RIDER_MISSIONS.has(options.mission) ? options.mission : "flight";
+    const dragonClass = RIDER_DRAGON_CLASSES.has(options.dragonClass) ? options.dragonClass : "hunter";
+    const allowedPriorities = RIDER_PRIORITIES[mission];
+    const priority = allowedPriorities.has(options.priority)
+      ? options.priority
+      : mission === "economy" ? "speed" : "balanced";
+    const weights = riderScoreWeights(mission, priority);
+    const groups = new Map();
+    (Array.isArray(profile?.effects) ? profile.effects : []).forEach(effect => {
+      const bucket = riderEffectBucket(effect?.type, dragonClass);
+      if (!weights[bucket]) return;
+      const current = groups.get(bucket) || { count: 0, maximum: 0 };
+      current.count += 1;
+      current.maximum = Math.max(current.maximum, Math.abs(Number(effect?.maximum) || 0));
+      groups.set(bucket, current);
+    });
+    if (mission === "base" && profile?.defensive) groups.set("defensive", { count: 1, maximum: 1 });
+    const components = [...groups.entries()].map(([bucket, detail]) => ({
+      bucket,
+      label: riderComponentLabel(bucket, dragonClass),
+      points: Math.round((weights[bucket] || 0) + Math.min(4, Math.max(0, detail.count - 1))),
+      evidenceCount: detail.count
+    })).sort((left, right) => right.points - left.points);
+    const score = components.reduce((sum, component) => sum + component.points, 0);
+    return {
+      name: String(profile?.name || "Unknown rider"),
+      defensive: Boolean(profile?.defensive),
+      tier: Number(profile?.tier) || 0,
+      skillNodes: Number(profile?.skillNodes) || 0,
+      skills: Array.isArray(profile?.skills) ? profile.skills.slice() : [],
+      score,
+      components,
+      tradeoff: riderTradeoff(new Set(groups.keys()), mission)
+    };
+  }
+
+  function scoreRiderProfiles(options = {}) {
+    const profiles = Array.isArray(riderIntelligenceData().profiles)
+      ? riderIntelligenceData().profiles
+      : [];
+    const ranked = profiles
+      .map(profile => scoreRiderProfile(profile, options))
+      .filter(result => result.score > 0)
+      .sort((left, right) => right.score - left.score || left.name.localeCompare(right.name));
+    const leadingScore = ranked[0]?.score || 1;
+    return ranked.map((result, index) => ({
+      ...result,
+      rank: index + 1,
+      fit: result.score >= leadingScore * 0.85
+        ? "Priority match"
+        : result.score >= leadingScore * 0.65
+          ? "Strong alternative"
+          : "Specialist option"
+    }));
   }
 
   function icon(name, className = "") {
@@ -543,19 +728,121 @@
     `);
   }
 
-  function renderRiders() {
+  function riderPriorityOptions() {
+    if (riderMission === "base") return [
+      ["balanced", "Balanced defence"],
+      ["damage", "Tower attack"],
+      ["endurance", "Tower health"]
+    ];
+    if (riderMission === "economy") return [
+      ["speed", "Build speed"],
+      ["production", "Production"],
+      ["training", "Training & XP"]
+    ];
+    return [
+      ["balanced", "Balanced flight"],
+      ["damage", "Damage"],
+      ["endurance", "Endurance"],
+      ["control", "Rage & control"]
+    ];
+  }
+
+  function riderEvidenceSkills(result) {
+    const buckets = new Set(result.components.map(component => component.bucket));
+    const patterns = [];
+    if (buckets.has("attack") || buckets.has("classAttack")) patterns.push(/attack/i);
+    if (buckets.has("health") || buckets.has("classHealth")) patterns.push(/\bHP\b|health/i);
+    if (buckets.has("rage")) patterns.push(/rage/i);
+    if (buckets.has("ammo")) patterns.push(/ammo/i);
+    if (buckets.has("resist")) patterns.push(/resist|debuff/i);
+    if (buckets.has("spell")) patterns.push(/spell|grant rider/i);
+    if (buckets.has("baseAttack") || buckets.has("baseHealth")) patterns.push(/tower|building/i);
+    if (buckets.has("speed")) patterns.push(/time/i);
+    if (buckets.has("production")) patterns.push(/production|storage|protection/i);
+    if (buckets.has("training")) patterns.push(/training|healing|XP/i);
+    const matching = result.skills.filter(skill => patterns.some(pattern => pattern.test(skill)));
+    return [...new Set(matching)].slice(0, 3);
+  }
+
+  function renderRiderAdvisor() {
+    const matches = scoreRiderProfiles({
+      mission: riderMission,
+      dragonClass: riderDragonClass,
+      priority: riderPriority
+    }).slice(0, 6);
+    const missionLabel = riderMission === "flight"
+      ? `${riderDragonClass[0].toUpperCase()}${riderDragonClass.slice(1)} flight`
+      : riderMission === "base" ? "Base defence" : "Economy and development";
+    return `
+      <section class="onyx-rider-advisor">
+        <div class="onyx-rider-command-heading">
+          <div><p class="onyx-command-kicker">MISSION PROFILE</p><h3>Build a rider shortlist</h3></div>
+          <span>Tap to tune</span>
+        </div>
+        <div class="onyx-rider-missions" role="group" aria-label="Rider mission">
+          ${[
+            ["flight", "rider", "Dragon flight", "Match combat skills"],
+            ["base", "base", "Base defence", "Match tower effects"],
+            ["economy", "calculators", "Development", "Match utility effects"]
+          ].map(([value, iconName, label, detail]) => `
+            <button type="button" data-rider-mission="${value}" class="${riderMission === value ? "active" : ""}" aria-pressed="${riderMission === value}">
+              ${icon(iconName)}<span><strong>${label}</strong><small>${detail}</small></span>
+            </button>
+          `).join("")}
+        </div>
+        ${riderMission === "flight" ? `
+          <div class="onyx-rider-control-block">
+            <small>DRAGON CLASS</small>
+            <div class="onyx-rider-choice-row" role="group" aria-label="Dragon class">
+              ${["hunter", "warrior", "sorcerer", "invoker"].map(value => `<button type="button" data-rider-class="${value}" class="${riderDragonClass === value ? "active" : ""}" aria-pressed="${riderDragonClass === value}">${value[0].toUpperCase()}${value.slice(1)}</button>`).join("")}
+            </div>
+          </div>
+        ` : ""}
+        <div class="onyx-rider-control-block">
+          <small>COMMAND PRIORITY</small>
+          <div class="onyx-rider-choice-row" role="group" aria-label="Rider priority">
+            ${riderPriorityOptions().map(([value, label]) => `<button type="button" data-rider-priority="${value}" class="${riderPriority === value ? "active" : ""}" aria-pressed="${riderPriority === value}">${label}</button>`).join("")}
+          </div>
+        </div>
+      </section>
+      <section class="onyx-rider-match-section">
+        <div class="onyx-rider-match-heading">
+          <div><p class="onyx-command-kicker">EXPLAINABLE MATCHING</p><h3>${escapeHtml(missionLabel)} candidates</h3></div>
+          <span>Onyx fit score</span>
+        </div>
+        <p class="onyx-rider-score-note">The score ranks verified effects for this mission. It is an Onyx comparison—not an in-game stat, ownership check or instruction to spend resources.</p>
+        <div class="onyx-rider-match-list">
+          ${matches.map(result => {
+            const evidenceSkills = riderEvidenceSkills(result);
+            return `
+              <article class="onyx-rider-match-card ${result.rank === 1 ? "lead" : ""}">
+                <div class="onyx-rider-rank"><span>${String(result.rank).padStart(2, "0")}</span><small>${escapeHtml(result.fit)}</small></div>
+                <div class="onyx-rider-match-copy">
+                  <div class="onyx-rider-name"><div><strong>${escapeHtml(result.name)}</strong><small>${formatNumber(result.skillNodes)} linked skill nodes${result.defensive ? " · defensive role" : ""}</small></div><b>${formatNumber(result.score)}</b></div>
+                  <div class="onyx-rider-components">
+                    ${result.components.slice(0, 4).map(component => `<span>${escapeHtml(component.label)} <b>+${formatNumber(component.points)}</b></span>`).join("")}
+                  </div>
+                  ${evidenceSkills.length ? `<p class="onyx-rider-evidence">Evidence: ${evidenceSkills.map(escapeHtml).join(" · ")}</p>` : ""}
+                  <p class="onyx-rider-tradeoff"><strong>Trade-off:</strong> ${escapeHtml(result.tradeoff)}</p>
+                </div>
+              </article>
+            `;
+          }).join("") || `<p class="onyx-empty-state">No verified rider effects match this mission yet.</p>`}
+        </div>
+      </section>
+    `;
+  }
+
+  function renderRiderCatalogue() {
     const catalogue = window.NoirBaseCatalog || {};
     const riders = Array.isArray(catalogue.riders) ? catalogue.riders : [];
     const skills = Array.isArray(catalogue.riderSkills) ? catalogue.riderSkills : [];
     const gear = Array.isArray(catalogue.riderGear) ? catalogue.riderGear : [];
-    return shell("Rider Intelligence", "RIDER CATALOGUE", `
-      <section class="onyx-source-banner verified">
-        <strong>Verified rider, skill and gear catalogue</strong>
-        <p>${formatNumber(riders.length)} rider names · ${formatNumber(skills.length)} skill definitions · ${formatNumber(gear.length)} gear definitions. This does not imply player ownership or a skill-to-rider association.</p>
-      </section>
-      <section class="onyx-command-section">
-        <p class="onyx-command-kicker">SEARCH</p>
-        <h3>Explore rider intelligence</h3>
+    return `
+      <section class="onyx-command-section onyx-rider-catalogue">
+        <p class="onyx-command-kicker">REFERENCE LIBRARY</p>
+        <h3>Search rider intelligence</h3>
+        <p>${formatNumber(riders.length)} riders · ${formatNumber(skills.length)} consolidated skill definitions · ${formatNumber(gear.length)} consolidated gear definitions</p>
         <div class="onyx-rider-filters" role="group" aria-label="Rider catalogue type">
           ${[
             ["riders", "Riders"],
@@ -568,22 +855,23 @@
           <p class="onyx-empty-state">Loading rider catalogue…</p>
         </div>
       </section>
-      <section class="onyx-evidence-note onyx-rider-note">
-        Onyx shows only verified catalogue fields. It does not infer which riders, levels, skills or gear belong to your account.
-      </section>
-    `);
+    `;
   }
 
-  function renderAtlas() {
-    return shell("Atlas Command", "AUTHORISED DATA ONLY", `
-      <section class="onyx-source-banner manual">
-        <strong>No authorised Atlas account is connected</strong>
-        <p>Onyx will not scrape, invent or expose private Atlas information. This command activates only through a player-authorised official scope.</p>
+  function renderRiders() {
+    const data = riderIntelligenceData();
+    return shell("Rider Intelligence", "RIDER COMMAND", `
+      <section class="onyx-source-banner verified onyx-rider-source">
+        <strong>Rider command graph ready</strong>
+        <p>${formatNumber(data.riderCount)} rider trees · ${formatNumber(data.skillNodeCount)} linked skill nodes · ${formatNumber(data.gearRecordCount)} gear and effect records. Every match shows its reasoning.</p>
       </section>
-      <section class="onyx-command-section onyx-empty-command">
-        ${icon("atlas", "onyx-empty-icon")}
-        <h3>Atlas intelligence is standing by</h3>
-        <p>Your existing chest and season tools continue to work without Atlas access.</p>
+      <nav class="onyx-rider-workspace-tabs" role="tablist" aria-label="Rider Intelligence views">
+        <button type="button" role="tab" data-rider-workspace="advisor" aria-selected="${riderWorkspaceTab === "advisor"}" class="${riderWorkspaceTab === "advisor" ? "active" : ""}">${icon("rider")}<span>Match rider</span></button>
+        <button type="button" role="tab" data-rider-workspace="catalogue" aria-selected="${riderWorkspaceTab === "catalogue"}" class="${riderWorkspaceTab === "catalogue" ? "active" : ""}">${icon("intel")}<span>Reference library</span></button>
+      </nav>
+      ${riderWorkspaceTab === "advisor" ? renderRiderAdvisor() : renderRiderCatalogue()}
+      <section class="onyx-evidence-note onyx-rider-note">
+        Onyx compares verified possible skill effects. It never assumes that you own a rider, have completed a particular skill path or equipped specific gear.
       </section>
     `);
   }
@@ -619,7 +907,6 @@
     if (command === "season") return renderSeason();
     if (command === "chest") return renderChest();
     if (command === "rider") return renderRiders();
-    if (command === "atlas") return renderAtlas();
     if (command === "calculators") return renderCalculators();
     return renderMenu();
   }
@@ -638,6 +925,10 @@
   function open(command = "menu") {
     if (command === "base") {
       window.OnyxBaseCommand?.open?.();
+      return;
+    }
+    if (command === "atlas") {
+      window.OnyxAtlasCommand?.open?.();
       return;
     }
     const requested = VALID_COMMANDS.has(command) ? command : "menu";
@@ -744,6 +1035,14 @@
     overlay.scrollTop = scrollTop;
   }
 
+  function refreshRiderOverlay(overlay) {
+    const scrollTop = overlay.scrollTop;
+    overlay.innerHTML = renderRiders();
+    hydrateIcons(overlay);
+    bindOverlay(overlay);
+    overlay.scrollTop = scrollTop;
+  }
+
   function bindOverlay(overlay) {
     overlay.querySelector("[data-command-close]")?.addEventListener("click", close);
     if (overlay.dataset.onyxDelegated !== "true") {
@@ -814,6 +1113,37 @@
       seasonTab = "planner";
       refreshSeasonOverlay(overlay);
     });
+    overlay.querySelectorAll("[data-rider-workspace]").forEach(button => {
+      button.addEventListener("click", () => {
+        riderWorkspaceTab = button.dataset.riderWorkspace === "catalogue" ? "catalogue" : "advisor";
+        refreshRiderOverlay(overlay);
+      });
+    });
+    overlay.querySelectorAll("[data-rider-mission]").forEach(button => {
+      button.addEventListener("click", () => {
+        const mission = button.dataset.riderMission;
+        if (!RIDER_MISSIONS.has(mission)) return;
+        riderMission = mission;
+        riderPriority = mission === "economy" ? "speed" : "balanced";
+        refreshRiderOverlay(overlay);
+      });
+    });
+    overlay.querySelectorAll("[data-rider-class]").forEach(button => {
+      button.addEventListener("click", () => {
+        const dragonClass = button.dataset.riderClass;
+        if (!RIDER_DRAGON_CLASSES.has(dragonClass)) return;
+        riderDragonClass = dragonClass;
+        refreshRiderOverlay(overlay);
+      });
+    });
+    overlay.querySelectorAll("[data-rider-priority]").forEach(button => {
+      button.addEventListener("click", () => {
+        const priority = button.dataset.riderPriority;
+        if (!RIDER_PRIORITIES[riderMission]?.has(priority)) return;
+        riderPriority = priority;
+        refreshRiderOverlay(overlay);
+      });
+    });
     overlay.querySelectorAll("[data-rider-category]").forEach(button => {
       button.addEventListener("click", () => {
         riderCatalogueMode = button.dataset.riderCategory;
@@ -854,7 +1184,9 @@
     getState: () => JSON.parse(JSON.stringify(commandState)),
     getSeasonRelease,
     planSeasonRoute,
-    normaliseCommandState
+    normaliseCommandState,
+    scoreRiderProfile,
+    scoreRiderProfiles
   });
 
   if (document.readyState === "loading") {

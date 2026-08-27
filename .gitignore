@@ -1,6 +1,11 @@
 # Private game-data captures and local imports
 *.har
 *.HAR
+*.har.zip
+*.HAR.zip
+private_*capture/
+raw_*capture/
+extracted_*state/
 
 # Local environment and credential files
 .env
@@ -16,4 +21,3 @@ service-account*.json
 # Local tooling output
 node_modules/
 .DS_Store
-

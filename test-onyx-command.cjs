@@ -5,6 +5,7 @@ const vm = require("node:vm");
 const html = fs.readFileSync("index.html", "utf8");
 const commandSource = fs.readFileSync("onyx-command.js", "utf8");
 const seasonSource = fs.readFileSync("onyx-season-data.js", "utf8");
+const riderDataSource = fs.readFileSync("onyx-rider-intelligence-data.js", "utf8");
 const baseSource = fs.readFileSync("onyx-base-command.js", "utf8");
 const commandCss = fs.readFileSync("onyx-command.css", "utf8");
 const chestToolsSource = fs.readFileSync("noir-chest-tools.js", "utf8");
@@ -12,8 +13,10 @@ const livePredictorSource = fs.readFileSync("live-predictor-ui.js", "utf8");
 const towerBridgeSource = fs.readFileSync("onyx-tower-inventory-bridge.js", "utf8");
 const profileSql = fs.readFileSync("supabase/onyx_command_profile_state.sql", "utf8");
 const databaseSource = fs.readFileSync("database.js", "utf8");
+const gitignore = fs.readFileSync(".gitignore", "utf8");
 
 assert.match(html, /<title>Onyx Command/);
+assert.match(gitignore, /\*\.har\.zip/);
 assert.equal((html.match(/class="onyx-command-card /g) || []).length, 6);
 assert.equal((html.match(/class="navigation-button/g) || []).length, 3);
 assert.doesNotMatch(html, /<script[^>]+base-planner\.js/);
@@ -45,9 +48,13 @@ assert.match(html, /onyx-tower-inventory-bridge\.js\?v=20260827-base-command-1/)
 assert.match(html, /database\.js\?v=20260827-monuments-perches-1/);
 assert.match(html, /onyx-base-command\.js\?v=20260827-merge-calculator-1/);
 assert.match(html, /onyx-season-data\.js\?v=20260827-season-branch-1/);
-assert.match(html, /onyx-command\.js\?v=20260827-season-branch-2/);
+assert.match(html, /onyx-rider-intelligence-data\.js\?v=20260828-rider-command-1/);
+assert.match(html, /onyx-atlas-command\.js\?v=20260828-atlas-command-1/);
+assert.match(html, /onyx-command\.js\?v=20260828-atlas-command-1/);
 assert.doesNotMatch(commandSource, /Private source boundary/);
-assert.match(html, /onyx-command\.css\?v=20260827-season-branch-1/);
+assert.match(html, /onyx-command\.css\?v=20260828-atlas-command-1/);
+assert.match(html, /onyx-atlas-command\.css\?v=20260828-atlas-command-1/);
+assert.match(commandSource, /window\.OnyxAtlasCommand\?\.open\?\.\(\)/);
 assert.match(livePredictorSource, /ONYX COMMAND · CHEST INTELLIGENCE/);
 assert.match(livePredictorSource, /aria-pressed/);
 assert.match(livePredictorSource, /data-lp-chest-type/);
@@ -102,6 +109,16 @@ assert.match(baseSource, /Seagazer Perch/);
 assert.match(baseSource, /Stonespear Perch/);
 assert.match(baseSource, /Rider gear/);
 assert.match(baseSource, /Only verified building HP and attack modifiers/);
+assert.match(commandSource, /Rider command graph ready/);
+assert.match(commandSource, /EXPLAINABLE MATCHING/);
+assert.match(commandSource, /Onyx fit score/);
+assert.match(commandSource, /not an in-game stat/);
+assert.match(commandSource, /mutually exclusive skill-path choices/);
+assert.match(commandCss, /\.onyx-rider-match-card\.lead/);
+assert.doesNotMatch(
+  riderDataSource,
+  /sessionToken|pocket_id|support_id|cookie|authorization|signature|playerId|guild|email/i
+);
 assert.match(baseSource, /BASE ADVISOR LOCKED/);
 assert.match(baseSource, /Move mode active/);
 assert.match(baseSource, /Swap towers/);
@@ -178,9 +195,33 @@ vm.createContext(sandbox);
 vm.runInContext(fs.readFileSync("base-adviser-catalog-towers.js", "utf8"), sandbox);
 vm.runInContext(fs.readFileSync("base-adviser-catalog-monuments.js", "utf8"), sandbox);
 vm.runInContext(fs.readFileSync("base-adviser-catalog-people.js", "utf8"), sandbox);
+vm.runInContext(riderDataSource, sandbox);
 vm.runInContext(baseSource, sandbox);
 vm.runInContext(seasonSource, sandbox);
 vm.runInContext(commandSource, sandbox);
+
+const riderData = JSON.parse(JSON.stringify(sandbox.OnyxRiderIntelligenceData));
+assert.equal(riderData.riderCount, 71);
+assert.equal(riderData.skillNodeCount, 1952);
+assert.equal(riderData.gearRecordCount, 2847);
+assert.equal(riderData.profiles.length, 71);
+assert.ok(riderData.profiles.every(profile => profile.name && profile.skillNodes > 0));
+const hunterControlMatches = JSON.parse(JSON.stringify(sandbox.OnyxCommand.scoreRiderProfiles({
+  mission: "flight",
+  dragonClass: "hunter",
+  priority: "control"
+})));
+assert.ok(hunterControlMatches.length >= 40);
+assert.ok(hunterControlMatches[0].score >= hunterControlMatches[1].score);
+assert.ok(hunterControlMatches[0].components.some(component => ["rage", "ammo", "spell"].includes(component.bucket)));
+const baseMatches = JSON.parse(JSON.stringify(sandbox.OnyxCommand.scoreRiderProfiles({
+  mission: "base",
+  dragonClass: "hunter",
+  priority: "endurance"
+})));
+assert.ok(baseMatches.length > 0);
+assert.ok(baseMatches[0].components.some(component => component.bucket === "baseHealth"));
+assert.ok(baseMatches.some(match => match.defensive));
 
 const zeroRoute = JSON.parse(JSON.stringify(sandbox.OnyxCommand.planSeasonRoute()));
 assert.equal(zeroRoute.claimedKeys, 0);
