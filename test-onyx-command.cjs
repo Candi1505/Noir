@@ -49,7 +49,7 @@ assert.match(html, /database\.js\?v=20260827-monuments-perches-1/);
 assert.match(html, /onyx-base-command\.js\?v=20260827-merge-calculator-1/);
 assert.match(html, /onyx-season-data\.js\?v=20260827-season-branch-1/);
 assert.match(html, /onyx-rider-intelligence-data\.js\?v=20260828-rider-command-1/);
-assert.match(html, /onyx-atlas-command\.js\?v=20260828-atlas-command-1/);
+assert.match(html, /onyx-atlas-command\.js\?v=20260828-atlas-terms-1/);
 assert.match(html, /onyx-command\.js\?v=20260828-atlas-command-1/);
 assert.doesNotMatch(commandSource, /Private source boundary/);
 assert.match(html, /onyx-command\.css\?v=20260828-atlas-command-1/);

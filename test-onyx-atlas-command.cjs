@@ -8,7 +8,7 @@ const css = fs.readFileSync("onyx-atlas-command.css", "utf8");
 const commandSource = fs.readFileSync("onyx-command.js", "utf8");
 
 assert.match(html, /onyx-atlas-command\.css\?v=20260828-atlas-command-1/);
-assert.match(html, /onyx-atlas-command\.js\?v=20260828-atlas-command-1/);
+assert.match(html, /onyx-atlas-command\.js\?v=20260828-atlas-terms-1/);
 assert.ok(
   html.indexOf("onyx-atlas-command.js") < html.indexOf("onyx-command.js"),
   "Atlas Command must load before the dashboard routes to it."
@@ -36,6 +36,11 @@ assert.match(source, /Battle ledger/);
 assert.match(source, /Castle watchboard/);
 assert.match(source, /Contribution board/);
 assert.match(source, /TACTICAL NETWORK/);
+assert.match(source, /Glory won/);
+assert.match(source, /Prims lost/);
+assert.match(source, /PRIMS DEFEATED/);
+assert.doesNotMatch(source, />XP won</);
+assert.doesNotMatch(source, />Ships lost</);
 assert.match(css, /grid-template-columns: repeat\(auto-fit, minmax\(60px, 1fr\)\)/);
 assert.match(css, /@media \(max-width: 760px\)/);
 assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
@@ -95,14 +100,14 @@ const normalised = JSON.parse(JSON.stringify(command.normaliseManualState({
     hiddenSecret: "must disappear"
   },
   members: [
-    { id: "one unsafe", name: "  Rook  ", troops: 250, status: "support", unknown: "drop" },
+    { id: "one unsafe", name: "  Rook  ", troops: 250, ships: 17, status: "support", unknown: "drop" },
     { name: "", troops: 900 }
   ],
   castles: [
     { id: "C 1", name: "Ember", troops: 500, fleets: 3, shieldHours: 1.27, status: "watch" }
   ],
   battles: [
-    { opponent: "Ash", destruction: 130, side: "invalid", result: "loss", shipsLost: -4 }
+    { opponent: "Ash", destruction: 130, side: "invalid", result: "loss", xp: 85, shipsLost: -4 }
   ],
   forbidden: "drop"
 })));
@@ -112,14 +117,16 @@ assert.equal(normalised.team.name, "Night Guard");
 assert.equal(normalised.team.totalTroops, 0);
 assert.equal(normalised.team.monthlyGold, 1200);
 assert.equal(normalised.team.monthlyMaterials, null);
-assert.equal(normalised.team.monthlyShips, 9999999);
+assert.equal(normalised.team.monthlyPrims, 9999999);
 assert.equal(normalised.members.length, 1);
 assert.equal(normalised.members[0].id, "one-unsafe");
 assert.equal(normalised.members[0].status, "support");
+assert.equal(normalised.members[0].prims, 17);
 assert.equal(normalised.castles[0].shieldHours, 1.3);
 assert.equal(normalised.battles[0].destruction, 100);
 assert.equal(normalised.battles[0].side, "defence");
-assert.equal(normalised.battles[0].shipsLost, 0);
+assert.equal(normalised.battles[0].glory, 85);
+assert.equal(normalised.battles[0].primsLost, 0);
 assert.equal("forbidden" in normalised, false);
 assert.equal("hiddenSecret" in normalised.team, false);
 assert.equal("unknown" in normalised.members[0], false);

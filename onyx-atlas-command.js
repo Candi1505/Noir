@@ -35,15 +35,15 @@
       totalTroops: 1842500,
       monthlyGold: 728400,
       monthlyMaterials: 413700,
-      monthlyShips: 286,
+      monthlyPrims: 286,
       eventScore: 148250
     }),
     members: Object.freeze([
-      Object.freeze({ id: "demo-vesper", name: "Vesper", troops: 428000, gold: 192400, materials: 114800, ships: 82, status: "ready" }),
-      Object.freeze({ id: "demo-rook", name: "Rook", troops: 396500, gold: 166200, materials: 96200, ships: 61, status: "ready" }),
-      Object.freeze({ id: "demo-sable", name: "Sable", troops: 362000, gold: 148600, materials: 88400, ships: 57, status: "watch" }),
-      Object.freeze({ id: "demo-aster", name: "Aster", troops: 341000, gold: 125300, materials: 73600, ships: 49, status: "ready" }),
-      Object.freeze({ id: "demo-flint", name: "Flint", troops: 315000, gold: 95900, materials: 40700, ships: 37, status: "support" })
+      Object.freeze({ id: "demo-vesper", name: "Vesper", troops: 428000, gold: 192400, materials: 114800, prims: 82, status: "ready" }),
+      Object.freeze({ id: "demo-rook", name: "Rook", troops: 396500, gold: 166200, materials: 96200, prims: 61, status: "ready" }),
+      Object.freeze({ id: "demo-sable", name: "Sable", troops: 362000, gold: 148600, materials: 88400, prims: 57, status: "watch" }),
+      Object.freeze({ id: "demo-aster", name: "Aster", troops: 341000, gold: 125300, materials: 73600, prims: 49, status: "ready" }),
+      Object.freeze({ id: "demo-flint", name: "Flint", troops: 315000, gold: 95900, materials: 40700, prims: 37, status: "support" })
     ]),
     castles: Object.freeze([
       Object.freeze({ id: "DEMO-A1", name: "Crownfall", owner: "Obsidian Watch", level: 6, troops: 712000, fleets: 4, shieldHours: 6.5, status: "clear" }),
@@ -51,9 +51,9 @@
       Object.freeze({ id: "DEMO-C7", name: "Northglass Keep", owner: "Obsidian Watch", level: 4, troops: 318000, fleets: 2, shieldHours: 0, status: "contested" })
     ]),
     battles: Object.freeze([
-      Object.freeze({ id: "demo-battle-1", when: "18 min ago", side: "defence", result: "win", opponent: "Ash Meridian", primarch: "Destroyer", primarchLevel: 14, destruction: 38, xp: 18420, shipsLost: 26 }),
-      Object.freeze({ id: "demo-battle-2", when: "46 min ago", side: "attack", result: "win", opponent: "Silver Quarry", primarch: "Taunter", primarchLevel: 11, destruction: 100, xp: 26750, shipsLost: 41 }),
-      Object.freeze({ id: "demo-battle-3", when: "2 hr ago", side: "defence", result: "loss", opponent: "Hollow Crown", primarch: "Trapper", primarchLevel: 12, destruction: 84, xp: 11200, shipsLost: 73 })
+      Object.freeze({ id: "demo-battle-1", when: "18 min ago", side: "defence", result: "win", opponent: "Ash Meridian", primarch: "Destroyer", primarchLevel: 14, destruction: 38, glory: 18420, primsLost: 26 }),
+      Object.freeze({ id: "demo-battle-2", when: "46 min ago", side: "attack", result: "win", opponent: "Silver Quarry", primarch: "Taunter", primarchLevel: 11, destruction: 100, glory: 26750, primsLost: 41 }),
+      Object.freeze({ id: "demo-battle-3", when: "2 hr ago", side: "defence", result: "loss", opponent: "Hollow Crown", primarch: "Trapper", primarchLevel: 12, destruction: 84, glory: 11200, primsLost: 73 })
     ]),
     updatedAt: "Synthetic scenario"
   });
@@ -115,7 +115,7 @@
         totalTroops: null,
         monthlyGold: null,
         monthlyMaterials: null,
-        monthlyShips: null,
+        monthlyPrims: null,
         eventScore: null
       },
       members: [],
@@ -135,7 +135,7 @@
       troops: cleanNumber(source.troops),
       gold: cleanNumber(source.gold),
       materials: cleanNumber(source.materials),
-      ships: cleanNumber(source.ships, 9999999),
+      prims: cleanNumber(source.prims ?? source.ships, 9999999),
       status: MEMBER_STATUSES.has(source.status) ? source.status : "ready"
     };
   }
@@ -169,8 +169,8 @@
       primarch: cleanText(source.primarch, 60),
       primarchLevel: cleanNumber(source.primarchLevel, 999),
       destruction: cleanNumber(source.destruction, 100),
-      xp: cleanNumber(source.xp),
-      shipsLost: cleanNumber(source.shipsLost, 9999999)
+      glory: cleanNumber(source.glory ?? source.xp),
+      primsLost: cleanNumber(source.primsLost ?? source.shipsLost, 9999999)
     };
   }
 
@@ -185,7 +185,7 @@
         totalTroops: cleanNumber(team.totalTroops),
         monthlyGold: cleanNumber(team.monthlyGold),
         monthlyMaterials: cleanNumber(team.monthlyMaterials),
-        monthlyShips: cleanNumber(team.monthlyShips, 9999999),
+        monthlyPrims: cleanNumber(team.monthlyPrims ?? team.monthlyShips, 9999999),
         eventScore: cleanNumber(team.eventScore)
       },
       members: (Array.isArray(source.members) ? source.members : []).slice(0, 100).map(normaliseMember).filter(Boolean),
@@ -451,7 +451,7 @@
         ${metricCard("TOTAL TROOPS", formatCompact(state.team.totalTroops), "Current snapshot", "team")}
         ${metricCard("MONTHLY GOLD", formatCompact(state.team.monthlyGold), "Recorded contribution", "castle")}
         ${metricCard("MATERIALS", formatCompact(state.team.monthlyMaterials), "Recorded contribution", "fleet")}
-        ${metricCard("SHIPS DEFEATED", formatNumber(state.team.monthlyShips), "Recorded this month", "battles")}
+        ${metricCard("PRIMS DEFEATED", formatNumber(state.team.monthlyPrims), "Recorded this month", "battles")}
       </section>
       ${renderNetwork(state)}
       ${renderAlerts(state)}
@@ -462,7 +462,7 @@
   function renderBattles(state) {
     return `<div class="oac-workspace" role="tabpanel">
       <section class="oac-workspace-lead">
-        <div><p>BATTLE INTELLIGENCE</p><h2>Battle ledger</h2><span>Logged outcomes, Primarchs, destruction, XP and ship losses.</span></div>
+        <div><p>BATTLE INTELLIGENCE</p><h2>Battle ledger</h2><span>Logged outcomes, Primarchs, destruction, Glory and Prim losses.</span></div>
         <b>${state.battles.length}</b>
       </section>
       <div class="oac-battle-list">
@@ -471,8 +471,8 @@
           <div class="oac-battle-opponent"><small>OPPOSING TEAM</small><h3>${escapeHtml(battle.opponent)}</h3><p>${escapeHtml(battle.primarch || "Primarch not recorded")}${battle.primarchLevel !== null ? ` · Level ${formatNumber(battle.primarchLevel)}` : ""}</p></div>
           <dl>
             <div><dt>Destruction</dt><dd>${battle.destruction === null ? "—" : `${battle.destruction}%`}</dd></div>
-            <div><dt>XP won</dt><dd>${formatNumber(battle.xp)}</dd></div>
-            <div><dt>Ships lost</dt><dd>${formatNumber(battle.shipsLost)}</dd></div>
+            <div><dt>Glory won</dt><dd>${formatNumber(battle.glory)}</dd></div>
+            <div><dt>Prims lost</dt><dd>${formatNumber(battle.primsLost)}</dd></div>
           </dl>
         </article>`).join("") : renderEmpty("battles", "No battles logged", "Open Enter intel to add the encounters you want on this private ledger.")}
       </div>
@@ -513,7 +513,7 @@
           return `<article role="row" class="oac-member-row ${escapeHtml(member.status)}">
             <div class="oac-member-identity"><i>${String(index + 1).padStart(2, "0")}</i><span><strong>${escapeHtml(member.name)}</strong><small>${escapeHtml(statusLabel(member.status))}</small></span></div>
             <div class="oac-member-troops"><strong>${formatCompact(member.troops)}</strong><span><i style="--member-width:${width}%"></i></span></div>
-            <dl><div><dt>Gold</dt><dd>${formatCompact(member.gold)}</dd></div><div><dt>Materials</dt><dd>${formatCompact(member.materials)}</dd></div><div><dt>Ships</dt><dd>${formatNumber(member.ships)}</dd></div></dl>
+            <dl><div><dt>Gold</dt><dd>${formatCompact(member.gold)}</dd></div><div><dt>Materials</dt><dd>${formatCompact(member.materials)}</dd></div><div><dt>Prims</dt><dd>${formatNumber(member.prims)}</dd></div></dl>
           </article>`;
         }).join("")}` : renderEmpty("team", "No team members recorded", "Open Enter intel to create a private readiness snapshot.")}
       </div>
@@ -543,7 +543,7 @@
           ${field("Total troops", "totalTroops", state.team.totalTroops, "number", 'min="0" inputmode="numeric"')}
           ${field("Monthly gold", "monthlyGold", state.team.monthlyGold, "number", 'min="0" inputmode="numeric"')}
           ${field("Monthly materials", "monthlyMaterials", state.team.monthlyMaterials, "number", 'min="0" inputmode="numeric"')}
-          ${field("Ships defeated", "monthlyShips", state.team.monthlyShips, "number", 'min="0" inputmode="numeric"')}
+          ${field("Prims defeated", "monthlyPrims", state.team.monthlyPrims, "number", 'min="0" inputmode="numeric"')}
           ${field("Atlas event score", "eventScore", state.team.eventScore, "number", 'min="0" inputmode="numeric"')}
         </div>
       </section>
@@ -566,7 +566,7 @@
         <label><span>Troops</span><input name="troops" type="number" min="0" inputmode="numeric"></label>
         <label><span>Gold</span><input name="gold" type="number" min="0" inputmode="numeric"></label>
         <label><span>Materials</span><input name="materials" type="number" min="0" inputmode="numeric"></label>
-        <label><span>Ships</span><input name="ships" type="number" min="0" inputmode="numeric"></label>
+        <label><span>Prims</span><input name="prims" type="number" min="0" inputmode="numeric"></label>
         <label><span>Condition</span><select name="status"><option value="ready">Ready</option><option value="watch">Watch</option><option value="support">Support</option></select></label>
         <button type="submit">${icon("plus")} Add member</button>
       </form>
@@ -603,8 +603,8 @@
         <label><span>Primarch</span><input name="primarch" maxlength="60"></label>
         <label><span>Primarch level</span><input name="primarchLevel" type="number" min="0" inputmode="numeric"></label>
         <label><span>Destruction %</span><input name="destruction" type="number" min="0" max="100" inputmode="numeric"></label>
-        <label><span>XP won</span><input name="xp" type="number" min="0" inputmode="numeric"></label>
-        <label><span>Ships lost</span><input name="shipsLost" type="number" min="0" inputmode="numeric"></label>
+        <label><span>Glory won</span><input name="glory" type="number" min="0" inputmode="numeric"></label>
+        <label><span>Prims lost</span><input name="primsLost" type="number" min="0" inputmode="numeric"></label>
         <button type="submit">${icon("plus")} Add battle</button>
       </form>
     </section>`;
