@@ -30,8 +30,8 @@ assert.match(
   /live-predictor-ui\.js\?v=20260827-onyx-predictor-1/
 );
 assert.match(html, /onyx-tower-inventory-bridge\.js\?v=20260827-base-command-1/);
-assert.match(html, /onyx-base-command\.js\?v=20260827-base-command-1/);
-assert.match(html, /onyx-command\.css\?v=20260827-base-command-1/);
+assert.match(html, /onyx-base-command\.js\?v=20260827-archipelago-1/);
+assert.match(html, /onyx-command\.css\?v=20260827-archipelago-1/);
 assert.match(livePredictorSource, /ONYX COMMAND · CHEST INTELLIGENCE/);
 assert.match(livePredictorSource, /aria-pressed/);
 assert.match(livePredictorSource, /data-lp-chest-type/);
@@ -41,7 +41,9 @@ assert.doesNotMatch(livePredictorSource, /gold:\s*["']G["']/);
 
 assert.match(baseSource, /TACTICAL MAP REQUIRED/);
 assert.match(baseSource, /Array\.from\(\{ length: TOTAL_SLOTS \}, \(\) => null\)/);
-assert.match(baseSource, /M278 762 C215 752/);
+assert.match(baseSource, /M253 753 C190 740/);
+assert.match(baseSource, /form: "crown"/);
+assert.match(baseSource, /obc-island-ridge/);
 assert.match(baseSource, /Estimated tower DP/);
 assert.match(baseSource, /Estimated island DP/);
 assert.match(baseSource, /Estimated total base DP/);

@@ -8,14 +8,14 @@
   const TOTAL_SLOTS = ISLAND_COUNT * SLOTS_PER_ISLAND;
 
   const ISLANDS = Object.freeze([
-    { name: "Gateway", form: "short", x: 222, y: 730, width: 112, height: 64, tilt: 5 },
-    { name: "Ember Reach", form: "long", x: 26, y: 642, width: 180, height: 70, tilt: -9 },
-    { name: "Veil", form: "short", x: 96, y: 548, width: 112, height: 64, tilt: -23 },
-    { name: "Northglass", form: "long", x: 154, y: 458, width: 178, height: 70, tilt: 10 },
-    { name: "Pivot", form: "short", x: 164, y: 367, width: 112, height: 64, tilt: 22 },
-    { name: "Goldwake", form: "long", x: 23, y: 273, width: 180, height: 70, tilt: -10 },
-    { name: "Spire", form: "short", x: 97, y: 177, width: 112, height: 64, tilt: -21 },
-    { name: "Command Crown", form: "long", x: 153, y: 70, width: 178, height: 70, tilt: -10 }
+    { name: "Gateway", form: "short", x: 178, y: 708, width: 150, height: 90, tilt: -5 },
+    { name: "Ember Reach", form: "long", x: 24, y: 611, width: 198, height: 98, tilt: 6 },
+    { name: "Veil", form: "short", x: 66, y: 515, width: 150, height: 90, tilt: -4 },
+    { name: "Northglass", form: "long", x: 142, y: 420, width: 198, height: 100, tilt: 5 },
+    { name: "Pivot", form: "short", x: 158, y: 326, width: 148, height: 88, tilt: -7 },
+    { name: "Goldwake", form: "long", x: 18, y: 230, width: 200, height: 100, tilt: 5 },
+    { name: "Spire", form: "short", x: 76, y: 140, width: 154, height: 88, tilt: -4 },
+    { name: "Command Crown", form: "crown", x: 92, y: 24, width: 238, height: 112, tilt: 0 }
   ]);
 
   const RESOURCE_NAMES = Object.freeze({
@@ -614,10 +614,11 @@
                 <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
               </filter>
             </defs>
-            <path class="route-bed" d="M278 762 C215 752 140 735 116 677 C92 620 120 602 152 580 C190 552 251 545 243 493 C237 452 202 434 220 399 C238 360 155 340 113 308 C80 282 111 233 153 209 C200 182 212 136 242 105"/>
-            <path class="route-glow" filter="url(#obcRouteGlow)" d="M278 762 C215 752 140 735 116 677 C92 620 120 602 152 580 C190 552 251 545 243 493 C237 452 202 434 220 399 C238 360 155 340 113 308 C80 282 111 233 153 209 C200 182 212 136 242 105"/>
-            <circle class="route-node start" cx="278" cy="762" r="6"/>
-            <circle class="route-node end" cx="242" cy="105" r="6"/>
+            <path class="route-shadow" d="M253 753 C190 740 117 712 123 660 C128 615 158 601 142 560 C126 521 207 508 241 470 C270 437 231 405 232 370 C232 329 165 318 118 280 C84 252 130 211 153 184 C179 153 181 108 211 79"/>
+            <path class="route-bed" d="M253 753 C190 740 117 712 123 660 C128 615 158 601 142 560 C126 521 207 508 241 470 C270 437 231 405 232 370 C232 329 165 318 118 280 C84 252 130 211 153 184 C179 153 181 108 211 79"/>
+            <path class="route-glow" filter="url(#obcRouteGlow)" d="M253 753 C190 740 117 712 123 660 C128 615 158 601 142 560 C126 521 207 508 241 470 C270 437 231 405 232 370 C232 329 165 318 118 280 C84 252 130 211 153 184 C179 153 181 108 211 79"/>
+            <circle class="route-node start" cx="253" cy="753" r="6"/>
+            <circle class="route-node end" cx="211" cy="79" r="6"/>
           </svg>
           ${ISLANDS.map((island, islandIndex) => {
             const slots = islandSlots(layout, islandIndex);
@@ -631,6 +632,7 @@
                 ${selectedIsland === islandIndex ? 'aria-current="true"' : ""}
                 aria-label="Island ${islandIndex + 1}, ${island.name}, ${occupied} of 5 towers, Estimated island DP ${estimateText(estimate)}">
                 <span class="obc-island-plate" aria-hidden="true"></span>
+                <span class="obc-island-ridge" aria-hidden="true"></span>
                 <span class="obc-island-copy">
                   <small>ISLAND ${String(islandIndex + 1).padStart(2, "0")} · ${island.form.toUpperCase()}</small>
                   <strong>${escapeHtml(island.name)}</strong>
