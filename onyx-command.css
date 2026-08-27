@@ -2218,8 +2218,9 @@ body.onyx-modal-open {
   overflow: hidden;
   border-radius: 19px;
   background:
-    radial-gradient(ellipse at 34% 20%, rgba(163, 115, 222, .09), transparent 26%),
-    radial-gradient(ellipse at 62% 72%, rgba(218, 176, 75, .07), transparent 28%),
+    radial-gradient(ellipse at 34% 20%, rgba(163, 115, 222, .14), transparent 29%),
+    radial-gradient(ellipse at 62% 72%, rgba(218, 176, 75, .1), transparent 30%),
+    radial-gradient(ellipse at 50% 48%, rgba(68, 78, 95, .12), transparent 54%),
     linear-gradient(180deg, rgba(4, 5, 8, .52), rgba(2, 3, 5, .78));
 }
 
@@ -2257,18 +2258,26 @@ body.onyx-modal-open {
 .obc-route-lines path {
   fill: none;
   stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.obc-route-lines .route-shadow {
+  stroke: rgba(0, 0, 0, .72);
+  stroke-width: 28;
+  filter: blur(3px);
 }
 
 .obc-route-lines .route-bed {
-  stroke: rgba(190, 194, 209, .14);
-  stroke-width: 14;
+  stroke: rgba(90, 96, 109, .42);
+  stroke-width: 20;
+  stroke-dasharray: 2 4;
 }
 
 .obc-route-lines .route-glow {
-  stroke: #b88a39;
-  stroke-width: 2.1;
-  stroke-dasharray: 7 9;
-  opacity: .7;
+  stroke: #d4ad54;
+  stroke-width: 2.4;
+  stroke-dasharray: 8 12;
+  opacity: .78;
   animation: obc-route-flow 16s linear infinite;
 }
 
@@ -2293,32 +2302,88 @@ body.onyx-modal-open {
   top: var(--island-top);
   width: var(--island-width);
   height: var(--island-height);
-  min-height: 58px;
+  min-height: 76px;
   padding: 0;
   border: 0;
   background: transparent;
   color: #bfc0c7;
   text-align: left;
-  filter: drop-shadow(0 10px 13px rgba(0, 0, 0, .46));
+  filter: drop-shadow(0 13px 15px rgba(0, 0, 0, .62));
 }
 
 .obc-island-plate {
   position: absolute;
   inset: 0;
-  border: 1px solid rgba(194, 199, 215, .24);
-  clip-path: polygon(8% 4%, 87% 0, 100% 28%, 93% 89%, 18% 100%, 0 69%);
+  overflow: hidden;
+  border: 1px solid rgba(194, 199, 215, .3);
+  clip-path: polygon(3% 41%, 9% 17%, 27% 4%, 50% 9%, 70% 0, 91% 15%, 99% 43%, 92% 75%, 73% 89%, 49% 84%, 27% 100%, 8% 81%);
   background:
-    linear-gradient(120deg, rgba(37, 38, 47, .94), rgba(11, 12, 17, .98) 62%),
+    radial-gradient(circle at 27% 28%, rgba(128, 105, 72, .16), transparent 23%),
+    radial-gradient(circle at 72% 32%, rgba(129, 85, 170, .16), transparent 27%),
+    linear-gradient(145deg, rgba(54, 57, 67, .98), rgba(18, 20, 27, .99) 56%, rgba(8, 9, 14, 1)),
     #0b0c11;
   box-shadow:
-    inset 0 1px rgba(255, 255, 255, .08),
-    inset 0 -10px 22px rgba(0, 0, 0, .36);
+    inset 0 2px rgba(255, 255, 255, .09),
+    inset 0 -17px 24px rgba(0, 0, 0, .55),
+    inset 0 0 0 5px rgba(6, 7, 11, .28);
   transform: rotate(var(--island-tilt));
   transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease;
 }
 
 .obc-map-island.long .obc-island-plate {
-  clip-path: polygon(5% 9%, 91% 0, 100% 36%, 94% 89%, 12% 100%, 0 61%);
+  clip-path: polygon(2% 38%, 7% 13%, 25% 4%, 42% 11%, 60% 1%, 78% 8%, 95% 25%, 100% 53%, 92% 80%, 72% 91%, 53% 84%, 35% 98%, 15% 88%, 4% 68%);
+}
+
+.obc-map-island.crown .obc-island-plate {
+  clip-path: polygon(3% 49%, 9% 20%, 25% 9%, 36% 15%, 48% 1%, 61% 14%, 76% 7%, 94% 24%, 99% 55%, 89% 82%, 69% 92%, 51% 85%, 31% 100%, 12% 83%);
+  background:
+    radial-gradient(circle at 50% 19%, rgba(225, 186, 91, .2), transparent 24%),
+    radial-gradient(circle at 73% 42%, rgba(140, 87, 204, .22), transparent 28%),
+    linear-gradient(145deg, rgba(66, 65, 73, .99), rgba(22, 22, 30, .99) 55%, rgba(8, 9, 14, 1));
+}
+
+.obc-island-plate::before,
+.obc-island-plate::after,
+.obc-island-ridge {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+}
+
+.obc-island-plate::before {
+  inset: 14% 9% 28%;
+  border: 1px solid rgba(207, 212, 224, .1);
+  border-radius: 45% 58% 42% 52%;
+  background:
+    radial-gradient(circle at 20% 68%, rgba(255, 255, 255, .08) 0 4%, transparent 5%),
+    radial-gradient(circle at 46% 27%, rgba(255, 255, 255, .07) 0 5%, transparent 6%),
+    radial-gradient(circle at 76% 61%, rgba(255, 255, 255, .06) 0 4%, transparent 5%),
+    linear-gradient(155deg, rgba(255, 255, 255, .045), transparent 42%);
+  box-shadow: inset 0 -8px 14px rgba(0, 0, 0, .24);
+}
+
+.obc-island-plate::after {
+  inset: 0;
+  opacity: .2;
+  background-image:
+    linear-gradient(118deg, transparent 38%, rgba(219, 185, 105, .2) 39%, transparent 41%),
+    linear-gradient(62deg, transparent 62%, rgba(159, 111, 207, .18) 63%, transparent 65%);
+  background-size: 53px 47px, 61px 59px;
+}
+
+.obc-island-ridge {
+  z-index: 1;
+  top: 15%;
+  left: 14%;
+  width: 22%;
+  height: 27%;
+  border: 1px solid rgba(209, 214, 224, .14);
+  border-radius: 46% 54% 50% 45%;
+  background: linear-gradient(145deg, rgba(105, 109, 121, .21), rgba(7, 8, 12, .22));
+  box-shadow:
+    34px 7px 0 -5px rgba(96, 94, 111, .12),
+    70px -3px 0 -7px rgba(134, 106, 76, .11);
+  transform: rotate(var(--island-tilt));
 }
 
 .obc-map-island::after {
@@ -2337,7 +2402,9 @@ body.onyx-modal-open {
 .obc-map-island.active .obc-island-plate {
   border-color: rgba(224, 184, 88, .73);
   background:
-    linear-gradient(120deg, rgba(78, 57, 44, .94), rgba(31, 20, 43, .97) 62%),
+    radial-gradient(circle at 25% 28%, rgba(219, 175, 79, .22), transparent 25%),
+    radial-gradient(circle at 74% 35%, rgba(151, 88, 222, .25), transparent 30%),
+    linear-gradient(135deg, rgba(72, 64, 60, .98), rgba(28, 20, 39, .99) 60%),
     #0b0c11;
   box-shadow:
     inset 0 1px rgba(255, 247, 221, .12),
@@ -2359,10 +2426,19 @@ body.onyx-modal-open {
 
 .obc-island-copy {
   position: absolute;
-  z-index: 2;
-  inset: 10px 11px 9px;
+  z-index: 3;
+  right: 9%;
+  bottom: 5%;
+  left: 9%;
   display: grid;
   align-content: center;
+  min-height: 38px;
+  padding: 5px 9px;
+  border: 1px solid rgba(205, 209, 220, .16);
+  border-radius: 10px;
+  background: linear-gradient(90deg, rgba(6, 7, 11, .88), rgba(13, 12, 18, .72));
+  box-shadow: 0 7px 14px rgba(0, 0, 0, .32);
+  backdrop-filter: blur(8px);
   pointer-events: none;
 }
 
@@ -2378,45 +2454,64 @@ body.onyx-modal-open {
 
 .obc-island-copy small {
   color: #9a7a3e;
-  font-size: clamp(.42rem, 1.2vw, .54rem);
+  font-size: clamp(.38rem, 1.08vw, .5rem);
   font-weight: 900;
   letter-spacing: .08em;
 }
 
 .obc-island-copy strong {
-  margin-top: 2px;
+  margin-top: 1px;
   color: #e2e0dc;
   font-size: clamp(.61rem, 1.75vw, .79rem);
 }
 
 .obc-island-copy em {
-  margin-top: 2px;
+  margin-top: 1px;
   color: #a99b80;
   font-size: clamp(.43rem, 1.3vw, .57rem);
 }
 
 .obc-occupancy {
   position: absolute;
-  z-index: 2;
-  right: 8px;
-  bottom: 6px;
-  display: flex;
-  gap: 2px;
+  z-index: 3;
+  top: 20%;
+  right: 14%;
+  left: 14%;
+  height: 28%;
   pointer-events: none;
 }
 
 .obc-occupancy i {
-  width: 4px;
-  height: 4px;
-  border: 1px solid rgba(188, 190, 201, .35);
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  border: 1px solid rgba(205, 210, 222, .52);
   border-radius: 50%;
-  background: rgba(5, 6, 9, .7);
+  background: rgba(5, 6, 9, .9);
+  box-shadow: 0 0 0 3px rgba(185, 191, 207, .06), 0 0 8px rgba(184, 191, 210, .18);
+}
+
+.obc-occupancy i:nth-child(1) { left: 0; top: 58%; }
+.obc-occupancy i:nth-child(2) { left: 24%; top: 15%; }
+.obc-occupancy i:nth-child(3) { left: 48%; top: 0; }
+.obc-occupancy i:nth-child(4) { left: 72%; top: 17%; }
+.obc-occupancy i:nth-child(5) { right: 0; top: 58%; }
+
+.obc-map-island.short .obc-occupancy {
+  right: 17%;
+  left: 17%;
+}
+
+.obc-map-island.crown .obc-occupancy {
+  top: 18%;
+  right: 18%;
+  left: 18%;
 }
 
 .obc-occupancy i.filled {
   border-color: #c392e9;
-  background: #b36feb;
-  box-shadow: 0 0 5px rgba(177, 105, 235, .64);
+  background: #ba74ef;
+  box-shadow: 0 0 0 3px rgba(185, 109, 239, .12), 0 0 10px rgba(177, 105, 235, .82);
 }
 
 .obc-move-banner {
@@ -3310,7 +3405,11 @@ body.onyx-modal-open {
   }
 
   .obc-island-copy {
-    inset: 9px 8px 7px;
+    right: 7%;
+    bottom: 4%;
+    left: 7%;
+    min-height: 36px;
+    padding: 4px 7px;
   }
 
   .obc-spot-field {
