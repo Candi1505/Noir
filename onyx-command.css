@@ -2212,8 +2212,8 @@ body.onyx-modal-open {
 
 .obc-route-map {
   position: relative;
-  width: min(100%, 380px);
-  aspect-ratio: 360 / 820;
+  width: 100%;
+  aspect-ratio: 760 / 500;
   margin: 8px auto 0;
   overflow: hidden;
   border-radius: 19px;
@@ -2263,23 +2263,40 @@ body.onyx-modal-open {
   stroke-linejoin: round;
 }
 
+.obc-route-lines .base-zone {
+  fill: url(#obcBlueprintHatch);
+  stroke: rgba(193, 207, 216, .54);
+  stroke-width: 2.4;
+  vector-effect: non-scaling-stroke;
+}
+
+.obc-route-lines .base-zone.zone-northern,
+.obc-route-lines .base-zone.zone-southern {
+  stroke: rgba(171, 181, 196, .46);
+}
+
+.obc-route-lines .zone-hatch-line {
+  stroke: rgba(171, 188, 199, .12);
+  stroke-width: 2;
+}
+
 .obc-route-lines .route-shadow {
-  stroke: rgba(1, 3, 7, .9);
-  stroke-width: 30;
-  filter: blur(2px);
+  stroke: rgba(1, 3, 7, .82);
+  stroke-width: 18;
+  filter: blur(1px);
 }
 
 .obc-route-lines .route-bed {
-  stroke: rgba(84, 104, 124, .52);
-  stroke-width: 18;
+  stroke: rgba(84, 104, 124, .44);
+  stroke-width: 9;
   stroke-dasharray: 1 5;
 }
 
 .obc-route-lines .route-glow {
-  stroke: #68b5d9;
-  stroke-width: 2;
+  stroke: #91b8ca;
+  stroke-width: 1.5;
   stroke-dasharray: 9 10;
-  opacity: .84;
+  opacity: .68;
   animation: obc-route-flow 16s linear infinite;
 }
 
@@ -2304,7 +2321,7 @@ body.onyx-modal-open {
   top: var(--island-top);
   width: var(--island-width);
   height: var(--island-height);
-  min-height: 76px;
+  min-height: 48px;
   padding: 0;
   border: 0;
   background: transparent;
@@ -2317,42 +2334,31 @@ body.onyx-modal-open {
   position: absolute;
   inset: 0;
   overflow: hidden;
-  border: 2px solid rgba(104, 181, 217, .78);
-  border-radius: 42% 28% 38% 31% / 38% 45% 39% 48%;
-  background:
-    repeating-linear-gradient(128deg, rgba(104, 181, 217, .09) 0 2px, transparent 2px 7px),
-    linear-gradient(135deg, rgba(24, 45, 59, .82), rgba(9, 15, 24, .94));
-  box-shadow:
-    inset 0 0 0 4px rgba(5, 9, 15, .76),
-    inset 0 0 0 5px rgba(104, 181, 217, .14),
-    0 0 12px rgba(81, 159, 196, .16);
+  border: 1px solid transparent;
+  border-radius: 34% 24% 36% 25% / 39% 33% 42% 35%;
+  background: transparent;
+  box-shadow: none;
   transform: rotate(var(--island-tilt));
   transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease;
 }
 
 .obc-map-island.long .obc-island-plate {
-  border-radius: 38% 24% 41% 23% / 47% 36% 48% 39%;
+  border-radius: 34% 22% 36% 21% / 44% 34% 45% 35%;
 }
 
 .obc-map-island.short .obc-island-plate {
-  border-color: rgba(165, 113, 226, .82);
-  border-radius: 44% 34% 42% 31% / 39% 46% 36% 48%;
-  background:
-    repeating-linear-gradient(128deg, rgba(165, 113, 226, .1) 0 2px, transparent 2px 7px),
-    linear-gradient(135deg, rgba(43, 28, 67, .78), rgba(13, 10, 24, .94));
-  box-shadow:
-    inset 0 0 0 4px rgba(7, 5, 13, .76),
-    inset 0 0 0 5px rgba(165, 113, 226, .14),
-    0 0 12px rgba(136, 83, 199, .14);
+  border-color: transparent;
+  border-radius: 40% 31% 39% 29% / 36% 43% 34% 44%;
+  background: transparent;
+  box-shadow: none;
 }
 
 .obc-map-island.bend-left .obc-island-plate,
 .obc-map-island.bend-right .obc-island-plate {
-  border-color: rgba(216, 180, 91, .72);
+  border-color: transparent;
   border-radius: 51% 23% 48% 24% / 31% 56% 29% 59%;
-  background:
-    repeating-linear-gradient(128deg, rgba(216, 180, 91, .08) 0 2px, transparent 2px 7px),
-    linear-gradient(135deg, rgba(49, 39, 24, .78), rgba(14, 12, 10, .95));
+  background: transparent;
+  box-shadow: none;
 }
 
 .obc-map-island.bend-right .obc-island-plate {
@@ -2368,16 +2374,20 @@ body.onyx-modal-open {
 }
 
 .obc-island-plate::before {
-  inset: 7px;
-  border: 1px dashed rgba(195, 218, 231, .2);
+  inset: 6px;
+  border: 1px dashed rgba(195, 218, 231, .1);
   border-radius: inherit;
+  opacity: 0;
+  transition: opacity .2s ease;
 }
 
 .obc-island-plate::after {
   top: 50%;
   right: 8%;
   left: 8%;
-  border-top: 1px dashed rgba(208, 221, 232, .16);
+  border-top: 1px dashed rgba(208, 221, 232, .1);
+  opacity: 0;
+  transition: opacity .2s ease;
 }
 
 .obc-island-axis {
@@ -2385,7 +2395,8 @@ body.onyx-modal-open {
   top: 14%;
   bottom: 16%;
   left: 50%;
-  border-left: 1px dashed rgba(204, 216, 229, .15);
+  border-left: 1px dashed rgba(204, 216, 229, .1);
+  opacity: 0;
   transform: rotate(var(--island-tilt));
 }
 
@@ -2404,14 +2415,23 @@ body.onyx-modal-open {
 .obc-map-island:focus-visible .obc-island-plate,
 .obc-map-island.active .obc-island-plate {
   border-color: rgba(229, 190, 93, .94);
-  background:
-    repeating-linear-gradient(128deg, rgba(229, 190, 93, .12) 0 2px, transparent 2px 7px),
-    linear-gradient(135deg, rgba(52, 42, 24, .86), rgba(18, 14, 21, .96));
+  background: rgba(55, 43, 19, .42);
   box-shadow:
-    inset 0 0 0 4px rgba(8, 7, 10, .78),
-    inset 0 0 0 5px rgba(229, 190, 93, .18),
+    inset 0 0 0 2px rgba(8, 7, 10, .42),
     0 0 14px rgba(224, 184, 88, .24);
   transform: rotate(var(--island-tilt)) scale(1.02);
+}
+
+.obc-map-island:hover .obc-island-plate::before,
+.obc-map-island:hover .obc-island-plate::after,
+.obc-map-island:hover .obc-island-axis,
+.obc-map-island:focus-visible .obc-island-plate::before,
+.obc-map-island:focus-visible .obc-island-plate::after,
+.obc-map-island:focus-visible .obc-island-axis,
+.obc-map-island.active .obc-island-plate::before,
+.obc-map-island.active .obc-island-plate::after,
+.obc-map-island.active .obc-island-axis {
+  opacity: 1;
 }
 
 .obc-map-island:hover::after,
@@ -2428,13 +2448,13 @@ body.onyx-modal-open {
 .obc-island-copy {
   position: absolute;
   z-index: 3;
-  right: 8%;
-  bottom: 6%;
-  left: 8%;
+  right: 6%;
+  bottom: 3%;
+  left: 6%;
   display: grid;
   align-content: center;
-  min-height: 34px;
-  padding: 4px 8px;
+  min-height: 25px;
+  padding: 2px 5px;
   border-left: 2px solid rgba(104, 181, 217, .5);
   background: linear-gradient(90deg, rgba(4, 7, 12, .9), rgba(4, 7, 12, .48), transparent);
   pointer-events: none;
@@ -2451,6 +2471,7 @@ body.onyx-modal-open {
 }
 
 .obc-island-copy small {
+  display: none;
   color: #7dbbd6;
   font-size: clamp(.38rem, 1.08vw, .5rem);
   font-weight: 900;
@@ -2460,22 +2481,22 @@ body.onyx-modal-open {
 .obc-island-copy strong {
   margin-top: 1px;
   color: #dce9ef;
-  font-size: clamp(.61rem, 1.75vw, .79rem);
+  font-size: clamp(.48rem, 1.35vw, .68rem);
 }
 
 .obc-island-copy em {
   margin-top: 1px;
   color: #93a7b1;
-  font-size: clamp(.43rem, 1.3vw, .57rem);
+  font-size: clamp(.36rem, 1vw, .48rem);
 }
 
 .obc-occupancy {
   position: absolute;
   z-index: 3;
-  top: 15%;
+  top: 10%;
   right: 20%;
   left: 20%;
-  height: 39%;
+  height: 35%;
   pointer-events: none;
 }
 
@@ -3261,7 +3282,7 @@ body.onyx-modal-open {
   }
 
   .obc-route-map {
-    width: min(100%, 400px);
+    width: 100%;
   }
 
   .obc-island-command {
@@ -3340,7 +3361,7 @@ body.onyx-modal-open {
   }
 
   .obc-route-map {
-    width: min(100%, 370px);
+    width: 100%;
   }
 
   .obc-island-command > header {
@@ -3447,11 +3468,11 @@ body.onyx-modal-open {
   }
 
   .obc-island-copy {
-    right: 7%;
-    bottom: 4%;
-    left: 7%;
-    min-height: 36px;
-    padding: 4px 7px;
+    right: 6%;
+    bottom: 3%;
+    left: 6%;
+    min-height: 23px;
+    padding: 2px 4px;
   }
 
   .obc-spot-field {

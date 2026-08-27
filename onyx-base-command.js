@@ -6,16 +6,18 @@
   const ISLAND_COUNT = 8;
   const SLOTS_PER_ISLAND = 5;
   const TOTAL_SLOTS = ISLAND_COUNT * SLOTS_PER_ISLAND;
+  const MAP_WIDTH = 760;
+  const MAP_HEIGHT = 500;
 
   const ISLANDS = Object.freeze([
-    { name: "Gateway", form: "long", x: 138, y: 708, width: 194, height: 84, tilt: -4 },
-    { name: "Ember Bend", form: "bend-left", x: 38, y: 620, width: 158, height: 92, tilt: 12 },
-    { name: "Veil", form: "short", x: 24, y: 523, width: 150, height: 82, tilt: -2 },
-    { name: "Northglass Bend", form: "bend-right", x: 118, y: 432, width: 160, height: 92, tilt: -12 },
-    { name: "Pivot Reach", form: "long", x: 146, y: 334, width: 190, height: 84, tilt: 4 },
-    { name: "Goldwake Bend", form: "bend-left", x: 38, y: 244, width: 160, height: 92, tilt: 12 },
-    { name: "Spire", form: "short", x: 22, y: 146, width: 152, height: 82, tilt: -2 },
-    { name: "Command Crown", form: "long", x: 126, y: 44, width: 204, height: 88, tilt: 3 }
+    { name: "Gateway", form: "long", zone: "western", x: 100, y: 58, width: 164, height: 106, tilt: -3 },
+    { name: "Ember Bend", form: "bend-left", zone: "western", x: 76, y: 192, width: 166, height: 108, tilt: 5 },
+    { name: "Veil", form: "short", zone: "western", x: 106, y: 330, width: 160, height: 104, tilt: -4 },
+    { name: "Northglass Bend", form: "bend-right", zone: "northern", x: 304, y: 104, width: 160, height: 102, tilt: -6 },
+    { name: "Pivot Reach", form: "long", zone: "northern", x: 526, y: 82, width: 172, height: 106, tilt: 4 },
+    { name: "Goldwake Bend", form: "bend-left", zone: "southern", x: 302, y: 286, width: 162, height: 104, tilt: 6 },
+    { name: "Spire", form: "short", zone: "southern", x: 534, y: 276, width: 158, height: 104, tilt: -4 },
+    { name: "Command Crown", form: "long", zone: "southern", x: 406, y: 386, width: 198, height: 102, tilt: -2 }
   ]);
 
   const RESOURCE_NAMES = Object.freeze({
@@ -584,10 +586,10 @@
 
   function islandStyle(island) {
     return [
-      `--island-left:${(island.x / 360) * 100}%`,
-      `--island-top:${(island.y / 820) * 100}%`,
-      `--island-width:${(island.width / 360) * 100}%`,
-      `--island-height:${(island.height / 820) * 100}%`,
+      `--island-left:${(island.x / MAP_WIDTH) * 100}%`,
+      `--island-top:${(island.y / MAP_HEIGHT) * 100}%`,
+      `--island-width:${(island.width / MAP_WIDTH) * 100}%`,
+      `--island-height:${(island.height / MAP_HEIGHT) * 100}%`,
       `--island-tilt:${island.tilt}deg`
     ].join(";");
   }
@@ -606,19 +608,25 @@
             <button id="obcCancelMove" type="button">Cancel</button>
           </div>
         ` : ""}
-        <div class="obc-route-map" aria-label="Eight-section top-down tactical base schematic">
-          <svg class="obc-route-lines" viewBox="0 0 360 820" preserveAspectRatio="none" aria-hidden="true">
+        <div class="obc-route-map" aria-label="Eight-section landscape top-down tactical base schematic">
+          <svg class="obc-route-lines" viewBox="0 0 ${MAP_WIDTH} ${MAP_HEIGHT}" preserveAspectRatio="none" aria-hidden="true">
             <defs>
               <filter id="obcRouteGlow" x="-40%" y="-20%" width="180%" height="140%">
                 <feGaussianBlur stdDeviation="5" result="blur"/>
                 <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
               </filter>
+              <pattern id="obcBlueprintHatch" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(34)">
+                <line x1="0" y1="0" x2="0" y2="10" class="zone-hatch-line"/>
+              </pattern>
             </defs>
-            <path class="route-shadow" d="M235 750 C178 744 113 715 117 666 C120 620 123 592 99 565 C75 536 142 507 198 478 C247 452 251 410 241 376 C229 337 167 325 118 290 C79 263 83 222 98 187 C113 151 190 122 228 88"/>
-            <path class="route-bed" d="M235 750 C178 744 113 715 117 666 C120 620 123 592 99 565 C75 536 142 507 198 478 C247 452 251 410 241 376 C229 337 167 325 118 290 C79 263 83 222 98 187 C113 151 190 122 228 88"/>
-            <path class="route-glow" filter="url(#obcRouteGlow)" d="M235 750 C178 744 113 715 117 666 C120 620 123 592 99 565 C75 536 142 507 198 478 C247 452 251 410 241 376 C229 337 167 325 118 290 C79 263 83 222 98 187 C113 151 190 122 228 88"/>
-            <circle class="route-node start" cx="235" cy="750" r="6"/>
-            <circle class="route-node end" cx="228" cy="88" r="6"/>
+            <path class="base-zone zone-western" d="M112 35 C55 66 47 144 72 208 C39 268 54 407 126 457 C203 510 292 453 274 374 C259 307 227 278 260 224 C300 159 272 79 211 43 C178 23 143 20 112 35 Z"/>
+            <path class="base-zone zone-northern" d="M342 65 C415 36 512 28 608 51 C708 75 737 159 685 219 C634 276 551 246 489 244 C430 242 410 292 349 286 C292 281 268 238 291 193 C315 148 294 84 342 65 Z"/>
+            <path class="base-zone zone-southern" d="M351 267 C429 237 526 245 632 276 C716 301 727 387 661 439 C594 493 485 509 391 480 C310 456 271 406 290 352 C306 307 321 279 351 267 Z"/>
+            <path class="route-shadow" d="M181 107 C138 174 145 292 184 382 C250 325 292 231 385 165 C472 104 578 119 611 139 C560 213 454 291 385 340 C449 386 532 400 505 438"/>
+            <path class="route-bed" d="M181 107 C138 174 145 292 184 382 C250 325 292 231 385 165 C472 104 578 119 611 139 C560 213 454 291 385 340 C449 386 532 400 505 438"/>
+            <path class="route-glow" filter="url(#obcRouteGlow)" d="M181 107 C138 174 145 292 184 382 C250 325 292 231 385 165 C472 104 578 119 611 139 C560 213 454 291 385 340 C449 386 532 400 505 438"/>
+            <circle class="route-node start" cx="181" cy="107" r="6"/>
+            <circle class="route-node end" cx="505" cy="438" r="6"/>
           </svg>
           ${ISLANDS.map((island, islandIndex) => {
             const slots = islandSlots(layout, islandIndex);
