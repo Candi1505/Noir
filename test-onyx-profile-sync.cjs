@@ -107,11 +107,19 @@ vm.runInContext(fs.readFileSync("database.js", "utf8"), sandbox);
     name: "Main Base",
     slots: Array.from({ length: 40 }, () => null)
   };
+  layout.slots[0] = {
+    type: "Manual Future Tower",
+    level: 301,
+    notes: "Manual evidence only"
+  };
   await database.saveOnyxBaseLayout(layout);
   assert.equal(operations.at(-1).table, "player_base_layouts");
   assert.equal(operations.at(-1).action, "upsert");
   assert.equal(operations.at(-1).payload.user_id, "player-one");
   assert.equal(operations.at(-1).payload.layout.slots.length, 40);
+  assert.equal(operations.at(-1).payload.layout.slots[0].type, "Manual Future Tower");
+  assert.equal(operations.at(-1).payload.layout.slots[0].level, 301);
+  assert.match(operations.at(-1).payload.updated_at, /^\d{4}-\d{2}-\d{2}T/);
 
   currentUserId = "player-two";
   await database.saveOnyxBaseLayout(null);

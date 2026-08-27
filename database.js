@@ -627,7 +627,11 @@ window.ChestDatabase = {
     const { data, error } = await window.chestSupabase
       .from("player_base_layouts")
       .upsert(
-        { user_id: user.id, layout: cleanLayout },
+        {
+          user_id: user.id,
+          layout: cleanLayout,
+          updated_at: cleanLayout.updatedAt
+        },
         { onConflict: "user_id" }
       )
       .select("layout")
