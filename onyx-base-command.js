@@ -10,14 +10,14 @@
   const MAP_HEIGHT = 500;
 
   const ISLANDS = Object.freeze([
-    { name: "Gateway", form: "long", zone: "western", x: 100, y: 58, width: 164, height: 106, tilt: -3 },
-    { name: "Ember Bend", form: "bend-left", zone: "western", x: 76, y: 192, width: 166, height: 108, tilt: 5 },
-    { name: "Veil", form: "short", zone: "western", x: 106, y: 330, width: 160, height: 104, tilt: -4 },
-    { name: "Northglass Bend", form: "bend-right", zone: "northern", x: 304, y: 104, width: 160, height: 102, tilt: -6 },
-    { name: "Pivot Reach", form: "long", zone: "northern", x: 526, y: 82, width: 172, height: 106, tilt: 4 },
-    { name: "Goldwake Bend", form: "bend-left", zone: "southern", x: 302, y: 286, width: 162, height: 104, tilt: 6 },
-    { name: "Spire", form: "short", zone: "southern", x: 534, y: 276, width: 158, height: 104, tilt: -4 },
-    { name: "Command Crown", form: "long", zone: "southern", x: 406, y: 386, width: 198, height: 102, tilt: -2 }
+    { name: "Gateway", form: "long", zone: "lower-right", x: 530, y: 326, width: 176, height: 108, tilt: -5 },
+    { name: "Ember Bend", form: "bend-left", zone: "lower-right", x: 338, y: 354, width: 178, height: 108, tilt: 5 },
+    { name: "Veil", form: "short", zone: "upper-right", x: 548, y: 82, width: 164, height: 104, tilt: 4 },
+    { name: "Northglass Bend", form: "bend-right", zone: "upper-right", x: 432, y: 152, width: 164, height: 106, tilt: -5 },
+    { name: "Pivot Reach", form: "long", zone: "upper-right", x: 294, y: 198, width: 174, height: 108, tilt: 6 },
+    { name: "Goldwake Bend", form: "bend-left", zone: "left-run", x: 106, y: 332, width: 170, height: 108, tilt: -4 },
+    { name: "Spire", form: "short", zone: "left-run", x: 84, y: 194, width: 164, height: 106, tilt: 4 },
+    { name: "Command Crown", form: "long", zone: "left-run", x: 116, y: 58, width: 184, height: 108, tilt: -3 }
   ]);
 
   const RESOURCE_NAMES = Object.freeze({
@@ -598,7 +598,7 @@
     return `
       <section class="obc-route-panel">
         <div class="obc-section-heading obc-map-heading">
-          <div><p>DEFENCE ROUTE SCHEMATIC</p><h3>Top-down base path</h3></div>
+          <div><p>DEFENCE ROUTE SCHEMATIC</p><h3>Dragon flight path</h3></div>
           <span>Tap an island</span>
         </div>
         ${moveFrom !== null ? `
@@ -608,7 +608,7 @@
             <button id="obcCancelMove" type="button">Cancel</button>
           </div>
         ` : ""}
-        <div class="obc-route-map" aria-label="Eight-section landscape top-down tactical base schematic">
+        <div class="obc-route-map" aria-label="Eight-section dragon flight route from the lower right through the eastern bends and up the western island">
           <svg class="obc-route-lines" viewBox="0 0 ${MAP_WIDTH} ${MAP_HEIGHT}" preserveAspectRatio="none" aria-hidden="true">
             <defs>
               <filter id="obcRouteGlow" x="-40%" y="-20%" width="180%" height="140%">
@@ -618,15 +618,22 @@
               <pattern id="obcBlueprintHatch" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(34)">
                 <line x1="0" y1="0" x2="0" y2="10" class="zone-hatch-line"/>
               </pattern>
+              <marker id="obcRouteArrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+                <path class="route-arrow-head" d="M1 1 9 5 1 9 3.5 5Z"/>
+              </marker>
             </defs>
-            <path class="base-zone zone-western" d="M112 35 C55 66 47 144 72 208 C39 268 54 407 126 457 C203 510 292 453 274 374 C259 307 227 278 260 224 C300 159 272 79 211 43 C178 23 143 20 112 35 Z"/>
-            <path class="base-zone zone-northern" d="M342 65 C415 36 512 28 608 51 C708 75 737 159 685 219 C634 276 551 246 489 244 C430 242 410 292 349 286 C292 281 268 238 291 193 C315 148 294 84 342 65 Z"/>
-            <path class="base-zone zone-southern" d="M351 267 C429 237 526 245 632 276 C716 301 727 387 661 439 C594 493 485 509 391 480 C310 456 271 406 290 352 C306 307 321 279 351 267 Z"/>
-            <path class="route-shadow" d="M181 107 C138 174 145 292 184 382 C250 325 292 231 385 165 C472 104 578 119 611 139 C560 213 454 291 385 340 C449 386 532 400 505 438"/>
-            <path class="route-bed" d="M181 107 C138 174 145 292 184 382 C250 325 292 231 385 165 C472 104 578 119 611 139 C560 213 454 291 385 340 C449 386 532 400 505 438"/>
-            <path class="route-glow" filter="url(#obcRouteGlow)" d="M181 107 C138 174 145 292 184 382 C250 325 292 231 385 165 C472 104 578 119 611 139 C560 213 454 291 385 340 C449 386 532 400 505 438"/>
-            <circle class="route-node start" cx="181" cy="107" r="6"/>
-            <circle class="route-node end" cx="505" cy="438" r="6"/>
+            <path class="base-zone zone-left-run" d="M116 34 C60 52 43 130 64 207 C37 275 54 410 126 465 C191 514 286 467 278 389 C272 329 235 300 261 248 C299 173 286 91 225 48 C190 23 150 22 116 34 Z"/>
+            <path class="base-zone zone-upper-right" d="M346 74 C434 36 567 34 660 66 C733 91 747 161 700 215 C651 272 574 250 505 247 C441 245 413 296 346 302 C285 308 250 273 271 224 C293 174 294 96 346 74 Z"/>
+            <path class="base-zone zone-lower-right" d="M350 256 C430 229 536 243 652 277 C730 300 741 382 679 437 C606 501 459 510 351 476 C272 451 246 385 278 326 C298 289 320 267 350 256 Z"/>
+            <path class="route-shadow" d="M658 433 C564 418 465 396 386 356 C320 323 274 290 305 231 C345 157 489 78 655 112 C635 180 547 226 421 229 C337 231 286 270 252 331 C222 384 173 407 151 366 C125 315 142 180 207 99"/>
+            <path class="route-bed" d="M658 433 C564 418 465 396 386 356 C320 323 274 290 305 231 C345 157 489 78 655 112 C635 180 547 226 421 229 C337 231 286 270 252 331 C222 384 173 407 151 366 C125 315 142 180 207 99"/>
+            <path class="route-glow" filter="url(#obcRouteGlow)" d="M658 433 C564 418 465 396 386 356 C320 323 274 290 305 231 C345 157 489 78 655 112 C635 180 547 226 421 229 C337 231 286 270 252 331 C222 384 173 407 151 366 C125 315 142 180 207 99"/>
+            <path class="route-direction" marker-end="url(#obcRouteArrow)" d="M670 437 C578 423 490 402 405 365"/>
+            <path class="route-direction" marker-end="url(#obcRouteArrow)" d="M650 108 C575 91 465 119 379 190"/>
+            <path class="route-direction" marker-end="url(#obcRouteArrow)" d="M158 388 C126 308 151 178 207 96"/>
+            <circle class="route-node start" cx="658" cy="433" r="7"/>
+            <circle class="route-node crossover" cx="300" cy="261" r="5"/>
+            <circle class="route-node end" cx="207" cy="99" r="7"/>
           </svg>
           ${ISLANDS.map((island, islandIndex) => {
             const slots = islandSlots(layout, islandIndex);
