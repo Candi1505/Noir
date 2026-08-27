@@ -6,6 +6,7 @@ const html = fs.readFileSync("index.html", "utf8");
 const commandSource = fs.readFileSync("onyx-command.js", "utf8");
 const baseSource = fs.readFileSync("onyx-base-command.js", "utf8");
 const chestToolsSource = fs.readFileSync("noir-chest-tools.js", "utf8");
+const livePredictorSource = fs.readFileSync("live-predictor-ui.js", "utf8");
 const profileSql = fs.readFileSync("supabase/onyx_command_profile_state.sql", "utf8");
 const databaseSource = fs.readFileSync("database.js", "utf8");
 
@@ -19,10 +20,20 @@ assert.match(commandSource, /Charged Volt Tower[\s\S]+38800/);
 assert.match(commandSource, /90,803 sigils/);
 assert.match(commandSource, /Wave 1/);
 assert.doesNotMatch(
-  html + commandSource + chestToolsSource,
+  html + commandSource + chestToolsSource + livePredictorSource,
   /\p{Extended_Pictographic}/u,
   "The Onyx mobile shell must use its SVG icon system instead of emoji."
 );
+assert.match(
+  html,
+  /live-predictor-ui\.js\?v=20260827-onyx-predictor-1/
+);
+assert.match(livePredictorSource, /ONYX COMMAND · CHEST INTELLIGENCE/);
+assert.match(livePredictorSource, /aria-pressed/);
+assert.match(livePredictorSource, /data-lp-chest-type/);
+assert.match(livePredictorSource, /lp-active-glint/);
+assert.match(livePredictorSource, /prefers-reduced-motion/);
+assert.doesNotMatch(livePredictorSource, /gold:\s*["']G["']/);
 
 assert.match(baseSource, /ADD YOUR BASE LAYOUT/);
 assert.match(baseSource, /Array\.from\(\{ length: TOTAL_SLOTS \}, \(\) => null\)/);
