@@ -8,14 +8,14 @@
   const TOTAL_SLOTS = ISLAND_COUNT * SLOTS_PER_ISLAND;
 
   const ISLANDS = Object.freeze([
-    { name: "Gateway", form: "short", x: 178, y: 708, width: 150, height: 90, tilt: -5 },
-    { name: "Ember Reach", form: "long", x: 24, y: 611, width: 198, height: 98, tilt: 6 },
-    { name: "Veil", form: "short", x: 66, y: 515, width: 150, height: 90, tilt: -4 },
-    { name: "Northglass", form: "long", x: 142, y: 420, width: 198, height: 100, tilt: 5 },
-    { name: "Pivot", form: "short", x: 158, y: 326, width: 148, height: 88, tilt: -7 },
-    { name: "Goldwake", form: "long", x: 18, y: 230, width: 200, height: 100, tilt: 5 },
-    { name: "Spire", form: "short", x: 76, y: 140, width: 154, height: 88, tilt: -4 },
-    { name: "Command Crown", form: "crown", x: 92, y: 24, width: 238, height: 112, tilt: 0 }
+    { name: "Gateway", form: "long", x: 138, y: 708, width: 194, height: 84, tilt: -4 },
+    { name: "Ember Bend", form: "bend-left", x: 38, y: 620, width: 158, height: 92, tilt: 12 },
+    { name: "Veil", form: "short", x: 24, y: 523, width: 150, height: 82, tilt: -2 },
+    { name: "Northglass Bend", form: "bend-right", x: 118, y: 432, width: 160, height: 92, tilt: -12 },
+    { name: "Pivot Reach", form: "long", x: 146, y: 334, width: 190, height: 84, tilt: 4 },
+    { name: "Goldwake Bend", form: "bend-left", x: 38, y: 244, width: 160, height: 92, tilt: 12 },
+    { name: "Spire", form: "short", x: 22, y: 146, width: 152, height: 82, tilt: -2 },
+    { name: "Command Crown", form: "long", x: 126, y: 44, width: 204, height: 88, tilt: 3 }
   ]);
 
   const RESOURCE_NAMES = Object.freeze({
@@ -596,7 +596,7 @@
     return `
       <section class="obc-route-panel">
         <div class="obc-section-heading obc-map-heading">
-          <div><p>ONYX S-ROUTE</p><h3>Tactical island map</h3></div>
+          <div><p>DEFENCE ROUTE SCHEMATIC</p><h3>Top-down base path</h3></div>
           <span>Tap an island</span>
         </div>
         ${moveFrom !== null ? `
@@ -606,7 +606,7 @@
             <button id="obcCancelMove" type="button">Cancel</button>
           </div>
         ` : ""}
-        <div class="obc-route-map" aria-label="Eight-island S-path map">
+        <div class="obc-route-map" aria-label="Eight-section top-down tactical base schematic">
           <svg class="obc-route-lines" viewBox="0 0 360 820" preserveAspectRatio="none" aria-hidden="true">
             <defs>
               <filter id="obcRouteGlow" x="-40%" y="-20%" width="180%" height="140%">
@@ -614,11 +614,11 @@
                 <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
               </filter>
             </defs>
-            <path class="route-shadow" d="M253 753 C190 740 117 712 123 660 C128 615 158 601 142 560 C126 521 207 508 241 470 C270 437 231 405 232 370 C232 329 165 318 118 280 C84 252 130 211 153 184 C179 153 181 108 211 79"/>
-            <path class="route-bed" d="M253 753 C190 740 117 712 123 660 C128 615 158 601 142 560 C126 521 207 508 241 470 C270 437 231 405 232 370 C232 329 165 318 118 280 C84 252 130 211 153 184 C179 153 181 108 211 79"/>
-            <path class="route-glow" filter="url(#obcRouteGlow)" d="M253 753 C190 740 117 712 123 660 C128 615 158 601 142 560 C126 521 207 508 241 470 C270 437 231 405 232 370 C232 329 165 318 118 280 C84 252 130 211 153 184 C179 153 181 108 211 79"/>
-            <circle class="route-node start" cx="253" cy="753" r="6"/>
-            <circle class="route-node end" cx="211" cy="79" r="6"/>
+            <path class="route-shadow" d="M235 750 C178 744 113 715 117 666 C120 620 123 592 99 565 C75 536 142 507 198 478 C247 452 251 410 241 376 C229 337 167 325 118 290 C79 263 83 222 98 187 C113 151 190 122 228 88"/>
+            <path class="route-bed" d="M235 750 C178 744 113 715 117 666 C120 620 123 592 99 565 C75 536 142 507 198 478 C247 452 251 410 241 376 C229 337 167 325 118 290 C79 263 83 222 98 187 C113 151 190 122 228 88"/>
+            <path class="route-glow" filter="url(#obcRouteGlow)" d="M235 750 C178 744 113 715 117 666 C120 620 123 592 99 565 C75 536 142 507 198 478 C247 452 251 410 241 376 C229 337 167 325 118 290 C79 263 83 222 98 187 C113 151 190 122 228 88"/>
+            <circle class="route-node start" cx="235" cy="750" r="6"/>
+            <circle class="route-node end" cx="228" cy="88" r="6"/>
           </svg>
           ${ISLANDS.map((island, islandIndex) => {
             const slots = islandSlots(layout, islandIndex);
@@ -632,7 +632,7 @@
                 ${selectedIsland === islandIndex ? 'aria-current="true"' : ""}
                 aria-label="Island ${islandIndex + 1}, ${island.name}, ${occupied} of 5 towers, Estimated island DP ${estimateText(estimate)}">
                 <span class="obc-island-plate" aria-hidden="true"></span>
-                <span class="obc-island-ridge" aria-hidden="true"></span>
+                <span class="obc-island-axis" aria-hidden="true"></span>
                 <span class="obc-island-copy">
                   <small>ISLAND ${String(islandIndex + 1).padStart(2, "0")} · ${island.form.toUpperCase()}</small>
                   <strong>${escapeHtml(island.name)}</strong>
@@ -766,7 +766,7 @@
         ${renderSwapPrompt()}
 
         <div class="obc-spot-field ${island.form}" aria-label="${escapeHtml(island.name)} tower spots">
-          <div class="obc-island-surface" aria-hidden="true"><i></i><i></i><i></i></div>
+          <div class="obc-island-surface" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
           ${slots.map((tower, spotIndex) => {
             const absolute = start + spotIndex;
             const estimate = towerEstimate(tower);
