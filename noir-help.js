@@ -392,14 +392,14 @@
     );
     overlay.setAttribute(
       "aria-label",
-      "NOIR • I ZI help and instructions"
+      "Onyx Command help and instructions"
     );
 
     overlay.innerHTML = `
       <div class="noir-help-shell">
         <header class="noir-help-topbar">
           <div>
-            <p class="noir-help-eyebrow">NOIR • I ZI</p>
+            <p class="noir-help-eyebrow">Onyx Command</p>
             <h1>Help &amp; How It Works</h1>
           </div>
           <button
@@ -413,7 +413,7 @@
         <section class="noir-help-intro">
           <h2>Know what waits in the dark.</h2>
           <p>
-            NOIR • I ZI uses the current event’s live chest decks and your own
+            Onyx Command uses the current event’s live chest decks and your own
             consecutive rewards to locate where you are. Your history stays
             on your device and never changes another player’s position.
           </p>
@@ -428,7 +428,7 @@
             </div>
             <div class="noir-help-step">
               <span>3</span>
-              <div>Keep recording until NOIR • I ZI says safe predictions are ready.</div>
+              <div>Keep recording until Onyx Command says safe predictions are ready.</div>
             </div>
             <div class="noir-help-step">
               <span>4</span>
@@ -450,7 +450,7 @@
               <li>Use Undo immediately if the wrong reward or amount was entered.</li>
             </ol>
             <div class="noir-help-callout">
-              When NOIR • I ZI says <strong>Predictions ready</strong> or
+              When Onyx Command says <strong>Predictions ready</strong> or
               <strong>Safe predictions ready</strong>, you can stop recording
               and use the displayed list.
             </div>
@@ -464,7 +464,7 @@
           </summary>
           <div class="noir-help-body">
             <p>
-              <strong>100%</strong> means NOIR • I ZI has uniquely located the main
+              <strong>100%</strong> means Onyx Command has uniquely located the main
               sequence and every separate reward pool used by that chest.
             </p>
             <p>
@@ -474,14 +474,14 @@
               a 1% chance of being wrong.
             </p>
             <p>
-              NOIR • I ZI may show only a few predictions because it pauses before an
+              Onyx Command may show only a few predictions because it pauses before an
               unresolved reward pool instead of guessing. When the safe list
               ends, open and record the next consecutive reward to identify
               that pool and unlock more.
             </p>
             <div class="noir-help-callout noir-help-warning">
               Different players and chest types may need different numbers of
-              consecutive starting rewards. Keep recording until NOIR • I ZI
+              consecutive starting rewards. Keep recording until Onyx Command
               explicitly says safe predictions are ready.
             </div>
           </div>
@@ -589,13 +589,13 @@
               <li>Use <strong>Save &amp; next empty</strong> to enter the base quickly without returning to the map after every tower.</li>
               <li>Enter each perch’s level, dragon, dragon level and perch rider. Rider skills and all eight gear slots are optional but improve the completed record.</li>
               <li>When the entered layout matches your real base, tap <strong>Save proposal as current</strong>. This becomes the comparison baseline.</li>
-              <li>To test a move, tap one tower and then its destination. NOIR • I ZI moves it into an empty slot or swaps it with the tower already there.</li>
+              <li>To test a move, tap one tower and then its destination. Onyx Command moves it into an empty slot or swaps it with the tower already there.</li>
               <li>Watch <strong>Projected defensive strength</strong>, <strong>Defensive effectiveness</strong> and the advice cards. Green is an improvement; red is a weaker proposal.</li>
               <li>Use Undo, Redo or Restore current layout while experimenting. Save the proposal as current only after making the same changes in WD.</li>
               <li>For Fortification planning, enter your current player level, target level and any XP already earned toward the next level.</li>
               <li>The <strong>Account XP requirements</strong> card automatically shows the XP needed for the next level and the chosen target. Players do not need to calculate expected XP or merge deductions themselves.</li>
-              <li>Add each active or stored tower you can upgrade, including its current level and quantity. NOIR • I ZI uses WD’s upgrade XP and level requirements to calculate whether the entered towers can reach the target and recommends an upgrade route.</li>
-              <li>Add planned merges in <strong>Tower merge &amp; XP debt</strong>. NOIR • I ZI compares the tower being kept, the tower being consumed and the resulting level shown by WD, then includes the debt in the account projection automatically.</li>
+              <li>Add each active or stored tower you can upgrade, including its current level and quantity. Onyx Command uses WD’s upgrade XP and level requirements to calculate whether the entered towers can reach the target and recommends an upgrade route.</li>
+              <li>Add planned merges in <strong>Tower merge &amp; XP debt</strong>. Onyx Command compares the tower being kept, the tower being consumed and the resulting level shown by WD, then includes the debt in the account projection automatically.</li>
             </ol>
             <div class="noir-help-callout">
               <strong>Planning tower merges</strong>
@@ -607,7 +607,7 @@
                 <li>If repeating the same merge, enter the quantity, then tap <strong>Calculate and add merge</strong>.</li>
               </ol>
               <p>
-                NOIR • I ZI adds the XP already held by both original towers and
+                Onyx Command adds the XP already held by both original towers and
                 compares it with the XP retained by the resulting tower. Any
                 lost XP is shown as <strong>Player XP debt created</strong> and
                 is added to the amount needed for the player’s next level.
@@ -622,7 +622,7 @@
             </div>
             <div class="noir-help-callout">
               The current DP is the number shown in WD. Projected defensive
-              strength is NOIR • I ZI’s planning estimate—it can compare placements,
+              strength is Onyx Command’s planning estimate—it can compare placements,
               coverage and support, but moving towers does not change WD’s
               displayed DP by itself.
             </div>
@@ -640,11 +640,11 @@
               <li>Check the selected chest, reward name and amount.</li>
               <li>Confirm whether the result was a regular or bonus chest.</li>
               <li>Use Undo for an incorrect last entry.</li>
-              <li>Take screenshots of NOIR • I ZI’s prediction and the game result before changing anything.</li>
+              <li>Take screenshots of Onyx Command’s prediction and the game result before changing anything.</li>
             </ol>
             <div class="noir-help-callout noir-help-warning">
               Never reset saved history simply because the safe list is short.
-              A short list usually means NOIR • I ZI needs one result from a new pool.
+              A short list usually means Onyx Command needs one result from a new pool.
             </div>
           </div>
         </details>
@@ -656,12 +656,12 @@
           </summary>
           <div class="noir-help-body">
             <p>
-              Found a problem or have an idea for NOIR • I ZI? Email Chest Companion
+              Found a problem or have an idea for Onyx Command? Email the Onyx team
               and include:
             </p>
             <ul>
               <li>The chest type you were using.</li>
-              <li>Screenshots of NOIR • I ZI and the game result.</li>
+              <li>Screenshots of Onyx Command and the game result.</li>
               <li>The confidence shown at the time.</li>
               <li>Whether it was a regular or bonus chest.</li>
               <li>A short description of what happened.</li>
@@ -672,8 +672,8 @@
             </div>
             <a
               class="noir-help-email"
-              href="mailto:noirchestcompanion@gmail.com?subject=NOIR • I ZI%20Help%20%26%20Feedback"
-            >Email NOIR • I ZI Chest Companion</a>
+              href="mailto:noirchestcompanion@gmail.com?subject=Onyx%20Command%20Help%20%26%20Feedback"
+            >Email Onyx Command</a>
           </div>
         </details>
 
