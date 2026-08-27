@@ -5,6 +5,7 @@ const vm = require("node:vm");
 const html = fs.readFileSync("index.html", "utf8");
 const commandSource = fs.readFileSync("onyx-command.js", "utf8");
 const baseSource = fs.readFileSync("onyx-base-command.js", "utf8");
+const commandCss = fs.readFileSync("onyx-command.css", "utf8");
 const chestToolsSource = fs.readFileSync("noir-chest-tools.js", "utf8");
 const livePredictorSource = fs.readFileSync("live-predictor-ui.js", "utf8");
 const towerBridgeSource = fs.readFileSync("onyx-tower-inventory-bridge.js", "utf8");
@@ -30,8 +31,8 @@ assert.match(
   /live-predictor-ui\.js\?v=20260827-onyx-predictor-1/
 );
 assert.match(html, /onyx-tower-inventory-bridge\.js\?v=20260827-base-command-1/);
-assert.match(html, /onyx-base-command\.js\?v=20260827-archipelago-1/);
-assert.match(html, /onyx-command\.css\?v=20260827-archipelago-1/);
+assert.match(html, /onyx-base-command\.js\?v=20260827-blueprint-1/);
+assert.match(html, /onyx-command\.css\?v=20260827-blueprint-1/);
 assert.match(livePredictorSource, /ONYX COMMAND · CHEST INTELLIGENCE/);
 assert.match(livePredictorSource, /aria-pressed/);
 assert.match(livePredictorSource, /data-lp-chest-type/);
@@ -41,9 +42,16 @@ assert.doesNotMatch(livePredictorSource, /gold:\s*["']G["']/);
 
 assert.match(baseSource, /TACTICAL MAP REQUIRED/);
 assert.match(baseSource, /Array\.from\(\{ length: TOTAL_SLOTS \}, \(\) => null\)/);
-assert.match(baseSource, /M253 753 C190 740/);
-assert.match(baseSource, /form: "crown"/);
-assert.match(baseSource, /obc-island-ridge/);
+assert.match(baseSource, /M235 750 C178 744/);
+assert.match(baseSource, /form: "bend-left"/);
+assert.match(baseSource, /form: "bend-right"/);
+assert.match(baseSource, /obc-island-axis/);
+assert.match(baseSource, /DEFENCE ROUTE SCHEMATIC/);
+assert.doesNotMatch(baseSource, /obc-island-ridge/);
+assert.match(commandCss, /\.obc-spot-field \.spot-1 \{ left: 27%; top: 31%; \}/);
+assert.match(commandCss, /\.obc-spot-field \.spot-4 \{ left: 73%; top: 69%; \}/);
+assert.match(commandCss, /\.obc-spot-field \.spot-5 \{ left: 50%; top: 50%; \}/);
+assert.match(commandCss, /\.obc-occupancy i:nth-child\(5\)[^}]+translate\(-50%, -50%\)/);
 assert.match(baseSource, /Estimated tower DP/);
 assert.match(baseSource, /Estimated island DP/);
 assert.match(baseSource, /Estimated total base DP/);
