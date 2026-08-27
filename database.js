@@ -546,6 +546,10 @@ window.ChestDatabase = {
     const currentKeys = rawKeys === null || rawKeys === undefined
       ? null
       : Number(rawKeys);
+    const rawSigils = state?.currentSigils;
+    const currentSigils = rawSigils === null || rawSigils === undefined
+      ? null
+      : Number(rawSigils);
 
     if (
       currentKeys !== null &&
@@ -553,11 +557,43 @@ window.ChestDatabase = {
     ) {
       throw new Error("Current keys must be a whole number from 0 to 40.");
     }
+    if (
+      currentSigils !== null &&
+      (!Number.isInteger(currentSigils) || currentSigils < 0 || currentSigils > 100000000)
+    ) {
+      throw new Error("Current sigils must be a whole number from 0 to 100,000,000.");
+    }
+
+    const branchLimits = {
+      "brickscale": 6,
+      "mission-bonus": 2,
+      "base-boost": 6,
+      "charged-volt-tower": 6,
+      "cosmic-orrery": 2,
+      "bloodstone": 3
+    };
+    const branchKeys = {};
+    for (const [slug, maximum] of Object.entries(branchLimits)) {
+      const value = Number(state?.branchKeys?.[slug] ?? 0);
+      if (!Number.isInteger(value) || value < 0 || value > maximum) {
+        throw new Error(`Invalid claimed-key checkpoint for ${slug}.`);
+      }
+      branchKeys[slug] = value;
+    }
+
+    const mythicChoice = ["", "Patchmaw", "Smirkle"].includes(state?.mythicChoice)
+      ? state.mythicChoice
+      : "";
 
     const user = await this.getAuthenticatedProfileUser();
     const preferences = {
-      version: 1,
+      version: 2,
       currentKeys,
+      currentSigils,
+      seasonRelease: "misfitrise-wave-1",
+      seasonTarget: 20,
+      mythicChoice,
+      branchKeys,
       updatedAt: new Date().toISOString()
     };
     const { data, error } = await window.chestSupabase

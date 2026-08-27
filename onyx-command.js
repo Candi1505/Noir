@@ -39,17 +39,38 @@
     { id: "super_sigil", label: "Super Sigil", detail: "Bonus at 30", tone: "sigil" }
   ]);
 
-  const VERIFIED_ROUTE = Object.freeze([
-    { branch: "Brickscale", keys: 6, sigils: 19503, stop: "Sixth key" },
-    { branch: "Mission Bonus", keys: 1, sigils: 6600, stop: "First key" },
-    { branch: "Base Boost", keys: 6, sigils: 19500, stop: "Sixth key" },
-    { branch: "Charged Volt Tower", keys: 6, sigils: 38800, stop: "Sixth key" },
-    { branch: "Cosmic Orrery", keys: 1, sigils: 6400, stop: "First key" }
+  const SEASON_PROGRESS_SLUGS = Object.freeze([
+    "brickscale",
+    "mission-bonus",
+    "base-boost",
+    "charged-volt-tower",
+    "cosmic-orrery",
+    "bloodstone"
   ]);
+  const SEASON_KEY_LIMITS = Object.freeze({
+    "brickscale": 6,
+    "mission-bonus": 2,
+    "base-boost": 6,
+    "charged-volt-tower": 6,
+    "cosmic-orrery": 2,
+    "bloodstone": 3
+  });
+  const MYTHIC_CHOICES = new Set(["", "Patchmaw", "Smirkle"]);
 
-  let commandState = {
-    currentKeys: null
-  };
+  function defaultCommandState() {
+    return {
+      version: 2,
+      currentKeys: null,
+      currentSigils: null,
+      seasonRelease: "misfitrise-wave-1",
+      seasonTarget: 20,
+      mythicChoice: "",
+      branchKeys: Object.fromEntries(SEASON_PROGRESS_SLUGS.map(slug => [slug, 0]))
+    };
+  }
+
+  let commandState = defaultCommandState();
+  let seasonTab = "planner";
   let riderCatalogueMode = "riders";
   let riderCatalogueQuery = "";
 
@@ -85,16 +106,35 @@
     return `${LOCAL_STATE_PREFIX}:${userId}`;
   }
 
+  function normaliseNullableInteger(value, minimum, maximum) {
+    if (value === null || value === undefined || value === "") return null;
+    const number = Number(value);
+    if (!Number.isFinite(number)) return null;
+    return Math.max(minimum, Math.min(maximum, Math.round(number)));
+  }
+
+  function normaliseCommandState(saved) {
+    const next = defaultCommandState();
+    next.currentKeys = normaliseNullableInteger(saved?.currentKeys, 0, 40);
+    next.currentSigils = normaliseNullableInteger(saved?.currentSigils, 0, 100000000);
+    next.mythicChoice = MYTHIC_CHOICES.has(saved?.mythicChoice)
+      ? saved.mythicChoice
+      : "";
+    SEASON_PROGRESS_SLUGS.forEach(slug => {
+      const value = Number(saved?.branchKeys?.[slug]);
+      next.branchKeys[slug] = Number.isInteger(value)
+        ? Math.max(0, Math.min(SEASON_KEY_LIMITS[slug], value))
+        : 0;
+    });
+    return next;
+  }
+
   function readLocalState() {
     try {
       const saved = JSON.parse(localStorage.getItem(storageKey()) || "null");
-      const rawCount = saved?.currentKeys;
-      const count = rawCount === null || rawCount === undefined ? null : Number(rawCount);
-      commandState.currentKeys = count !== null && Number.isFinite(count)
-        ? Math.max(0, Math.min(40, Math.round(count)))
-        : null;
+      commandState = normaliseCommandState(saved);
     } catch (error) {
-      commandState.currentKeys = null;
+      commandState = defaultCommandState();
     }
   }
 
@@ -105,15 +145,9 @@
     if (typeof loader !== "function") return;
     try {
       const saved = await loader.call(window.ChestDatabase);
-      const rawCount = saved?.currentKeys;
-      const count = rawCount === null || rawCount === undefined ? null : Number(rawCount);
-      if (count === null || Number.isFinite(count)) {
-        commandState.currentKeys = count === null
-          ? null
-          : Math.max(0, Math.min(40, Math.round(count)));
-        localStorage.setItem(storageKey(), JSON.stringify(commandState));
-        renderKeyProgress();
-      }
+      commandState = normaliseCommandState(saved);
+      localStorage.setItem(storageKey(), JSON.stringify(commandState));
+      renderKeyProgress();
     } catch (error) {
       console.warn("[Onyx Command] Cloud preferences are not available yet.", error);
     }
@@ -187,44 +221,287 @@
     `;
   }
 
-  function renderSeason() {
-    const value = commandState.currentKeys === null ? "" : commandState.currentKeys;
-    return shell("Season Command", "MISFITRISE · WAVE 1", `
-      <section class="onyx-source-banner verified">
-        <strong>Verified Wave 1 season graph</strong>
-        <p>12 verified branches and 558 mapped nodes. This route is calculated for Wave 1 and is not treated as permanent.</p>
+  function getSeasonRelease() {
+    const release = window.OnyxSeasonData;
+    return release && Array.isArray(release.branches) ? release : null;
+  }
+
+  function getSeasonPlanningBranches() {
+    const release = getSeasonRelease();
+    if (!release) return [];
+    return SEASON_PROGRESS_SLUGS
+      .map(slug => release.branches.find(branch => branch.slug === slug))
+      .filter(Boolean);
+  }
+
+  function planSeasonRoute(options = {}) {
+    const branches = getSeasonPlanningBranches();
+    const requestedTarget = Number(options.targetKeys ?? 20);
+    const targetKeys = Number.isInteger(requestedTarget)
+      ? Math.max(0, Math.min(25, requestedTarget))
+      : 20;
+    const progress = normaliseCommandState({ branchKeys: options.branchKeys }).branchKeys;
+
+    if (!branches.length) {
+      return {
+        available: false,
+        targetKeys,
+        claimedKeys: 0,
+        plannedKeys: 0,
+        additionalKeys: 0,
+        additionalSigils: 0,
+        reachable: false,
+        selection: []
+      };
+    }
+
+    const claimedKeys = branches.reduce((total, branch) => {
+      return total + Math.min(branch.keyCheckpoints.length, progress[branch.slug] || 0);
+    }, 0);
+    const totalAvailableKeys = branches.reduce((total, branch) => {
+      return total + branch.keyCheckpoints.length;
+    }, 0);
+    const additionalNeeded = Math.max(0, targetKeys - claimedKeys);
+    const totalRemaining = Math.max(0, totalAvailableKeys - claimedKeys);
+    const achievableAdditional = Math.min(additionalNeeded, totalRemaining);
+
+    let states = new Map([[0, { cost: 0, choices: {} }]]);
+    branches.forEach(branch => {
+      const claimed = Math.min(branch.keyCheckpoints.length, progress[branch.slug] || 0);
+      const sunkCost = claimed > 0 ? branch.keyCheckpoints[claimed - 1] : 0;
+      const nextStates = new Map();
+      states.forEach((state, selectedBefore) => {
+        for (let added = 0; added <= branch.keyCheckpoints.length - claimed; added += 1) {
+          const selected = selectedBefore + added;
+          if (selected > achievableAdditional) continue;
+          const stop = claimed + added;
+          const incrementalCost = added > 0
+            ? branch.keyCheckpoints[stop - 1] - sunkCost
+            : 0;
+          const candidate = {
+            cost: state.cost + incrementalCost,
+            choices: { ...state.choices, [branch.slug]: added }
+          };
+          const existing = nextStates.get(selected);
+          if (!existing || candidate.cost < existing.cost) {
+            nextStates.set(selected, candidate);
+          }
+        }
+      });
+      states = nextStates;
+    });
+
+    const best = states.get(achievableAdditional) || { cost: 0, choices: {} };
+    const selection = branches.flatMap(branch => {
+      const addedKeys = best.choices[branch.slug] || 0;
+      if (!addedKeys) return [];
+      const claimed = Math.min(branch.keyCheckpoints.length, progress[branch.slug] || 0);
+      const stopKey = claimed + addedKeys;
+      const previousCost = claimed > 0 ? branch.keyCheckpoints[claimed - 1] : 0;
+      return [{
+        slug: branch.slug,
+        branch: branch.name,
+        claimedKeys: claimed,
+        addedKeys,
+        stopKey,
+        checkpointCost: branch.keyCheckpoints[stopKey - 1],
+        sigils: branch.keyCheckpoints[stopKey - 1] - previousCost
+      }];
+    });
+
+    return {
+      available: true,
+      targetKeys,
+      claimedKeys,
+      plannedKeys: claimedKeys + achievableAdditional,
+      additionalKeys: achievableAdditional,
+      additionalSigils: best.cost,
+      reachable: claimedKeys >= targetKeys || additionalNeeded <= totalRemaining,
+      selection
+    };
+  }
+
+  function renderSeasonTabs() {
+    const tabs = [
+      ["planner", "Road to 20"],
+      ["branches", "Branch Explorer"],
+      ["intel", "Season Intel"]
+    ];
+    return `<nav class="onyx-season-tabs" role="tablist" aria-label="Season Command sections">
+      ${tabs.map(([value, label]) => `<button type="button" role="tab" data-season-tab="${value}" aria-selected="${seasonTab === value}" class="${seasonTab === value ? "active" : ""}">${label}</button>`).join("")}
+    </nav>`;
+  }
+
+  function renderSeasonProgressControls() {
+    return `<div class="onyx-season-progress-grid">
+      ${getSeasonPlanningBranches().map(branch => {
+        const claimed = commandState.branchKeys[branch.slug] || 0;
+        const checkpoint = claimed > 0 ? branch.keyCheckpoints[claimed - 1] : 0;
+        return `<article class="onyx-season-progress-card">
+          <div>
+            <span>${escapeHtml(branch.type)}</span>
+            <strong>${escapeHtml(branch.name)}</strong>
+            <small>${claimed ? `Stopped at ${formatNumber(checkpoint)} sigils` : "No key checkpoint marked"}</small>
+          </div>
+          <div class="onyx-stepper" aria-label="${escapeHtml(branch.name)} claimed keys">
+            <button type="button" data-season-branch="${branch.slug}" data-season-key-delta="-1" aria-label="Remove one ${escapeHtml(branch.name)} key" ${claimed === 0 ? "disabled" : ""}>−</button>
+            <output>${claimed}<small>/${branch.keyCheckpoints.length}</small></output>
+            <button type="button" data-season-branch="${branch.slug}" data-season-key-delta="1" aria-label="Add one ${escapeHtml(branch.name)} key" ${claimed === branch.keyCheckpoints.length ? "disabled" : ""}>+</button>
+          </div>
+        </article>`;
+      }).join("")}
+    </div>`;
+  }
+
+  function renderSeasonPlanner() {
+    const plan = planSeasonRoute({ targetKeys: 20, branchKeys: commandState.branchKeys });
+    const keyValue = commandState.currentKeys === null ? "" : commandState.currentKeys;
+    const sigilValue = commandState.currentSigils === null ? "" : commandState.currentSigils;
+    const difference = commandState.currentSigils === null
+      ? null
+      : commandState.currentSigils - plan.additionalSigils;
+    const mismatch = commandState.currentKeys !== null && commandState.currentKeys !== plan.claimedKeys;
+
+    return `
+      <section class="onyx-season-hero-panel">
+        <div class="onyx-season-orbit" style="--season-progress:${Math.min(100, (plan.claimedKeys / 20) * 100)}">
+          <span><strong>${plan.claimedKeys}</strong><small>/20</small></span>
+          ${icon("key", "onyx-season-orbit-key")}
+        </div>
+        <div>
+          <p class="onyx-command-kicker">ROAD TO 20 KEYS</p>
+          <h3>${plan.claimedKeys >= 20 ? "Mythic gate unlocked" : `${20 - plan.claimedKeys} planned key${20 - plan.claimedKeys === 1 ? "" : "s"} remain`}</h3>
+          <p>Onyx follows only the branch checkpoints you mark. It does not infer where your keys came from.</p>
+        </div>
+        <div class="onyx-season-metrics">
+          <article><span>Route from here</span><strong>${formatNumber(plan.additionalSigils)}</strong><small>sigils</small></article>
+          <article><span>Your sigils</span><strong>${commandState.currentSigils === null ? "—" : formatNumber(commandState.currentSigils)}</strong><small>manual</small></article>
+          <article class="${difference !== null && difference < 0 ? "short" : ""}"><span>${difference === null ? "Budget gap" : difference < 0 ? "Still needed" : "After route"}</span><strong>${difference === null ? "—" : formatNumber(Math.abs(difference))}</strong><small>sigils</small></article>
+        </div>
       </section>
 
-      <section class="onyx-command-section onyx-key-entry">
-        <div>
-          <p class="onyx-command-kicker">YOUR PROGRESS</p>
-          <h3>How many keys have you earned?</h3>
-          <p>Your claimed-key count belongs to your profile, so you add and update it yourself.</p>
+      <section class="onyx-command-section onyx-season-inputs">
+        <div class="onyx-section-heading">
+          <div><p class="onyx-command-kicker">YOUR SEASON STATE</p><h3>Set the command inputs</h3></div>
+          <span class="onyx-source-chip">Manual · profile saved</span>
         </div>
-        <label>
-          <span>Current keys</span>
-          <input id="onyxCurrentKeysInput" type="number" min="0" max="40" inputmode="numeric" value="${value}" placeholder="0–40">
-        </label>
-        <button class="onyx-primary-action" id="onyxSaveKeys" type="button">Save key count</button>
-        <p id="onyxKeySaveStatus" class="onyx-inline-status" aria-live="polite"></p>
+        <div class="onyx-season-field-grid">
+          <label><span>Overall keys</span><input id="onyxCurrentKeysInput" type="number" min="0" max="40" inputmode="numeric" value="${keyValue}" placeholder="0–40"><small>For your home progress ring</small></label>
+          <label><span>Current sigils</span><input id="onyxCurrentSigilsInput" type="number" min="0" max="100000000" inputmode="numeric" value="${sigilValue}" placeholder="Enter balance"><small>Used only for the budget gap</small></label>
+        </div>
+        <div class="onyx-mythic-choice" role="group" aria-label="Mythic target">
+          <span>Mythic target</span>
+          ${["Patchmaw", "Smirkle"].map(name => `<button type="button" data-season-mythic="${name}" aria-pressed="${commandState.mythicChoice === name}" class="${commandState.mythicChoice === name ? "active" : ""}">${name}</button>`).join("")}
+        </div>
+        ${mismatch ? `<div class="onyx-season-warning"><strong>Checkpoint detail needed</strong><p>Your overall count is ${commandState.currentKeys}, but the marked branch checkpoints total ${plan.claimedKeys}. Allocate those keys below before treating the remaining cost as exact.</p></div>` : ""}
+      </section>
+
+      <section class="onyx-command-section onyx-route-command">
+        <div class="onyx-section-heading">
+          <div><p class="onyx-command-kicker">LOWEST VERIFIED COST</p><h3>${plan.claimedKeys ? "Your route from marked checkpoints" : "Wave 1 route from zero"}</h3></div>
+          <span class="onyx-source-chip">${formatNumber(plan.additionalSigils)} sigils</span>
+        </div>
+        <div class="onyx-route-list">
+          ${plan.selection.length ? plan.selection.map(item => `
+            <article>
+              <div><strong>${escapeHtml(item.branch)}</strong><small>Stop at key ${item.stopKey} · ${formatNumber(item.checkpointCost)} cumulative</small></div>
+              <span>+${item.addedKeys} key${item.addedKeys === 1 ? "" : "s"}</span>
+              <b>${formatNumber(item.sigils)}</b>
+            </article>
+          `).join("") : `<p class="onyx-empty-state">${plan.claimedKeys >= 20 ? "Your marked checkpoints already reach the 20-key gate." : "No verified route is available for this state."}</p>`}
+        </div>
+        <p class="onyx-evidence-note">Costs are exact to the selected key checkpoints for this release. The recommendation is recomputed whenever you change branch progress.</p>
       </section>
 
       <section class="onyx-command-section">
         <div class="onyx-section-heading">
-          <div><p class="onyx-command-kicker">ROAD TO 20 KEYS</p><h3>Lowest verified Wave 1 route</h3></div>
-          <span class="onyx-source-chip">90,803 sigils</span>
+          <div><p class="onyx-command-kicker">CLAIMED CHECKPOINTS</p><h3>Tap each branch to match your progress</h3></div>
+          <span class="onyx-source-chip">${plan.claimedKeys}/25 marked</span>
         </div>
-        <div class="onyx-route-list">
-          ${VERIFIED_ROUTE.map(item => `
-            <article>
-              <div><strong>${escapeHtml(item.branch)}</strong><small>Stop at ${escapeHtml(item.stop)}</small></div>
-              <span>${item.keys} key${item.keys === 1 ? "" : "s"}</span>
-              <b>${formatNumber(item.sigils)}</b>
-            </article>
-          `).join("")}
-        </div>
-        <p class="onyx-evidence-note">Later season releases can change the best route. Onyx will not silently carry this recommendation into another wave.</p>
+        ${renderSeasonProgressControls()}
       </section>
+    `;
+  }
+
+  function renderSeasonBranches() {
+    const release = getSeasonRelease();
+    const statusLabels = {
+      current: "Wave 1",
+      daily: "Daily",
+      mythic: "20-key gate",
+      history: "Prior season"
+    };
+    return `<section class="onyx-command-section onyx-branch-explorer">
+      <div class="onyx-section-heading">
+        <div><p class="onyx-command-kicker">BRANCH EXPLORER</p><h3>Misfitrise command map</h3></div>
+        <span class="onyx-source-chip">${release.branchCount} branches</span>
+      </div>
+      <p class="onyx-branch-intro">Tap-first reference cards show branch purpose, size, completion cost and every verified key stop without exposing the private source file.</p>
+      <div class="onyx-branch-grid">
+        ${release.branches.map(branch => {
+          const cost = branch.completionCost === null
+            ? branch.costLabel
+            : branch.costLabel === "free"
+              ? "Free"
+              : `${formatNumber(branch.completionCost)} ${branch.costLabel}`;
+          return `<article class="onyx-branch-card ${branch.status}">
+            <header><span>${escapeHtml(statusLabels[branch.status] || branch.status)}</span><b>${formatNumber(branch.logicalNodes)} nodes</b></header>
+            <div class="onyx-branch-name">${icon(branch.status === "mythic" ? "crest" : "season")}<div><strong>${escapeHtml(branch.name)}</strong><small>${escapeHtml(branch.type)}</small></div></div>
+            <div class="onyx-branch-cost"><span>${branch.unlockKeys ? "Unlock rule" : "Completion"}</span><strong>${branch.unlockKeys ? `${branch.unlockKeys} keys` : escapeHtml(cost)}</strong></div>
+            ${branch.keyCheckpoints.length ? `<div class="onyx-checkpoint-rail" aria-label="${escapeHtml(branch.name)} key checkpoints">${branch.keyCheckpoints.map((checkpoint, index) => `<span><b>${index + 1}</b>${formatNumber(checkpoint)}</span>`).join("")}</div>` : `<p class="onyx-branch-note">${branch.status === "mythic" ? `${branch.returnedKeys} keys returned later; they do not fund this branch's own unlock.` : branch.status === "daily" ? "Free daily progression · no key checkpoints." : escapeHtml(branch.costLabel)}</p>`}
+          </article>`;
+        }).join("")}
+      </div>
+    </section>`;
+  }
+
+  function renderSeasonIntel() {
+    const release = getSeasonRelease();
+    return `
+      <section class="onyx-season-intel-hero">
+        ${icon("season", "onyx-season-intel-glyph")}
+        <div><p class="onyx-command-kicker">RELEASE INTELLIGENCE</p><h3>${escapeHtml(release.season)} · Wave ${release.wave}</h3><p>Verified ${escapeHtml(release.verifiedAt)}. This release is frozen so later waves cannot silently change an old plan.</p></div>
+      </section>
+      <section class="onyx-command-section">
+        <div class="onyx-season-rule-grid">
+          <article><span>01</span><strong>${release.logicalNodeCount} logical nodes</strong><p>Choice variants are collapsed so costs are not double-counted.</p></article>
+          <article><span>02</span><strong>${release.preMythicKeyCount} pre-mythic keys</strong><p>Available across the six sigil branches in this release.</p></article>
+          <article><span>03</span><strong>${release.mythicUnlockKeys}-key mythic gate</strong><p>Patchmaw and Smirkle each require their own unlock decision.</p></article>
+          <article><span>04</span><strong>No self-funding unlock</strong><p>Keys returned inside a mythic branch do not count toward opening that same branch.</p></article>
+        </div>
+      </section>
+      <section class="onyx-source-banner manual">
+        <strong>Private source boundary</strong>
+        <p>Only reviewed branch totals and checkpoints ship with Onyx. Account details, credentials and the private source file never enter the public app or player profile.</p>
+      </section>
+    `;
+  }
+
+  function renderSeasonSaveBar() {
+    return `<section class="onyx-season-save-bar">
+      <div><strong>Season command state</strong><small>Saved separately for each signed-in player.</small></div>
+      <div><button type="button" id="onyxResetSeason" class="secondary">Reset</button><button type="button" id="onyxSaveSeason" class="primary">Save progress</button></div>
+      <p id="onyxSeasonSaveStatus" aria-live="polite"></p>
+    </section>`;
+  }
+
+  function renderSeason() {
+    const release = getSeasonRelease();
+    if (!release) {
+      return shell("Season Command", "SEASON INTELLIGENCE", `
+        <section class="onyx-source-banner limited"><strong>Season release unavailable</strong><p>Onyx could not load its reviewed season release. No route will be guessed.</p></section>
+      `);
+    }
+    return shell("Season Command", "MISFITRISE · WAVE 1", `
+      <section class="onyx-source-banner verified">
+        <strong>Verified Wave 1 season graph</strong>
+        <p>${release.branchCount} verified branches and ${release.logicalNodeCount} mapped nodes. Routes recalculate from your marked key checkpoints.</p>
+      </section>
+      ${renderSeasonTabs()}
+      <div class="onyx-season-tab-panel" role="tabpanel">
+        ${seasonTab === "branches" ? renderSeasonBranches() : seasonTab === "intel" ? renderSeasonIntel() : renderSeasonPlanner()}
+      </div>
+      ${renderSeasonSaveBar()}
     `);
   }
 
@@ -428,11 +705,57 @@
       : `<p class="onyx-empty-state">No ${category} match that search.</p>`;
   }
 
+  function readSeasonInputs(overlay, showErrors = false) {
+    const status = overlay.querySelector("#onyxSeasonSaveStatus");
+    const keyInput = overlay.querySelector("#onyxCurrentKeysInput");
+    const sigilInput = overlay.querySelector("#onyxCurrentSigilsInput");
+
+    if (keyInput) {
+      const rawKeys = String(keyInput.value || "").trim();
+      if (!rawKeys) {
+        commandState.currentKeys = null;
+      } else {
+        const keys = Number(rawKeys);
+        if (!Number.isInteger(keys) || keys < 0 || keys > 40) {
+          if (showErrors && status) status.textContent = "Overall keys must be a whole number from 0 to 40.";
+          return false;
+        }
+        commandState.currentKeys = keys;
+      }
+    }
+
+    if (sigilInput) {
+      const rawSigils = String(sigilInput.value || "").trim();
+      if (!rawSigils) {
+        commandState.currentSigils = null;
+      } else {
+        const sigils = Number(rawSigils);
+        if (!Number.isInteger(sigils) || sigils < 0 || sigils > 100000000) {
+          if (showErrors && status) status.textContent = "Current sigils must be a whole number from 0 to 100,000,000.";
+          return false;
+        }
+        commandState.currentSigils = sigils;
+      }
+    }
+    return true;
+  }
+
+  function refreshSeasonOverlay(overlay) {
+    const scrollTop = overlay.scrollTop;
+    overlay.innerHTML = renderSeason();
+    hydrateIcons(overlay);
+    bindOverlay(overlay);
+    overlay.scrollTop = scrollTop;
+  }
+
   function bindOverlay(overlay) {
     overlay.querySelector("[data-command-close]")?.addEventListener("click", close);
-    overlay.addEventListener("click", event => {
-      if (event.target === overlay) close();
-    });
+    if (overlay.dataset.onyxDelegated !== "true") {
+      overlay.addEventListener("click", event => {
+        if (event.target === overlay) close();
+      });
+      overlay.dataset.onyxDelegated = "true";
+    }
     overlay.querySelectorAll("[data-onyx-chest]").forEach(button => {
       button.addEventListener("click", () => {
         close();
@@ -448,23 +771,52 @@
         window.OnyxCommandCore?.showView?.(button.dataset.onyxView, button.dataset.title);
       });
     });
-    overlay.querySelector("#onyxSaveKeys")?.addEventListener("click", async () => {
-      const input = overlay.querySelector("#onyxCurrentKeysInput");
-      const status = overlay.querySelector("#onyxKeySaveStatus");
-      const raw = String(input?.value || "").trim();
-      if (!raw) {
-        commandState.currentKeys = null;
-      } else {
-        const count = Number(raw);
-        if (!Number.isInteger(count) || count < 0 || count > 40) {
-          status.textContent = "Enter a whole number from 0 to 40.";
-          return;
-        }
-        commandState.currentKeys = count;
-      }
-      status.textContent = "Saving…";
+    overlay.querySelectorAll("[data-season-tab]").forEach(button => {
+      button.addEventListener("click", () => {
+        readSeasonInputs(overlay);
+        seasonTab = button.dataset.seasonTab;
+        refreshSeasonOverlay(overlay);
+      });
+    });
+    overlay.querySelectorAll("[data-season-mythic]").forEach(button => {
+      button.addEventListener("click", () => {
+        readSeasonInputs(overlay);
+        commandState.mythicChoice = commandState.mythicChoice === button.dataset.seasonMythic
+          ? ""
+          : button.dataset.seasonMythic;
+        refreshSeasonOverlay(overlay);
+      });
+    });
+    overlay.querySelectorAll("[data-season-key-delta]").forEach(button => {
+      button.addEventListener("click", () => {
+        readSeasonInputs(overlay);
+        const slug = button.dataset.seasonBranch;
+        const delta = Number(button.dataset.seasonKeyDelta);
+        if (!SEASON_PROGRESS_SLUGS.includes(slug) || !Number.isInteger(delta)) return;
+        commandState.branchKeys[slug] = Math.max(
+          0,
+          Math.min(SEASON_KEY_LIMITS[slug], commandState.branchKeys[slug] + delta)
+        );
+        refreshSeasonOverlay(overlay);
+      });
+    });
+    overlay.querySelector("#onyxSaveSeason")?.addEventListener("click", async () => {
+      const status = overlay.querySelector("#onyxSeasonSaveStatus");
+      if (!readSeasonInputs(overlay, true)) return;
+      status.textContent = "Saving season command…";
       const cloudSaved = await saveCommandState();
-      status.textContent = cloudSaved ? "Saved to your Onyx profile." : "Saved on this device; cloud sync is unavailable.";
+      status.textContent = cloudSaved
+        ? "Saved to your Onyx profile."
+        : "Saved on this device; cloud sync is unavailable.";
+    });
+    overlay.querySelector("#onyxResetSeason")?.addEventListener("click", async () => {
+      const approved = typeof window.confirm !== "function"
+        || window.confirm("Reset all saved Misfitrise key, sigil and branch progress?");
+      if (!approved) return;
+      commandState = defaultCommandState();
+      await saveCommandState();
+      seasonTab = "planner";
+      refreshSeasonOverlay(overlay);
     });
     overlay.querySelectorAll("[data-rider-category]").forEach(button => {
       button.addEventListener("click", () => {
@@ -503,7 +855,10 @@
     open,
     close,
     hydrateIcons,
-    getState: () => ({ ...commandState })
+    getState: () => JSON.parse(JSON.stringify(commandState)),
+    getSeasonRelease,
+    planSeasonRoute,
+    normaliseCommandState
   });
 
   if (document.readyState === "loading") {
