@@ -2264,15 +2264,14 @@ body.onyx-modal-open {
 }
 
 .obc-route-lines .route-shadow {
-  stroke: rgba(1, 3, 7, .82);
-  stroke-width: 18;
-  filter: blur(1px);
+  stroke: rgba(1, 3, 7, .9);
+  stroke-width: 66;
+  filter: blur(2px);
 }
 
 .obc-route-lines .route-bed {
-  stroke: rgba(84, 104, 124, .44);
-  stroke-width: 9;
-  stroke-dasharray: 1 5;
+  stroke: rgba(35, 47, 59, .76);
+  stroke-width: 52;
 }
 
 .obc-route-lines .route-glow {
@@ -2317,13 +2316,15 @@ body.onyx-modal-open {
 }
 
 .obc-island-plate {
+  --island-floor: radial-gradient(ellipse at 50% 36%, rgba(43, 55, 67, .84), rgba(14, 20, 29, .72) 68%, rgba(5, 8, 13, .48));
+  --island-floor-shadow: inset 0 0 0 1px rgba(166, 182, 194, .07), inset 0 -14px 24px rgba(0, 0, 0, .34), 0 8px 15px rgba(0, 0, 0, .2);
   position: absolute;
   inset: 0;
   overflow: hidden;
-  border: 1px solid transparent;
+  border: 0;
   border-radius: 34% 24% 36% 25% / 39% 33% 42% 35%;
-  background: transparent;
-  box-shadow: none;
+  background: var(--island-floor);
+  box-shadow: var(--island-floor-shadow);
   transform: rotate(var(--island-tilt));
   transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease;
 }
@@ -2335,16 +2336,16 @@ body.onyx-modal-open {
 .obc-map-island.short .obc-island-plate {
   border-color: transparent;
   border-radius: 40% 31% 39% 29% / 36% 43% 34% 44%;
-  background: transparent;
-  box-shadow: none;
+  background: var(--island-floor);
+  box-shadow: var(--island-floor-shadow);
 }
 
 .obc-map-island.bend-left .obc-island-plate,
 .obc-map-island.bend-right .obc-island-plate {
   border-color: transparent;
   border-radius: 51% 23% 48% 24% / 31% 56% 29% 59%;
-  background: transparent;
-  box-shadow: none;
+  background: var(--island-floor);
+  box-shadow: var(--island-floor-shadow);
 }
 
 .obc-map-island.bend-right .obc-island-plate {
@@ -2401,8 +2402,8 @@ body.onyx-modal-open {
 .obc-map-island:focus-visible .obc-island-plate,
 .obc-map-island.active .obc-island-plate {
   border-color: transparent;
-  background: transparent;
-  box-shadow: none;
+  background: var(--island-floor);
+  box-shadow: var(--island-floor-shadow);
   transform: rotate(var(--island-tilt)) scale(1.02);
 }
 
