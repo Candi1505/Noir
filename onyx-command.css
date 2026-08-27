@@ -647,6 +647,283 @@ main {
   background: linear-gradient(135deg, rgba(164, 119, 47, .72), rgba(92, 56, 130, .88));
 }
 
+.onyx-wd-dossier {
+  position: relative;
+  z-index: 1;
+  grid-column: 1 / -1;
+  margin-top: 3px;
+  padding: 18px;
+  overflow: hidden;
+  border: 1px solid rgba(135, 84, 207, .34);
+  border-radius: 18px;
+  background:
+    linear-gradient(150deg, rgba(23, 19, 31, .96), rgba(5, 7, 11, .96)),
+    rgba(6, 7, 11, .94);
+  box-shadow:
+    inset 0 1px rgba(255, 255, 255, .045),
+    0 16px 38px rgba(0, 0, 0, .3);
+}
+
+.onyx-wd-dossier::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 88% 0, rgba(126, 72, 202, .16), transparent 17rem),
+    linear-gradient(90deg, transparent, rgba(219, 183, 78, .025), transparent);
+  pointer-events: none;
+}
+
+.onyx-wd-dossier-header,
+.onyx-wd-dossier-footer,
+.onyx-wd-section-heading {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+}
+
+.onyx-wd-dossier-header > div:nth-child(2) {
+  min-width: 0;
+  flex: 1;
+}
+
+.onyx-wd-dossier-header h3 {
+  margin: 2px 0 0;
+  overflow: hidden;
+  color: #f0edf1;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.62rem;
+  font-weight: 400;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.onyx-wd-dossier-header p:last-child {
+  margin-top: 4px;
+  color: #92949f;
+  font-size: .74rem;
+}
+
+.onyx-wd-dossier-sigil {
+  width: 50px;
+  height: 50px;
+  display: grid;
+  flex: 0 0 50px;
+  place-items: center;
+  border: 1px solid rgba(221, 185, 82, .38);
+  border-radius: 15px;
+  color: #dbb951;
+  background: linear-gradient(145deg, rgba(111, 66, 166, .35), rgba(6, 7, 11, .82));
+  box-shadow: inset 0 0 20px rgba(125, 70, 195, .16);
+}
+
+.onyx-wd-dossier-sigil span,
+.onyx-wd-dossier-sigil svg {
+  width: 27px;
+  height: 27px;
+}
+
+.onyx-wd-live-state {
+  display: inline-flex;
+  min-height: 29px;
+  align-items: center;
+  padding: 5px 9px;
+  border: 1px solid rgba(92, 210, 157, .32);
+  border-radius: 999px;
+  color: #77d7a9;
+  background: rgba(28, 88, 64, .13);
+  font-size: .62rem;
+  font-weight: 850;
+  letter-spacing: .035em;
+  text-transform: uppercase;
+}
+
+.onyx-wd-live-state[data-online="false"] {
+  color: #a9abb4;
+  border-color: rgba(174, 176, 187, .2);
+  background: rgba(70, 71, 78, .13);
+}
+
+.onyx-wd-metric-grid {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 17px;
+}
+
+.onyx-wd-metric {
+  min-width: 0;
+  padding: 12px 10px;
+  border: 1px solid rgba(190, 192, 204, .13);
+  border-radius: 13px;
+  background: rgba(2, 4, 7, .48);
+}
+
+.onyx-wd-metric span,
+.onyx-wd-signal-row span {
+  display: block;
+  color: #7f818d;
+  font-size: .61rem;
+  font-weight: 750;
+  letter-spacing: .035em;
+  text-transform: uppercase;
+}
+
+.onyx-wd-metric strong {
+  display: block;
+  margin-top: 5px;
+  overflow: hidden;
+  color: #e8e7eb;
+  font-size: .88rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.onyx-wd-metric:first-child strong {
+  color: #e0bd59;
+}
+
+.onyx-wd-intel-columns {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.onyx-wd-intel-columns > section {
+  padding: 14px;
+  border: 1px solid rgba(190, 192, 204, .12);
+  border-radius: 14px;
+  background: rgba(5, 6, 10, .42);
+}
+
+.onyx-wd-signal-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.onyx-wd-signal-row {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.onyx-wd-signal-row strong {
+  overflow: hidden;
+  color: #d8d8df;
+  font-size: .75rem;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.onyx-wd-dragons {
+  position: relative;
+  margin-top: 10px;
+  padding: 14px;
+  border: 1px solid rgba(218, 181, 82, .15);
+  border-radius: 14px;
+  background: rgba(14, 11, 18, .5);
+}
+
+.onyx-wd-section-heading {
+  justify-content: space-between;
+}
+
+.onyx-wd-section-heading h4 {
+  margin-top: 2px;
+  color: #e7e4e9;
+  font-size: .92rem;
+}
+
+.onyx-wd-section-heading > span {
+  color: #7f818c;
+  font-size: .61rem;
+}
+
+.onyx-wd-dragon-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 11px;
+}
+
+.onyx-wd-dragon-card {
+  padding: 10px;
+  border: 1px solid rgba(129, 78, 197, .22);
+  border-radius: 12px;
+  background: linear-gradient(145deg, rgba(86, 51, 126, .16), rgba(2, 4, 7, .54));
+}
+
+.onyx-wd-dragon-card span,
+.onyx-wd-dragon-card small {
+  display: block;
+  color: #7e808b;
+  font-size: .59rem;
+}
+
+.onyx-wd-dragon-card strong {
+  display: block;
+  margin: 4px 0 2px;
+  color: #dcb957;
+  font-size: .78rem;
+}
+
+.onyx-wd-dossier-footer {
+  margin-top: 12px;
+  padding-top: 13px;
+  border-top: 1px solid rgba(192, 194, 205, .11);
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.onyx-wd-dossier-footer > div {
+  min-width: 180px;
+  flex: 1;
+}
+
+.onyx-wd-dossier-footer strong {
+  color: #d8d7dd;
+  font-size: .76rem;
+}
+
+.onyx-wd-dossier-footer p {
+  margin-top: 4px;
+  color: #7f818c;
+  font-size: .64rem;
+  line-height: 1.42;
+}
+
+.onyx-wd-dossier-footer button {
+  min-height: 40px;
+  padding: 8px 13px;
+  border: 1px solid rgba(220, 184, 82, .48);
+  border-radius: 11px;
+  color: #fff8e8;
+  background: linear-gradient(135deg, rgba(169, 121, 49, .9), rgba(111, 67, 151, .94));
+  font: inherit;
+  font-size: .72rem;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.onyx-wd-dossier-footer button:disabled {
+  cursor: wait;
+  opacity: .62;
+}
+
+#onyxWdProfileSyncMessage {
+  width: 100%;
+  margin: 0;
+  color: #79d9ac;
+}
+
 .onyx-intel-grid {
   display: grid;
   gap: 11px;
@@ -6151,6 +6428,40 @@ body.onyx-modal-open {
   .onyx-api-actions button,
   .onyx-api-actions span {
     justify-content: center;
+    width: 100%;
+  }
+
+  .onyx-wd-dossier {
+    padding: 14px;
+  }
+
+  .onyx-wd-dossier-header {
+    align-items: flex-start;
+  }
+
+  .onyx-wd-dossier-header h3 {
+    font-size: 1.32rem;
+  }
+
+  .onyx-wd-live-state {
+    position: absolute;
+    right: 0;
+    top: 49px;
+  }
+
+  .onyx-wd-metric-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .onyx-wd-intel-columns {
+    grid-template-columns: 1fr;
+  }
+
+  .onyx-wd-dragon-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .onyx-wd-dossier-footer button {
     width: 100%;
   }
 

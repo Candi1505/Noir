@@ -1984,6 +1984,57 @@
   }
 
 
+  async function applyOfficialProfile(profileDetails = {}) {
+
+    const nickname =
+      String(profileDetails.nickname || "")
+        .trim()
+        .slice(0, 30);
+
+    const allianceName =
+      String(profileDetails.alliance_name || "")
+        .trim()
+        .slice(0, 50);
+
+    if (!nickname && !allianceName) {
+      throw new Error(
+        "The official profile did not include a usable name or guild."
+      );
+    }
+
+    appState.profile = {
+      ...appState.profile,
+      nickname:
+        nickname ||
+        appState.profile.nickname ||
+        "Tester",
+      alliance_name:
+        allianceName ||
+        appState.profile.alliance_name ||
+        ""
+    };
+
+    saveLocalState();
+    loadProfileIntoScreen();
+    renderHomeScreen();
+
+    if (
+      currentUser?.id &&
+      window.ChestDatabase?.saveProfile
+    ) {
+      await withTimeout(
+        window.ChestDatabase.saveProfile(
+          currentUser.id,
+          appState.profile
+        )
+      );
+      return "cloud";
+    }
+
+    return "device";
+  }
+
+
   /* =======================================================
      HOME SCREEN
   ======================================================= */
@@ -3788,6 +3839,7 @@ function getArmoryPage(position, positionsPerPage = 20) {
     openChest: openChestTracker,
     showView,
     renderHome: renderHomeScreen,
+    applyOfficialProfile,
     getCurrentUserId: () => currentUser?.id || null,
     getProfile: () => ({ ...appState.profile })
   });

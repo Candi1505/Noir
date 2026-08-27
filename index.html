@@ -17,7 +17,7 @@
   <title>Onyx Command — War Dragons Companion</title>
 
 <link rel="stylesheet" href="styles.css?v=20260730-arcane">
-<link rel="stylesheet" href="onyx-command.css?v=20260828-war-dragons-link-1">
+  <link rel="stylesheet" href="onyx-command.css?v=20260828-war-dragons-profile-2">
 <link rel="stylesheet" href="onyx-atlas-command.css?v=20260828-atlas-command-1">
 
   <style>
@@ -659,6 +659,64 @@
               Copy safe field shape
             </button>
           </details>
+
+          <section
+            id="onyxWdProfilePanel"
+            class="onyx-wd-dossier"
+            aria-labelledby="onyxWdProfileName"
+            hidden
+          >
+            <header class="onyx-wd-dossier-header">
+              <div class="onyx-wd-dossier-sigil" aria-hidden="true">
+                <span data-onyx-icon="profile"></span>
+              </div>
+              <div>
+                <p class="onyx-command-kicker">LIVE COMMAND DOSSIER</p>
+                <h3 id="onyxWdProfileName">Verified player</h3>
+                <p id="onyxWdProfileGuild">Official War Dragons public profile</p>
+              </div>
+              <span id="onyxWdOnlineState" class="onyx-wd-live-state">Verified</span>
+            </header>
+
+            <div
+              id="onyxWdPrimaryMetrics"
+              class="onyx-wd-metric-grid"
+              aria-label="Official player power summary"
+            ></div>
+
+            <div class="onyx-wd-intel-columns">
+              <section>
+                <p class="onyx-command-kicker">BATTLE SIGNAL</p>
+                <div id="onyxWdBattleMetrics" class="onyx-wd-signal-list"></div>
+              </section>
+              <section>
+                <p class="onyx-command-kicker">COMMAND RECORD</p>
+                <div id="onyxWdCommandMetrics" class="onyx-wd-signal-list"></div>
+              </section>
+            </div>
+
+            <section id="onyxWdDragonSection" class="onyx-wd-dragons" hidden>
+              <div class="onyx-wd-section-heading">
+                <div>
+                  <p class="onyx-command-kicker">ROSTER VANGUARD</p>
+                  <h4>Top dragons</h4>
+                </div>
+                <span>Official attack power</span>
+              </div>
+              <div id="onyxWdDragonList" class="onyx-wd-dragon-list"></div>
+            </section>
+
+            <footer class="onyx-wd-dossier-footer">
+              <div>
+                <strong>Live, read-only intelligence</strong>
+                <p>Only your verified name and guild can be copied into the saved Onyx profile. The live dossier is cleared when this page refreshes.</p>
+              </div>
+              <button id="onyxWdApplyProfile" type="button">
+                Use verified identity
+              </button>
+              <p id="onyxWdProfileSyncMessage" role="status"></p>
+            </footer>
+          </section>
         </section>
 
         <div class="onyx-intel-grid">
@@ -1501,7 +1559,7 @@
   <script src="onyx-rider-intelligence-data.js?v=20260828-rider-command-1"></script>
   <script src="onyx-tower-inventory-bridge.js?v=20260827-base-command-1"></script>
   <script src="app.js?v=20260828-onyx-parity-1"></script>
-  <script src="onyx-war-dragons-api.js?v=20260828-war-dragons-link-1"></script>
+  <script src="onyx-war-dragons-api.js?v=20260828-war-dragons-profile-2"></script>
   <script src="onyx-fortification-command.js?v=20260828-fortification-command-1"></script>
   <script src="onyx-base-command.js?v=20260828-fortification-command-1"></script>
   <script src="onyx-atlas-command.js?v=20260828-atlas-terms-1"></script>
