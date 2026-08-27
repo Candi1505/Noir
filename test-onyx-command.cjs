@@ -32,8 +32,8 @@ assert.match(
 );
 assert.match(html, /onyx-tower-inventory-bridge\.js\?v=20260827-base-command-1/);
 assert.match(html, /database\.js\?v=20260827-monuments-perches-1/);
-assert.match(html, /onyx-base-command\.js\?v=20260827-owner-har-boundary-1/);
-assert.match(html, /onyx-command\.css\?v=20260827-owner-har-boundary-1/);
+assert.match(html, /onyx-base-command\.js\?v=20260827-merge-calculator-1/);
+assert.match(html, /onyx-command\.css\?v=20260827-merge-calculator-1/);
 assert.match(livePredictorSource, /ONYX COMMAND · CHEST INTELLIGENCE/);
 assert.match(livePredictorSource, /aria-pressed/);
 assert.match(livePredictorSource, /data-lp-chest-type/);
@@ -61,6 +61,7 @@ assert.match(baseSource, /name: "Ember Bend"[^\n]+zone: "lower-right"[^\n]+x: 44
 assert.match(baseSource, /name: "Northglass Bend"[^\n]+zone: "upper-right"[^\n]+x: 338[^\n]+y: 140/);
 assert.match(baseSource, /name: "Command Crown"[^\n]+zone: "left-run"[^\n]+x: 134[^\n]+y: 78/);
 assert.match(commandCss, /--island-floor:/);
+assert.match(commandCss, /\.obc-shell \.obc-tabs \{[\s\S]*?grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
 assert.match(baseSource, /form: "bend-left"/);
 assert.match(baseSource, /form: "bend-right"/);
 assert.match(baseSource, /obc-island-axis/);
@@ -76,6 +77,11 @@ assert.match(baseSource, /Estimated island DP/);
 assert.match(baseSource, /Estimated total base DP/);
 assert.match(baseSource, /DP SANDBOX/);
 assert.match(baseSource, /BASE SUPPORT NETWORK/);
+assert.match(baseSource, /data-obc-tab="merge"/);
+assert.match(baseSource, /Tower Merge Intelligence/);
+assert.match(baseSource, /MERGE_TRANSFER_RATE = 0\.45/);
+assert.match(baseSource, /WD preview result level/);
+assert.match(baseSource, /Every figure is an estimate until WD shows the preview/);
 assert.match(baseSource, /Monument loadout/);
 assert.match(baseSource, /Riverwatch Perch/);
 assert.match(baseSource, /Seagazer Perch/);
@@ -164,6 +170,87 @@ assert.equal(blankLayout.perches.length, 3);
 assert.equal(blankLayout.perches[1].name, "Seagazer Perch");
 assert.equal(sandbox.OnyxBaseCommand.getTowerRecord("Archer Tower", 1).level, 1);
 assert.equal(sandbox.OnyxBaseCommand.getTowerRecord("Archer Tower", 999), null);
+
+const mergeEstimate = JSON.parse(JSON.stringify(sandbox.OnyxBaseCommand.estimateMerge({
+  destinationType: "Crystal Howitzer",
+  destinationLevel: 230,
+  sourceType: "Cosmic Orrery",
+  sourceLevel: 230,
+  quantity: 1,
+  maximumTowerLevel: 250,
+  previewResultLevel: ""
+})));
+assert.equal(mergeEstimate.ok, true);
+assert.equal(mergeEstimate.transferRate, 0.45);
+assert.equal(mergeEstimate.resultSource, "model");
+assert.equal(mergeEstimate.resultLevel, 250);
+assert.equal(mergeEstimate.levelsGained, 20);
+assert.equal(mergeEstimate.xpDebt, 18181791);
+
+const previewMerge = JSON.parse(JSON.stringify(sandbox.OnyxBaseCommand.estimateMerge({
+  destinationType: "Crystal Howitzer",
+  destinationLevel: 230,
+  sourceType: "Cosmic Orrery",
+  sourceLevel: 230,
+  quantity: 1,
+  maximumTowerLevel: 250,
+  previewResultLevel: 245
+})));
+assert.equal(previewMerge.resultSource, "wd-preview");
+assert.equal(previewMerge.modelResultLevel, 250);
+assert.equal(previewMerge.resultLevel, 245);
+assert.equal(previewMerge.xpDebt, 18733201);
+
+const quantityMerge = JSON.parse(JSON.stringify(sandbox.OnyxBaseCommand.estimateMerge({
+  destinationType: "Crystal Howitzer",
+  destinationLevel: 230,
+  sourceType: "Cosmic Orrery",
+  sourceLevel: 230,
+  quantity: 2,
+  maximumTowerLevel: 250,
+  previewResultLevel: ""
+})));
+assert.equal(quantityMerge.ok, true);
+assert.equal(quantityMerge.sourceXp, mergeEstimate.sourceXp * 2);
+assert.equal(quantityMerge.transferredValue, mergeEstimate.transferredValue * 2);
+
+const cappedMerge = JSON.parse(JSON.stringify(sandbox.OnyxBaseCommand.estimateMerge({
+  destinationType: "Crystal Howitzer",
+  destinationLevel: 230,
+  sourceType: "Cosmic Orrery",
+  sourceLevel: 230,
+  quantity: 1,
+  maximumTowerLevel: 233,
+  previewResultLevel: ""
+})));
+assert.equal(cappedMerge.ok, true);
+assert.equal(cappedMerge.resultLevel, 233);
+assert.equal(cappedMerge.capped, true);
+assert.equal(cappedMerge.xpDebt, 20056585);
+
+assert.equal(
+  sandbox.OnyxBaseCommand.estimateMerge({
+    destinationType: "Crystal Howitzer",
+    destinationLevel: 230,
+    sourceType: "Cosmic Orrery",
+    sourceLevel: 230,
+    quantity: 1,
+    maximumTowerLevel: 250,
+    previewResultLevel: 229
+  }).ok,
+  false
+);
+assert.equal(
+  sandbox.OnyxBaseCommand.estimateMerge({
+    destinationType: "Crystal Howitzer",
+    destinationLevel: 999,
+    sourceType: "Cosmic Orrery",
+    sourceLevel: 230,
+    quantity: 1,
+    maximumTowerLevel: 999
+  }).ok,
+  false
+);
 
 blankLayout.slots[5] = {
   type: "Archer Tower",

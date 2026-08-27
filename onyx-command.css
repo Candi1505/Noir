@@ -1078,6 +1078,430 @@ body.onyx-modal-open {
   }
 }
 
+/* Tower Merge command */
+.obc-source-banner.merge-ready {
+  border-color: rgba(99, 208, 177, .3);
+  background:
+    radial-gradient(circle at 92% 15%, rgba(89, 204, 172, .12), transparent 35%),
+    linear-gradient(135deg, rgba(27, 74, 65, .2), rgba(10, 11, 15, .9));
+}
+
+.obc-source-banner.merge-ready strong {
+  color: #83d7bd;
+}
+
+.obc-merge-command,
+.obc-merge-result {
+  padding: 20px;
+  overflow: hidden;
+  border: 1px solid rgba(205, 208, 220, .18);
+  border-radius: 24px;
+  background:
+    linear-gradient(145deg, rgba(20, 22, 28, .97), rgba(8, 9, 13, .98));
+  box-shadow: inset 0 1px rgba(255, 255, 255, .035), 0 20px 55px rgba(0, 0, 0, .22);
+}
+
+.obc-merge-heading > span {
+  border-color: rgba(99, 208, 177, .28);
+  color: #83d7bd;
+  background: rgba(31, 94, 77, .18);
+}
+
+.obc-merge-pair {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 72px minmax(0, 1fr);
+  align-items: stretch;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.obc-merge-tower,
+.obc-merge-limits {
+  position: relative;
+  display: grid;
+  gap: 13px;
+  padding: 17px;
+  border: 1px solid rgba(205, 208, 220, .16);
+  border-radius: 19px;
+  background:
+    radial-gradient(circle at 85% 12%, rgba(161, 109, 237, .1), transparent 32%),
+    rgba(7, 8, 12, .72);
+}
+
+.obc-merge-tower.consumed {
+  background:
+    radial-gradient(circle at 85% 12%, rgba(213, 171, 70, .1), transparent 32%),
+    rgba(7, 8, 12, .72);
+}
+
+.obc-merge-step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.obc-merge-step > span {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  border: 1px solid rgba(99, 208, 177, .34);
+  border-radius: 50%;
+  color: #83d7bd;
+  background: rgba(31, 94, 77, .18);
+  font-size: .68rem;
+  font-weight: 900;
+}
+
+.obc-merge-step small,
+.obc-merge-step strong {
+  display: block;
+}
+
+.obc-merge-step small {
+  color: #777d86;
+  font-size: .58rem;
+  font-weight: 850;
+  letter-spacing: .1em;
+}
+
+.obc-merge-step strong {
+  margin-top: 2px;
+  color: #e1e2e7;
+  font-size: .85rem;
+}
+
+.obc-merge-tower-mark {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border: 1px solid rgba(161, 109, 237, .28);
+  border-radius: 14px;
+  color: #b38bea;
+  background: rgba(91, 49, 151, .14);
+}
+
+.obc-merge-tower.consumed .obc-merge-tower-mark {
+  border-color: rgba(213, 171, 70, .28);
+  color: #d9b760;
+  background: rgba(104, 76, 18, .14);
+}
+
+.obc-merge-tower-mark svg {
+  width: 25px;
+  height: 25px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.obc-merge-tower label,
+.obc-merge-limits label {
+  color: #9296a0;
+  font-size: .68rem;
+  font-weight: 780;
+}
+
+.obc-merge-tower select,
+.obc-merge-tower input,
+.obc-merge-limits input {
+  width: 100%;
+  min-height: 48px;
+  margin-top: 6px;
+  border: 1px solid rgba(205, 208, 220, .18);
+  border-radius: 13px;
+  background: rgba(4, 5, 8, .85);
+  color: #e5e5e9;
+}
+
+.obc-merge-limits label em {
+  margin-left: 5px;
+  color: #d5b65f;
+  font-style: normal;
+}
+
+.obc-merge-transfer {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 5px;
+  color: #83d7bd;
+}
+
+.obc-merge-transfer span {
+  font-size: .78rem;
+  font-weight: 950;
+  letter-spacing: .05em;
+}
+
+.obc-merge-transfer svg {
+  width: 58px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 7px rgba(99, 208, 177, .45));
+}
+
+.obc-merge-limits {
+  margin-top: 13px;
+  background:
+    radial-gradient(circle at 93% 8%, rgba(99, 208, 177, .08), transparent 30%),
+    rgba(7, 8, 12, .72);
+}
+
+.obc-merge-limits > p {
+  margin: -2px 0 0;
+  color: #787d86;
+  font-size: .68rem;
+}
+
+.obc-merge-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1.8fr) minmax(120px, .7fr);
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.obc-merge-actions button {
+  min-height: 50px;
+}
+
+.obc-merge-message {
+  margin: 12px 0 0;
+  padding: 11px 13px;
+  border: 1px solid rgba(99, 208, 177, .25);
+  border-radius: 12px;
+  color: #83d7bd;
+  background: rgba(31, 94, 77, .13);
+  font-size: .72rem;
+}
+
+.obc-merge-message.error {
+  border-color: rgba(222, 112, 126, .3);
+  color: #e69aa5;
+  background: rgba(109, 36, 48, .14);
+}
+
+.obc-merge-result {
+  position: relative;
+  border-color: rgba(99, 208, 177, .28);
+  background:
+    radial-gradient(circle at 92% 0%, rgba(99, 208, 177, .13), transparent 35%),
+    linear-gradient(145deg, rgba(14, 30, 27, .96), rgba(7, 9, 12, .99));
+}
+
+.obc-merge-result-hero {
+  display: grid;
+  grid-template-columns: 62px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  padding-bottom: 17px;
+  border-bottom: 1px solid rgba(205, 208, 220, .12);
+}
+
+.obc-merge-result-hero > div {
+  display: grid;
+  place-items: center;
+  width: 62px;
+  height: 62px;
+  border: 1px solid rgba(99, 208, 177, .35);
+  border-radius: 20px;
+  color: #83d7bd;
+  background: rgba(31, 94, 77, .18);
+  box-shadow: 0 0 28px rgba(99, 208, 177, .09);
+}
+
+.obc-merge-result-hero svg {
+  width: 36px;
+  height: 36px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.obc-merge-result-hero small,
+.obc-merge-result-hero strong,
+.obc-merge-result-hero em {
+  display: block;
+}
+
+.obc-merge-result-hero small {
+  color: #8d949c;
+  font-size: .66rem;
+  font-weight: 850;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.obc-merge-result-hero strong {
+  margin-top: 3px;
+  color: #f0eee9;
+  font-family: Georgia, serif;
+  font-size: clamp(1.8rem, 6vw, 2.65rem);
+  font-weight: 500;
+}
+
+.obc-merge-result-hero em {
+  margin-top: 2px;
+  color: #83d7bd;
+  font-size: .75rem;
+  font-style: normal;
+  font-weight: 850;
+}
+
+.obc-merge-result-hero > b {
+  color: rgba(213, 182, 95, .85);
+  font-family: Georgia, serif;
+  font-size: 2.1rem;
+  font-weight: 500;
+}
+
+.obc-merge-route-copy,
+.obc-merge-xp-grid {
+  display: grid;
+  gap: 9px;
+  margin-top: 14px;
+}
+
+.obc-merge-route-copy {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.obc-merge-xp-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.obc-merge-route-copy article,
+.obc-merge-xp-grid article {
+  padding: 12px;
+  border: 1px solid rgba(205, 208, 220, .13);
+  border-radius: 14px;
+  background: rgba(4, 6, 9, .58);
+}
+
+.obc-merge-route-copy small,
+.obc-merge-route-copy strong,
+.obc-merge-route-copy span,
+.obc-merge-xp-grid small,
+.obc-merge-xp-grid strong {
+  display: block;
+}
+
+.obc-merge-route-copy small,
+.obc-merge-xp-grid small {
+  color: #7e858d;
+  font-size: .61rem;
+  font-weight: 780;
+}
+
+.obc-merge-route-copy strong,
+.obc-merge-xp-grid strong {
+  margin-top: 4px;
+  color: #dddfe3;
+  font-size: .82rem;
+}
+
+.obc-merge-route-copy span {
+  margin-top: 3px;
+  color: #8e959c;
+  font-size: .67rem;
+}
+
+.obc-merge-xp-grid article.debt {
+  border-color: rgba(213, 182, 95, .3);
+  background: rgba(92, 68, 18, .14);
+}
+
+.obc-merge-xp-grid article.debt strong {
+  color: #dfc36e;
+}
+
+.obc-merge-variance,
+.obc-merge-cap-note {
+  margin: 13px 0 0;
+  padding: 11px 12px;
+  border-left: 3px solid #d5b65f;
+  border-radius: 0 11px 11px 0;
+  color: #bbb6aa;
+  background: rgba(92, 68, 18, .13);
+  font-size: .7rem;
+  line-height: 1.45;
+}
+
+.obc-merge-honesty {
+  border-color: rgba(213, 182, 95, .25);
+}
+
+@media (max-width: 680px) {
+  .obc-merge-command,
+  .obc-merge-result {
+    padding: 14px;
+    border-radius: 19px;
+  }
+
+  .obc-merge-pair {
+    grid-template-columns: 1fr;
+  }
+
+  .obc-merge-transfer {
+    min-height: 54px;
+  }
+
+  .obc-merge-transfer svg {
+    transform: rotate(90deg);
+  }
+
+  .obc-merge-route-copy {
+    grid-template-columns: 1fr;
+  }
+
+  .obc-merge-xp-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 420px) {
+  .obc-merge-tower,
+  .obc-merge-limits {
+    padding: 14px;
+  }
+
+  .obc-merge-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .obc-merge-result-hero {
+    grid-template-columns: 52px minmax(0, 1fr) auto;
+    gap: 10px;
+  }
+
+  .obc-merge-result-hero > div {
+    width: 52px;
+    height: 52px;
+    border-radius: 16px;
+  }
+
+  .obc-merge-result-hero svg {
+    width: 30px;
+    height: 30px;
+  }
+
+  .obc-merge-xp-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* ONYX BASE COMMAND · MONUMENT + PERCH NETWORK */
 .obc-estimate-breakdown {
   grid-column: 1 / -1;
@@ -3872,4 +4296,9 @@ body.onyx-modal-open {
   .obc-spot-halo {
     transition: none;
   }
+}
+
+/* Four Base Command sections stay legible as a two-by-two tap grid. */
+.obc-shell .obc-tabs {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
