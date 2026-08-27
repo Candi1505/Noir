@@ -1078,6 +1078,397 @@ body.onyx-modal-open {
   }
 }
 
+/* ONYX BASE COMMAND · MONUMENT + PERCH NETWORK */
+.obc-estimate-breakdown {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.obc-estimate-breakdown article {
+  padding: 10px 11px;
+  border: 1px solid rgba(214, 217, 228, .12);
+  border-radius: 12px;
+  background: rgba(6, 7, 10, .68);
+}
+
+.obc-estimate-breakdown small,
+.obc-estimate-breakdown strong {
+  display: block;
+}
+
+.obc-estimate-breakdown small {
+  color: #7f828c;
+  font-size: .59rem;
+  line-height: 1.3;
+}
+
+.obc-estimate-breakdown strong {
+  margin-top: 4px;
+  color: #cdb269;
+  font-size: .76rem;
+}
+
+.obc-estimate-preview > p {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: #858891;
+  font-size: .61rem;
+  line-height: 1.4;
+}
+
+.obc-equipment-command,
+.obc-rider-details {
+  margin-top: 13px;
+  padding: 12px;
+  border: 1px solid rgba(165, 105, 225, .22);
+  border-radius: 14px;
+  background: rgba(21, 13, 31, .32);
+}
+
+.obc-equipment-command > summary,
+.obc-rider-details > summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: #d8d4dc;
+  font-size: .76rem;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.obc-equipment-command > summary small,
+.obc-rider-details > summary small {
+  color: #b48ad9;
+  font-size: .64rem;
+}
+
+.obc-equipment-command > p,
+.obc-rider-details > p {
+  margin-top: 9px;
+  color: #82848d;
+  font-size: .65rem;
+  line-height: 1.45;
+}
+
+.obc-monument-grid {
+  display: grid;
+  gap: 9px;
+  margin-top: 11px;
+}
+
+.obc-monument-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 92px;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid rgba(216, 181, 90, .13);
+  border-radius: 12px;
+  background: rgba(5, 6, 9, .58);
+}
+
+.obc-perch-network,
+.obc-perch-sheet {
+  scroll-margin-top: 145px;
+  padding: 16px;
+  border: 1px solid rgba(214, 216, 226, .17);
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at 12% 0, rgba(109, 65, 171, .16), transparent 22rem),
+    linear-gradient(145deg, rgba(18, 18, 24, .95), rgba(6, 7, 10, .98));
+  box-shadow: inset 0 1px rgba(255, 255, 255, .035), 0 16px 36px rgba(0, 0, 0, .18);
+}
+
+.obc-perch-intro {
+  margin-top: 8px;
+  color: #898b94;
+  font-size: .71rem;
+  line-height: 1.45;
+}
+
+.obc-perch-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 9px;
+  margin-top: 13px;
+}
+
+.obc-perch-cards > button {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  gap: 9px;
+  min-height: 96px;
+  padding: 12px;
+  border: 1px solid rgba(163, 106, 221, .22);
+  border-radius: 14px;
+  background: linear-gradient(145deg, rgba(21, 17, 29, .9), rgba(7, 8, 11, .94));
+  color: #a87ad0;
+  text-align: left;
+}
+
+.obc-perch-cards > button.active,
+.obc-perch-cards > button:focus-visible {
+  border-color: rgba(221, 181, 84, .65);
+  box-shadow: 0 0 24px rgba(148, 89, 209, .18);
+}
+
+.obc-perch-cards svg,
+.obc-perch-preview svg {
+  width: 34px;
+  height: 34px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.35;
+}
+
+.obc-perch-cards span,
+.obc-perch-cards small,
+.obc-perch-cards strong,
+.obc-perch-cards em,
+.obc-perch-cards b {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  font-style: normal;
+  text-overflow: ellipsis;
+}
+
+.obc-perch-cards small {
+  color: #77818b;
+  font-size: .56rem;
+  white-space: nowrap;
+}
+
+.obc-perch-cards strong {
+  margin-top: 3px;
+  color: #dfdce2;
+  font-size: .73rem;
+}
+
+.obc-perch-cards em {
+  margin-top: 4px;
+  color: #9e8cae;
+  font-size: .62rem;
+  white-space: nowrap;
+}
+
+.obc-perch-cards b {
+  grid-column: 1 / -1;
+  color: #c5a85e;
+  font-size: .57rem;
+  font-weight: 800;
+}
+
+.obc-perch-sheet {
+  margin-top: 14px;
+  border-color: rgba(220, 181, 86, .3);
+}
+
+.obc-perch-sheet .obc-section-heading > div > small {
+  display: block;
+  margin-top: 4px;
+  color: #848791;
+  font-size: .64rem;
+}
+
+.obc-perch-preview {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid rgba(220, 181, 87, .19);
+  border-radius: 13px;
+  background: rgba(8, 8, 12, .68);
+  color: #d5b45e;
+}
+
+.obc-perch-preview small,
+.obc-perch-preview strong,
+.obc-perch-preview span {
+  display: block;
+}
+
+.obc-perch-preview small,
+.obc-perch-preview span {
+  color: #858892;
+  font-size: .62rem;
+}
+
+.obc-perch-preview strong {
+  margin: 3px 0;
+  color: #e0bf68;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.2rem;
+  font-weight: 400;
+}
+
+.obc-perch-fields,
+.obc-perch-bonuses {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 9px;
+  margin-top: 13px;
+}
+
+.obc-perch-fields.two {
+  grid-template-columns: minmax(0, 1fr) 130px;
+}
+
+.obc-perch-sheet label {
+  color: #aaa8a4;
+  font-size: .68rem;
+  font-weight: 800;
+}
+
+.obc-perch-sheet input,
+.obc-perch-sheet select {
+  width: 100%;
+  min-height: 46px;
+  margin-top: 6px;
+  padding: 9px 10px;
+  border: 1px solid rgba(215, 218, 230, .2);
+  border-radius: 11px;
+  background: rgba(5, 6, 9, .9);
+  color: #ece9e2;
+}
+
+.obc-perch-sheet input:focus,
+.obc-perch-sheet select:focus {
+  outline: 2px solid rgba(217, 179, 86, .55);
+  outline-offset: 1px;
+}
+
+.obc-perch-bonuses {
+  padding: 11px;
+  border: 1px solid rgba(216, 181, 90, .17);
+  border-radius: 13px;
+  background: rgba(7, 7, 11, .52);
+}
+
+.obc-perch-bonuses legend {
+  padding: 0 5px;
+  color: #caae66;
+  font-size: .68rem;
+  font-weight: 850;
+}
+
+.obc-rider-command {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(213, 216, 228, .12);
+}
+
+.obc-skill-add {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.obc-skill-add button,
+.obc-skill-list button {
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid rgba(165, 105, 225, .3);
+  border-radius: 10px;
+  background: rgba(44, 26, 65, .28);
+  color: #c39ae4;
+  font-size: .66rem;
+  font-weight: 850;
+}
+
+.obc-skill-list {
+  display: grid;
+  gap: 7px;
+  margin-top: 9px;
+}
+
+.obc-skill-list article {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 82px auto;
+  gap: 8px;
+  align-items: end;
+  padding: 9px;
+  border: 1px solid rgba(165, 105, 225, .16);
+  border-radius: 11px;
+  background: rgba(7, 7, 11, .55);
+}
+
+.obc-skill-list strong {
+  align-self: center;
+  color: #d8d5dc;
+  font-size: .7rem;
+}
+
+.obc-gear-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.obc-gear-grid > article {
+  padding: 10px;
+  border: 1px solid rgba(215, 218, 228, .12);
+  border-radius: 12px;
+  background: rgba(6, 7, 10, .62);
+}
+
+.obc-gear-grid > article > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 82px;
+  gap: 8px;
+  margin-top: 7px;
+}
+
+.obc-perch-actions {
+  grid-template-columns: minmax(0, 1fr) minmax(120px, .35fr);
+}
+
+@media (max-width: 700px) {
+  .obc-estimate-breakdown,
+  .obc-perch-cards,
+  .obc-perch-fields,
+  .obc-perch-bonuses,
+  .obc-gear-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .obc-estimate-breakdown {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .obc-perch-cards > button {
+    min-height: 86px;
+  }
+
+  .obc-perch-fields.two,
+  .obc-monument-row {
+    grid-template-columns: minmax(0, 1fr) 86px;
+  }
+
+  .obc-skill-list article {
+    grid-template-columns: minmax(0, 1fr) 74px;
+  }
+
+  .obc-skill-list button {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 390px) {
+  .obc-estimate-breakdown,
+  .obc-perch-fields.two,
+  .obc-monument-row,
+  .obc-skill-add,
+  .obc-perch-actions {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Base & Towers command */
 .obc-overlay {
   position: fixed;

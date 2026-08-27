@@ -591,9 +591,26 @@ window.ChestDatabase = {
         throw new Error("An Onyx base layout must contain exactly 40 slots.");
       }
 
+      const cleanText = (value, maximum) =>
+        String(value || "").trim().replace(/\s+/g, " ").slice(0, maximum);
+      const cleanWholeNumber = (value, minimum, maximum, fallback = minimum) => {
+        const number = Number(value);
+        return Number.isInteger(number) && number >= minimum && number <= maximum
+          ? number
+          : fallback;
+      };
+      const cleanMonument = selection => {
+        const name = cleanText(selection?.name, 120);
+        if (!name) return null;
+        return {
+          name,
+          level: cleanWholeNumber(selection?.level, 1, 99, 1)
+        };
+      };
+
       const cleanSlots = layout.slots.map(slot => {
         if (slot === null) return null;
-        const type = String(slot?.type || "").trim().slice(0, 80);
+        const type = cleanText(slot?.type, 80);
         const level = Number(slot?.level);
         const notes = String(slot?.notes || "").trim().slice(0, 250);
 
@@ -601,13 +618,60 @@ window.ChestDatabase = {
           throw new Error("Each recorded tower needs a tower type and valid level.");
         }
 
-        return { type, level, notes };
+        return {
+          type,
+          level,
+          notes,
+          rune: cleanMonument(slot?.rune),
+          glyph: cleanMonument(slot?.glyph),
+          relic: cleanMonument(slot?.relic)
+        };
+      });
+
+      const perchNames = ["Riverwatch Perch", "Seagazer Perch", "Stonespear Perch"];
+      const gearSlots = ["head", "chest", "gloves", "pants", "boots", "weapons", "shield", "rings"];
+      const sourcePerches = Array.isArray(layout.perches) ? layout.perches : [];
+      const cleanPerches = perchNames.map((name, index) => {
+        const perch = sourcePerches[index] && typeof sourcePerches[index] === "object"
+          ? sourcePerches[index]
+          : {};
+        const skills = (Array.isArray(perch.skills) ? perch.skills : []).slice(0, 32).map(skill => {
+          const skillName = cleanText(skill?.name, 120);
+          return skillName
+            ? { name: skillName, level: cleanWholeNumber(skill?.level, 1, 99, 1) }
+            : null;
+        }).filter(Boolean);
+        const gear = Object.fromEntries(gearSlots.map(slot => {
+          const item = perch.gear?.[slot];
+          const itemName = cleanText(item?.name, 120);
+          return [slot, itemName ? {
+            name: itemName,
+            rarity: cleanText(item?.rarity, 32),
+            level: cleanWholeNumber(item?.level, 0, 99, 0)
+          } : null];
+        }));
+        return {
+          name,
+          level: cleanWholeNumber(perch.level, 0, 999, 0),
+          dragonName: cleanText(perch.dragonName, 120),
+          dragonClass: cleanText(perch.dragonClass, 40),
+          dragonTier: cleanText(perch.dragonTier, 80),
+          dragonLevel: cleanWholeNumber(perch.dragonLevel, 0, 999, 0),
+          riderName: cleanText(perch.riderName, 120),
+          riderLevel: cleanWholeNumber(perch.riderLevel, 0, 999, 0),
+          elementalResistance: cleanText(perch.elementalResistance, 40),
+          towerBonus: cleanText(perch.towerBonus, 40),
+          specialBonus: cleanText(perch.specialBonus, 40),
+          skills,
+          gear
+        };
       });
 
       cleanLayout = {
-        version: 1,
+        version: 2,
         name: String(layout.name || "My Base").trim().slice(0, 60) || "My Base",
         slots: cleanSlots,
+        perches: cleanPerches,
         updatedAt: new Date().toISOString()
       };
     }

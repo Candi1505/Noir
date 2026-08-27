@@ -103,14 +103,51 @@ vm.runInContext(fs.readFileSync("database.js", "utf8"), sandbox);
   );
 
   const layout = {
-    version: 1,
+    version: 2,
     name: "Main Base",
-    slots: Array.from({ length: 40 }, () => null)
+    rawHar: { log: { entries: [{ request: { headers: ["never persist"] } }] } },
+    slots: Array.from({ length: 40 }, () => null),
+    perches: ["Riverwatch Perch", "Seagazer Perch", "Stonespear Perch"].map(name => ({
+      name,
+      level: 0,
+      dragonName: "",
+      dragonClass: "",
+      dragonTier: "",
+      dragonLevel: 0,
+      riderName: "",
+      riderLevel: 0,
+      elementalResistance: "",
+      towerBonus: "",
+      specialBonus: "",
+      skills: [],
+      gear: Object.fromEntries(["head", "chest", "gloves", "pants", "boots", "weapons", "shield", "rings"].map(slot => [slot, null]))
+    }))
   };
   layout.slots[0] = {
     type: "Manual Future Tower",
     level: 301,
-    notes: "Manual evidence only"
+    notes: "Manual evidence only",
+    requestHeaders: "never persist",
+    rune: { name: "My verified rune", level: 4 },
+    glyph: null,
+    relic: { name: "My verified relic", level: 2 }
+  };
+  layout.perches[0] = {
+    ...layout.perches[0],
+    capturedPayload: "never persist",
+    level: 30,
+    dragonName: "Aevros",
+    dragonClass: "Warrior",
+    dragonTier: "Mythic · Tier 4",
+    dragonLevel: 100,
+    riderName: "Freeda",
+    riderLevel: 50,
+    towerBonus: "tower-health-15",
+    skills: [{ name: "Increase Archer Tower's HP", level: 5 }],
+    gear: {
+      ...layout.perches[0].gear,
+      head: { name: "Glamorous Defender Helm", rarity: "Legendary", level: 10 }
+    }
   };
   await database.saveOnyxBaseLayout(layout);
   assert.equal(operations.at(-1).table, "player_base_layouts");
@@ -119,7 +156,28 @@ vm.runInContext(fs.readFileSync("database.js", "utf8"), sandbox);
   assert.equal(operations.at(-1).payload.layout.slots.length, 40);
   assert.equal(operations.at(-1).payload.layout.slots[0].type, "Manual Future Tower");
   assert.equal(operations.at(-1).payload.layout.slots[0].level, 301);
+  assert.equal(operations.at(-1).payload.layout.version, 2);
+  assert.equal(operations.at(-1).payload.layout.slots[0].rune.name, "My verified rune");
+  assert.equal(operations.at(-1).payload.layout.perches.length, 3);
+  assert.equal(operations.at(-1).payload.layout.perches[0].riderName, "Freeda");
+  assert.equal(operations.at(-1).payload.layout.perches[0].skills[0].level, 5);
+  assert.equal(operations.at(-1).payload.layout.perches[0].gear.head.level, 10);
+  assert.equal("rawHar" in operations.at(-1).payload.layout, false);
+  assert.equal("requestHeaders" in operations.at(-1).payload.layout.slots[0], false);
+  assert.equal("capturedPayload" in operations.at(-1).payload.layout.perches[0], false);
   assert.match(operations.at(-1).payload.updated_at, /^\d{4}-\d{2}-\d{2}T/);
+
+  const legacyLayout = {
+    version: 1,
+    name: "Legacy Base",
+    slots: Array.from({ length: 40 }, () => null)
+  };
+  legacyLayout.slots[0] = { type: "Archer Tower", level: 100, notes: "Kept" };
+  await database.saveOnyxBaseLayout(legacyLayout);
+  assert.equal(operations.at(-1).payload.layout.version, 2);
+  assert.equal(operations.at(-1).payload.layout.slots[0].type, "Archer Tower");
+  assert.equal(operations.at(-1).payload.layout.perches.length, 3);
+  assert.equal(operations.at(-1).payload.layout.perches[0].name, "Riverwatch Perch");
 
   currentUserId = "player-two";
   await database.saveOnyxBaseLayout(null);

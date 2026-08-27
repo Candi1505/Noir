@@ -2,12 +2,47 @@
   "use strict";
 
   const OVERLAY_ID = "onyxBaseCommandOverlay";
-  const STORAGE_PREFIX = "onyxBaseLayoutV1";
+  const STORAGE_PREFIX = "onyxBaseLayoutV2";
+  const LEGACY_STORAGE_PREFIX = "onyxBaseLayoutV1";
   const ISLAND_COUNT = 8;
   const SLOTS_PER_ISLAND = 5;
   const TOTAL_SLOTS = ISLAND_COUNT * SLOTS_PER_ISLAND;
   const MAP_WIDTH = 760;
   const MAP_HEIGHT = 500;
+
+  const GEAR_SLOTS = Object.freeze([
+    ["head", "Head"],
+    ["chest", "Chest"],
+    ["gloves", "Gloves"],
+    ["pants", "Pants"],
+    ["boots", "Boots"],
+    ["weapons", "Weapon"],
+    ["shield", "Shield"],
+    ["rings", "Rings"]
+  ]);
+
+  const GEAR_RARITIES = Object.freeze([
+    "Common", "Rare", "Epic", "Legendary", "Mythic", "Ascendant"
+  ]);
+
+  const PERCHES = Object.freeze([
+    { name: "Riverwatch Perch", islands: [3, 4, 5] },
+    { name: "Seagazer Perch", islands: [1, 2] },
+    { name: "Stonespear Perch", islands: [6, 7] }
+  ]);
+
+  const PERCH_RIDER_EXCEPTIONS = new Set(["Freeda", "Vivian"]);
+
+  const KNOWN_DRAGON_PERCH_BONUSES = Object.freeze({
+    Aevros: { elementalResistance: "wind-10", towerBonus: "tower-health-15", specialBonus: "tower-ward-25" },
+    Cerebron: { elementalResistance: "dark-10", towerBonus: "supershot-15", specialBonus: "refund-supershot-25" },
+    Krygant: { elementalResistance: "ice-10", towerBonus: "tower-health-15", specialBonus: "tower-ward-25" },
+    Xytheris: { elementalResistance: "fire-10", towerBonus: "supershot-15", specialBonus: "" },
+    Rakmo: { elementalResistance: "dark-10", towerBonus: "tower-health-15", specialBonus: "" },
+    Varuag: { elementalResistance: "ice-10", towerBonus: "tower-attack-10", specialBonus: "" },
+    Simba: { elementalResistance: "earth-10", towerBonus: "tower-health-15", specialBonus: "tower-ward-25" },
+    Nartaka: { elementalResistance: "dark-10", towerBonus: "tower-attack-10", specialBonus: "double-attack-20" }
+  });
 
   const ISLANDS = Object.freeze([
     { name: "Gateway", form: "long", zone: "lower-right", x: 321, y: 340, width: 180, height: 108, tilt: 5 },
@@ -64,6 +99,8 @@
   let selectedIsland = 0;
   let selectedSlot = null;
   let editorDraft = null;
+  let selectedPerch = null;
+  let perchDraft = null;
   let moveFrom = null;
   let pendingSwap = null;
   let layout = null;
@@ -153,8 +190,8 @@
     return window.OnyxCommandCore?.getCurrentUserId?.() || null;
   }
 
-  function storageKey() {
-    return `${STORAGE_PREFIX}:${userId() || "signed-out"}`;
+  function storageKey(prefix = STORAGE_PREFIX) {
+    return `${prefix}:${userId() || "signed-out"}`;
   }
 
   function towerTypes() {
@@ -185,8 +222,77 @@
     return rowsFor(type).find(row => Number(row?.level) === Number(level)) || null;
   }
 
+  function monumentItems(kind = "") {
+    const items = Array.isArray(catalogue().monumentItems) ? catalogue().monumentItems : [];
+    return kind ? items.filter(item => item?.kind === kind) : items;
+  }
+
+  function monumentItem(kind, name) {
+    return monumentItems(kind).find(item => item?.name === name) || null;
+  }
+
+  function defensiveRiders() {
+    const riders = Array.isArray(catalogue().riders) ? catalogue().riders : [];
+    return riders.filter(rider => rider?.defensive || PERCH_RIDER_EXCEPTIONS.has(rider?.name));
+  }
+
+  function riderSkills() {
+    return Array.isArray(catalogue().riderSkills) ? catalogue().riderSkills : [];
+  }
+
+  function riderGear(slot = "") {
+    const gear = Array.isArray(catalogue().riderGear) ? catalogue().riderGear : [];
+    return slot ? gear.filter(item => item?.slot === slot) : gear;
+  }
+
+  function dragons() {
+    return Array.isArray(catalogue().dragons) ? catalogue().dragons : [];
+  }
+
   function blankSlots() {
     return Array.from({ length: TOTAL_SLOTS }, () => null);
+  }
+
+  function blankGear() {
+    return Object.fromEntries(GEAR_SLOTS.map(([slot]) => [slot, null]));
+  }
+
+  function blankPerches() {
+    return PERCHES.map(perch => ({
+      name: perch.name,
+      level: 0,
+      dragonName: "",
+      dragonClass: "",
+      dragonTier: "",
+      dragonLevel: 0,
+      riderName: "",
+      riderLevel: 0,
+      elementalResistance: "",
+      towerBonus: "",
+      specialBonus: "",
+      skills: [],
+      gear: blankGear()
+    }));
+  }
+
+  function cleanText(value, maximum = 120) {
+    return String(value || "").trim().replace(/\s+/g, " ").slice(0, maximum);
+  }
+
+  function cleanWholeNumber(value, minimum = 0, maximum = 999) {
+    const number = Number.parseInt(value, 10);
+    return Number.isInteger(number) && number >= minimum && number <= maximum
+      ? number
+      : minimum;
+  }
+
+  function normaliseMonument(value, legacyName, legacyLevel) {
+    const name = cleanText(value?.name || legacyName, 120);
+    if (!name) return null;
+    return {
+      name,
+      level: cleanWholeNumber(value?.level ?? legacyLevel, 1, 99)
+    };
   }
 
   function normaliseTower(value) {
@@ -197,7 +303,68 @@
     return {
       type,
       level,
-      notes: String(value.notes || "").trim().slice(0, 250)
+      notes: String(value.notes || "").trim().slice(0, 250),
+      rune: normaliseMonument(
+        value.rune,
+        typeof value.rune === "string" ? value.rune : value.runes,
+        value.runeLevel
+      ),
+      glyph: normaliseMonument(value.glyph, typeof value.glyph === "string" ? value.glyph : "", value.glyphLevel),
+      relic: normaliseMonument(value.relic, typeof value.relic === "string" ? value.relic : "", value.relicLevel)
+    };
+  }
+
+  function normaliseGear(value) {
+    if (!value || typeof value !== "object") return null;
+    const name = cleanText(value.name, 120);
+    if (!name) return null;
+    return {
+      name,
+      rarity: cleanText(value.rarity, 32),
+      level: cleanWholeNumber(value.level, 0, 99)
+    };
+  }
+
+  function normalisePerch(value, index) {
+    const defaults = blankPerches()[index];
+    const safe = value && typeof value === "object" ? value : {};
+    const legacySkills = Array.isArray(safe.riderSkills)
+      ? safe.riderSkills.map(name => ({ name, level: safe.riderSkillLevels?.[name] }))
+      : [];
+    const sourceSkills = Array.isArray(safe.skills) ? safe.skills : legacySkills;
+    const skills = sourceSkills.slice(0, 32).map(skill => {
+      const name = cleanText(typeof skill === "string" ? skill : skill?.name, 120);
+      if (!name) return null;
+      const definition = riderSkills().find(item => item?.name === name);
+      return {
+        name,
+        level: cleanWholeNumber(
+          typeof skill === "string" ? definition?.maximumLevel : skill?.level,
+          1,
+          Math.max(1, Number(definition?.maximumLevel) || 99)
+        )
+      };
+    }).filter(Boolean);
+    const sourceGear = safe.gear && typeof safe.gear === "object"
+      ? safe.gear
+      : safe.riderGear && typeof safe.riderGear === "object"
+        ? safe.riderGear
+        : {};
+    return {
+      ...defaults,
+      name: defaults.name,
+      level: cleanWholeNumber(safe.level, 0, 999),
+      dragonName: cleanText(safe.dragonName, 120),
+      dragonClass: cleanText(safe.dragonClass, 40),
+      dragonTier: cleanText(safe.dragonTier, 80),
+      dragonLevel: cleanWholeNumber(safe.dragonLevel, 0, 999),
+      riderName: cleanText(safe.riderName, 120),
+      riderLevel: cleanWholeNumber(safe.riderLevel, 0, 999),
+      elementalResistance: cleanText(safe.elementalResistance, 40),
+      towerBonus: cleanText(safe.towerBonus, 40),
+      specialBonus: cleanText(safe.specialBonus, 40),
+      skills,
+      gear: Object.fromEntries(GEAR_SLOTS.map(([slot]) => [slot, normaliseGear(sourceGear[slot])]))
     };
   }
 
@@ -209,24 +376,28 @@
       value.slots.length !== TOTAL_SLOTS
     ) return null;
     return {
-      version: 1,
+      version: 2,
       name: String(value.name || "My Base").trim().slice(0, 60) || "My Base",
       slots: Array.from({ length: TOTAL_SLOTS }, (_, index) => normaliseTower(value.slots[index])),
+      perches: Array.from({ length: PERCHES.length }, (_, index) =>
+        normalisePerch(Array.isArray(value.perches) ? value.perches[index] : null, index)
+      ),
       updatedAt: String(value.updatedAt || new Date().toISOString())
     };
   }
 
   function createLayout(name = "My Base") {
     return {
-      version: 1,
+      version: 2,
       name: String(name || "My Base").trim().slice(0, 60) || "My Base",
       slots: blankSlots(),
+      perches: blankPerches(),
       updatedAt: new Date().toISOString()
     };
   }
 
   function comparableLayout(value) {
-    return value ? JSON.stringify({ name: value.name, slots: value.slots }) : "";
+    return value ? JSON.stringify({ name: value.name, slots: value.slots, perches: value.perches }) : "";
   }
 
   function updateDraftState() {
@@ -239,7 +410,9 @@
       ? clone(savedSnapshot)
       : null;
     try {
-      layout = normaliseLayout(JSON.parse(localStorage.getItem(storageKey()) || "null"));
+      const current = localStorage.getItem(storageKey());
+      const legacy = localStorage.getItem(storageKey(LEGACY_STORAGE_PREFIX));
+      layout = normaliseLayout(JSON.parse(current || legacy || "null"));
     } catch (error) {
       layout = null;
     }
@@ -251,10 +424,12 @@
   function saveLocal() {
     if (!layout) {
       localStorage.removeItem(storageKey());
+      localStorage.removeItem(storageKey(LEGACY_STORAGE_PREFIX));
       return;
     }
     layout.updatedAt = new Date().toISOString();
     localStorage.setItem(storageKey(), JSON.stringify(layout));
+    localStorage.removeItem(storageKey(LEGACY_STORAGE_PREFIX));
   }
 
   function markDirty(message = "Draft stored on this device.") {
@@ -412,25 +587,196 @@
       : "A restriction is recorded, but no verified player-facing limit is available.";
   }
 
-  function towerEstimate(tower) {
-    if (!tower) return null;
-    const row = exactRow(tower.type, tower.level);
-    const value = Number(row?.power);
-    return Number.isFinite(value) && value >= 0 ? value : null;
+  function normalKey(value) {
+    return String(value || "").toLowerCase().replace(/\btower\b/g, "").replace(/[^a-z0-9]/g, "");
   }
 
-  function estimateSlots(slots) {
-    return (Array.isArray(slots) ? slots : []).reduce((summary, tower) => {
+  function effectValue(effect, level, maximumLevel = 1) {
+    const values = Array.isArray(effect?.values)
+      ? effect.values.map(Number).filter(Number.isFinite)
+      : [];
+    if (values.length) {
+      const index = Math.max(0, Math.min(values.length - 1, Number.parseInt(level, 10) - 1));
+      return Number(values[index]) || 0;
+    }
+    const chosenLevel = Math.max(1, Math.min(
+      Number(maximumLevel) || 1,
+      Number.parseInt(level, 10) || 1
+    ));
+    return (Number(effect?.base) || 0) +
+      (Number(effect?.perLevel) || 0) * Math.max(0, chosenLevel - 1);
+  }
+
+  function modifierBucket(value) {
+    const text = String(value || "").toLowerCase();
+    if (/building.*(?:hp|health)|(?:hp|health).*building/.test(text)) return "hp";
+    if (/building.*(?:atk|attack|damage)|(?:atk|attack|damage).*building/.test(text)) return "attack";
+    return "";
+  }
+
+  function monumentModifierBucket(value) {
+    const text = String(value || "").toLowerCase();
+    if (/\bhp\b|health/.test(text)) return "hp";
+    if (/\batk\b|\battack\b/.test(text)) return "attack";
+    return "";
+  }
+
+  function monumentEffectApplies(effect, tower) {
+    const text = normalKey(effect?.text);
+    if (!text) return false;
+    const towerKey = normalKey(tower?.type);
+    const namedTower = (Array.isArray(catalogue().towers) ? catalogue().towers : [])
+      .map(item => normalKey(item?.name))
+      .filter(key => key.length >= 4)
+      .find(key => text.includes(key));
+    return !namedTower || text.includes(towerKey) || towerKey.includes(namedTower);
+  }
+
+  function monumentModifier(tower) {
+    let hp = 0;
+    let attack = 0;
+    for (const [kind, selection] of [["Rune", tower?.rune], ["Glyph", tower?.glyph], ["Relic", tower?.relic]]) {
+      if (!selection?.name || selection.level < 1) continue;
+      const item = monumentItem(kind, selection.name);
+      item?.effects?.forEach(effect => {
+        if (!monumentEffectApplies(effect, tower)) return;
+        const bucket = monumentModifierBucket(effect?.text);
+        if (!bucket) return;
+        const value = effectValue(effect, selection.level, item.maximumLevel);
+        if (bucket === "hp") hp += value;
+        if (bucket === "attack") attack += value;
+      });
+    }
+    return { hp, attack };
+  }
+
+  const RIDER_TOWER_KEYS = Object.freeze({
+    elementalflakdark: "darkflak",
+    elementalflakfire: "fireflak",
+    elementalflakice: "iceflak",
+    elementalflakwind: "electroflak",
+    elementalflakearth: "earthflak",
+    crystalhowitzer: "crystalhowitzer",
+    burntower: "fireturret",
+    fireturret: "fireturret",
+    draintower: "drakulpylon",
+    souldraintower: "souldrain",
+    nexustower: "nexus",
+    nullspire: "nullspire",
+    magetowersuper: "redarchmage",
+    magebluetowersuper: "bluearchmage",
+    magetower: "redmage",
+    magebluetower: "bluemage",
+    lightningtowersuper: "chargedvolt",
+    e20q4tower: "cosmicorrery"
+  });
+
+  function riderEffectApplies(type, tower) {
+    const specific = String(type || "").split("_")[1];
+    if (!specific) return true;
+    const expected = RIDER_TOWER_KEYS[normalKey(specific)] || normalKey(specific);
+    const actual = normalKey(tower?.type);
+    return actual.includes(expected) || expected.includes(actual);
+  }
+
+  function riderModifier(tower, perch) {
+    if (!perch?.level || !perch?.dragonName || !perch?.riderName) return { hp: 0, attack: 0 };
+    let hp = 0;
+    let attack = 0;
+    perch.skills.forEach(selection => {
+      const skill = riderSkills().find(item => item?.name === selection?.name);
+      skill?.effects?.forEach(effect => {
+        if (!riderEffectApplies(effect?.type, tower)) return;
+        const bucket = modifierBucket(effect?.type);
+        if (!bucket) return;
+        const value = effectValue(effect, selection.level, skill.maximumLevel);
+        if (bucket === "hp") hp += value;
+        if (bucket === "attack") attack += value;
+      });
+    });
+    Object.values(perch.gear || {}).forEach(selection => {
+      if (!selection?.name || selection.level < 1) return;
+      const item = riderGear().find(entry => entry?.name === selection.name);
+      const variants = Array.isArray(item?.variants) ? item.variants : [];
+      const variant = variants.find(entry => entry?.rarity === selection.rarity)
+        || (variants.length === 1 ? variants[0] : null);
+      variant?.effects?.forEach(effect => {
+        if (!riderEffectApplies(effect?.type, tower)) return;
+        const bucket = modifierBucket(effect?.type);
+        if (!bucket) return;
+        const value = effectValue(effect, selection.level, variant.maximumLevel);
+        if (bucket === "hp") hp += value;
+        if (bucket === "attack") attack += value;
+      });
+    });
+    return { hp, attack };
+  }
+
+  function coveringPerch(towerIndex, perches = layout?.perches || []) {
+    const islandIndex = Math.floor(Number(towerIndex) / SLOTS_PER_ISLAND);
+    const configIndex = PERCHES.findIndex(perch => perch.islands.includes(islandIndex));
+    return configIndex >= 0 ? perches?.[configIndex] || null : null;
+  }
+
+  function perchModifier(perch) {
+    if (!perch?.level || !perch?.dragonName) return { hp: 0, attack: 0 };
+    return {
+      hp: perch.towerBonus === "tower-health-15" ? 0.15 : 0,
+      attack: perch.towerBonus === "tower-attack-10" ? 0.1 : 0
+    };
+  }
+
+  function towerEstimateDetails(tower, towerIndex = 0, perches = layout?.perches || []) {
+    if (!tower) return null;
+    const row = exactRow(tower.type, tower.level);
+    const base = Number(row?.power);
+    if (!Number.isFinite(base) || base < 0) return null;
+    const monument = monumentModifier(tower);
+    const perch = coveringPerch(towerIndex, perches);
+    const rider = riderModifier(tower, perch);
+    const perchBonus = perchModifier(perch);
+    const gain = modifier => base * (Number(modifier.hp || 0) + Number(modifier.attack || 0)) / 2;
+    const monumentGain = gain(monument);
+    const riderGain = gain(rider);
+    const perchGain = gain(perchBonus);
+    return {
+      base,
+      monumentGain,
+      riderGain,
+      perchGain,
+      value: Math.max(0, Math.round(base + monumentGain + riderGain + perchGain))
+    };
+  }
+
+  function towerEstimate(tower, towerIndex = 0, perches = layout?.perches || []) {
+    return towerEstimateDetails(tower, towerIndex, perches)?.value ?? null;
+  }
+
+  function estimateSlots(slots, startIndex = 0, perches = layout?.perches || []) {
+    return (Array.isArray(slots) ? slots : []).reduce((summary, tower, index) => {
       if (!tower) return summary;
       summary.placed += 1;
-      const value = towerEstimate(tower);
-      if (value === null) summary.unavailable += 1;
+      const detail = towerEstimateDetails(tower, startIndex + index, perches);
+      if (detail === null) summary.unavailable += 1;
       else {
         summary.known += 1;
-        summary.value += value;
+        summary.value += detail.value;
+        summary.baseValue += detail.base;
+        summary.monumentGain += detail.monumentGain;
+        summary.riderGain += detail.riderGain;
+        summary.perchGain += detail.perchGain;
       }
       return summary;
-    }, { value: 0, placed: 0, known: 0, unavailable: 0 });
+    }, {
+      value: 0,
+      baseValue: 0,
+      monumentGain: 0,
+      riderGain: 0,
+      perchGain: 0,
+      placed: 0,
+      known: 0,
+      unavailable: 0
+    });
   }
 
   function islandSlots(sourceLayout, islandIndex) {
@@ -464,6 +810,15 @@
       <strong>${escapeHtml(estimateText(summary))}</strong>
       <span>${escapeHtml(estimateDelta(summary, baseline) || estimateCoverage(summary))}</span>
     </article>`;
+  }
+
+  function renderEstimateBreakdown(summary) {
+    return `<div class="obc-estimate-breakdown" aria-label="Estimated DP breakdown">
+      <article><small>Base tower rows</small><strong>${formatNumber(Math.round(summary.baseValue))}</strong></article>
+      <article><small>Runes · glyphs · relics</small><strong>+${formatNumber(Math.round(summary.monumentGain))}</strong></article>
+      <article><small>Defensive rider + gear</small><strong>+${formatNumber(Math.round(summary.riderGain))}</strong></article>
+      <article><small>Perch tower bonus</small><strong>+${formatNumber(Math.round(summary.perchGain))}</strong></article>
+    </div>`;
   }
 
   function renderInventoryState(compact = false) {
@@ -640,7 +995,7 @@
           </svg>
           ${ISLANDS.map((island, islandIndex) => {
             const slots = islandSlots(layout, islandIndex);
-            const estimate = estimateSlots(slots);
+            const estimate = estimateSlots(slots, islandIndex * SLOTS_PER_ISLAND, layout.perches);
             const occupied = slots.filter(Boolean).length;
             return `
               <button type="button"
@@ -676,12 +1031,26 @@
     }
     const imported = inventoryRecords().find(record => availableInventory(record, slotIndex) > 0);
     if (imported) {
-      editorDraft = { type: imported.type, level: imported.level, notes: "" };
+      editorDraft = {
+        type: imported.type,
+        level: imported.level,
+        notes: "",
+        rune: null,
+        glyph: null,
+        relic: null
+      };
       return;
     }
     const fallbackType = selectedTower || towerTypes()[0] || "";
     const levels = rowsFor(fallbackType).map(row => Number(row.level)).filter(Number.isFinite);
-    editorDraft = { type: fallbackType, level: selectedLevel || levels[0] || 1, notes: "" };
+    editorDraft = {
+      type: fallbackType,
+      level: selectedLevel || levels[0] || 1,
+      notes: "",
+      rune: null,
+      glyph: null,
+      relic: null
+    };
   }
 
   function renderInventoryPicker() {
@@ -703,10 +1072,39 @@
     `;
   }
 
+  function catalogueEffect(item) {
+    return (Array.isArray(item?.effects) ? item.effects : []).slice(0, 2).map(effect => {
+      const amount = Number(effect?.max ?? effect?.min ?? effect?.base ?? 0);
+      const value = effect?.unit === "%" && amount
+        ? `${(amount * 100).toFixed(amount * 100 >= 10 ? 0 : 1)}%`
+        : "";
+      return `${effect?.text || ""}${value ? ` ${value}` : ""}`.trim();
+    }).filter(Boolean).join(" · ");
+  }
+
+  function renderMonumentEditor(kind, key, selection) {
+    const items = monumentItems(kind);
+    const selected = monumentItem(kind, selection?.name);
+    const maximum = selected?.maximumLevel || 99;
+    return `
+      <div class="obc-monument-row">
+        <label>${escapeHtml(kind)}
+          <input id="obcSlot${escapeHtml(kind)}" list="obc${escapeHtml(kind)}List" maxlength="120" value="${escapeHtml(selection?.name || "")}" placeholder="Tap to search ${formatNumber(items.length)} ${kind.toLowerCase()}${items.length === 1 ? "" : "s"}" autocomplete="off">
+        </label>
+        <label>Level
+          <input id="obcSlot${escapeHtml(kind)}Level" type="number" min="1" max="${maximum}" inputmode="numeric" value="${escapeHtml(selection?.level || "")}" placeholder="Max ${maximum}">
+        </label>
+        <datalist id="obc${escapeHtml(kind)}List">
+          ${items.map(item => `<option value="${escapeHtml(item.name)}" label="${escapeHtml(`${item.rarity || "Catalogue"}${catalogueEffect(item) ? ` · ${catalogueEffect(item)}` : ""}`)}"></option>`).join("")}
+        </datalist>
+      </div>
+    `;
+  }
+
   function renderTowerEditor() {
     if (selectedSlot === null || !layout || !editorDraft) return "";
     const tower = layout.slots[selectedSlot];
-    const estimate = towerEstimate(editorDraft);
+    const detail = towerEstimateDetails(editorDraft, selectedSlot, layout.perches);
     const importedMatch = inventoryRecords().some(record =>
       record.type === editorDraft.type && Number(record.level) === Number(editorDraft.level)
     );
@@ -719,8 +1117,11 @@
 
         <div class="obc-estimate-preview">
           ${towerIcon(editorDraft.type)}
-          <div><small>Estimated tower DP</small><strong id="obcEditorEstimate">${estimate === null ? "Unavailable" : `≈ ${formatNumber(estimate)}`}</strong></div>
+          <div><small>Estimated tower DP</small><strong id="obcEditorEstimate">${detail === null ? "Unavailable" : `≈ ${formatNumber(detail.value)}`}</strong></div>
           <span>${importedMatch ? "Private import match" : "Manual entry"}</span>
+          <p id="obcEditorBreakdown">${detail
+            ? `Base ${formatNumber(detail.base)} · monuments +${formatNumber(Math.round(detail.monumentGain))} · rider +${formatNumber(Math.round(detail.riderGain))} · perch +${formatNumber(Math.round(detail.perchGain))}`
+            : "An exact tower level row is required before bonuses can be estimated."}</p>
         </div>
 
         <div class="obc-picker-heading"><strong>Prefill from private inventory</strong><small>Optional · tap once</small></div>
@@ -738,7 +1139,16 @@
         <label class="obc-notes">Notes
           <input id="obcSlotTowerNotes" maxlength="250" value="${escapeHtml(editorDraft.notes || "")}" placeholder="Optional tactical note">
         </label>
-        <p class="obc-editor-evidence">Manual types and levels are allowed. If there is no exact catalogue row, Onyx saves the tower but marks its DP estimate unavailable.</p>
+        <details class="obc-equipment-command" ${editorDraft.rune || editorDraft.glyph || editorDraft.relic ? "open" : ""}>
+          <summary><span>Monument loadout</span><small>${[editorDraft.rune, editorDraft.glyph, editorDraft.relic].filter(Boolean).length}/3 equipped</small></summary>
+          <p>Choose only the rune, glyph and relic actually equipped to this tower. Onyx applies verified building HP and attack effects and labels the result as an estimate.</p>
+          <div class="obc-monument-grid">
+            ${renderMonumentEditor("Rune", "rune", editorDraft.rune)}
+            ${renderMonumentEditor("Glyph", "glyph", editorDraft.glyph)}
+            ${renderMonumentEditor("Relic", "relic", editorDraft.relic)}
+          </div>
+        </details>
+        <p class="obc-editor-evidence">Manual entries remain available. Unrecognised equipment is saved for your record but contributes nothing to the estimate until it matches a verified catalogue definition.</p>
         <div class="obc-editor-actions">
           <button id="obcSaveTower" class="primary" type="button">${tower ? "Update tower" : "Place tower"}</button>
           ${tower ? '<button id="obcStartMove" type="button">Move</button><button id="obcClearTower" class="danger" type="button">Remove</button>' : ""}
@@ -748,10 +1158,171 @@
     `;
   }
 
+  function perchCoverageLabel(index) {
+    return PERCHES[index]?.islands.map(islandIndex => ISLANDS[islandIndex]?.name).filter(Boolean).join(" · ") || "No mapped islands";
+  }
+
+  function openPerchEditor(index) {
+    selectedPerch = index;
+    perchDraft = clone(layout?.perches?.[index] || blankPerches()[index]);
+    selectedSlot = null;
+    editorDraft = null;
+  }
+
+  function readPerchDraft(overlay) {
+    if (selectedPerch === null || !perchDraft) return null;
+    const skills = perchDraft.skills.map((skill, index) => ({
+      name: skill.name,
+      level: overlay.querySelector(`[data-obc-skill-level="${index}"]`)?.value ?? skill.level
+    }));
+    const gear = Object.fromEntries(GEAR_SLOTS.map(([slot]) => [slot, {
+      name: overlay.querySelector(`[data-obc-gear-name="${slot}"]`)?.value || "",
+      rarity: overlay.querySelector(`[data-obc-gear-rarity="${slot}"]`)?.value || "",
+      level: overlay.querySelector(`[data-obc-gear-level="${slot}"]`)?.value || 0
+    }]));
+    return normalisePerch({
+      name: PERCHES[selectedPerch].name,
+      level: overlay.querySelector("#obcPerchLevel")?.value,
+      dragonName: overlay.querySelector("#obcPerchDragon")?.value,
+      dragonClass: overlay.querySelector("#obcPerchDragonClass")?.value,
+      dragonTier: overlay.querySelector("#obcPerchDragonTier")?.value,
+      dragonLevel: overlay.querySelector("#obcPerchDragonLevel")?.value,
+      riderName: overlay.querySelector("#obcPerchRider")?.value,
+      riderLevel: overlay.querySelector("#obcPerchRiderLevel")?.value,
+      elementalResistance: overlay.querySelector("#obcPerchResistance")?.value,
+      towerBonus: overlay.querySelector("#obcPerchTowerBonus")?.value,
+      specialBonus: overlay.querySelector("#obcPerchSpecialBonus")?.value,
+      skills,
+      gear
+    }, selectedPerch);
+  }
+
+  function perchPreview(perch) {
+    const perches = clone(layout?.perches || blankPerches());
+    if (selectedPerch !== null && perch) perches[selectedPerch] = perch;
+    return estimateSlots(layout?.slots || blankSlots(), 0, perches);
+  }
+
+  function renderPerchDatalists() {
+    return `
+      <datalist id="obcDragonList">
+        ${dragons().map(dragon => `<option value="${escapeHtml(dragon.name)}" label="${escapeHtml(`${dragon.dragonClass || "Dragon"} · ${dragon.rarity || ""} · ${dragon.element || ""}`)}"></option>`).join("")}
+      </datalist>
+      <datalist id="obcDefensiveRiderList">
+        ${defensiveRiders().map(rider => `<option value="${escapeHtml(rider.name)}" label="Defensive / perch rider"></option>`).join("")}
+      </datalist>
+      <datalist id="obcRiderSkillList">
+        ${riderSkills().map(skill => `<option value="${escapeHtml(skill.name)}" label="Maximum level ${escapeHtml(skill.maximumLevel || 1)}"></option>`).join("")}
+      </datalist>
+      ${GEAR_SLOTS.map(([slot, label]) => `
+        <datalist id="obcGear${escapeHtml(slot)}List">
+          ${riderGear(slot).map(item => `<option value="${escapeHtml(item.name)}" label="${escapeHtml(`${item.element || "No element"} · ${label}`)}"></option>`).join("")}
+        </datalist>
+      `).join("")}
+    `;
+  }
+
+  function gearRarityOptions(slot, selection) {
+    const item = riderGear(slot).find(entry => entry?.name === selection?.name);
+    const options = Array.from(new Set([...(item?.rarities || []), ...GEAR_RARITIES]));
+    return `<option value="">Choose…</option>${options.map(rarity => `<option value="${escapeHtml(rarity)}" ${selection?.rarity === rarity ? "selected" : ""}>${escapeHtml(rarity)}</option>`).join("")}`;
+  }
+
+  function renderPerchEditor() {
+    if (selectedPerch === null || !perchDraft || !layout) return "";
+    const config = PERCHES[selectedPerch];
+    const preview = perchPreview(perchDraft);
+    const dragon = dragons().find(item => item?.name === perchDraft.dragonName);
+    return `
+      <section class="obc-perch-sheet" aria-label="${escapeHtml(config.name)} editor">
+        <div class="obc-section-heading">
+          <div><p>PERCH COMMAND</p><h3>${escapeHtml(config.name)}</h3><small>Covers ${escapeHtml(perchCoverageLabel(selectedPerch))}</small></div>
+          <button id="obcCancelPerch" class="obc-icon-button" type="button" aria-label="Close perch editor">${icon("close")}</button>
+        </div>
+        <div class="obc-perch-preview">
+          ${icon("shield")}
+          <div><small>Estimated total base DP with this draft</small><strong id="obcPerchEstimate">${escapeHtml(estimateText(preview))}</strong><span id="obcPerchBreakdown">Monuments +${formatNumber(Math.round(preview.monumentGain))} · riders +${formatNumber(Math.round(preview.riderGain))} · perch +${formatNumber(Math.round(preview.perchGain))}</span></div>
+        </div>
+        <div class="obc-perch-fields">
+          <label>Perch level<input id="obcPerchLevel" type="number" min="0" max="999" inputmode="numeric" value="${perchDraft.level || ""}" placeholder="Level"></label>
+          <label>Dragon<input id="obcPerchDragon" list="obcDragonList" maxlength="120" value="${escapeHtml(perchDraft.dragonName)}" placeholder="Tap to search ${formatNumber(dragons().length)} dragons" autocomplete="off"></label>
+          <label>Dragon level<input id="obcPerchDragonLevel" type="number" min="0" max="999" inputmode="numeric" value="${perchDraft.dragonLevel || ""}"></label>
+          <label>Class<input id="obcPerchDragonClass" maxlength="40" value="${escapeHtml(perchDraft.dragonClass || dragon?.dragonClass || "")}" placeholder="Dragon class"></label>
+          <label>Tier / rarity<input id="obcPerchDragonTier" maxlength="80" value="${escapeHtml(perchDraft.dragonTier || [dragon?.rarity, dragon?.tier ? `Tier ${dragon.tier}` : ""].filter(Boolean).join(" · "))}" placeholder="e.g. Mythic · Tier 4"></label>
+        </div>
+        <fieldset class="obc-perch-bonuses">
+          <legend>Verified perch bonuses</legend>
+          <label>Elemental resistance<select id="obcPerchResistance">
+            <option value="">None / not entered</option>
+            ${["Wind", "Dark", "Ice", "Fire", "Earth"].map(element => `<option value="${element.toLowerCase()}-10" ${perchDraft.elementalResistance === `${element.toLowerCase()}-10` ? "selected" : ""}>10% ${element}</option>`).join("")}
+          </select></label>
+          <label>Main tower bonus<select id="obcPerchTowerBonus">
+            <option value="">None / not entered</option>
+            <option value="tower-health-15" ${perchDraft.towerBonus === "tower-health-15" ? "selected" : ""}>Tower Health 15%</option>
+            <option value="tower-attack-10" ${perchDraft.towerBonus === "tower-attack-10" ? "selected" : ""}>Tower Attack 10%</option>
+            <option value="supershot-15" ${perchDraft.towerBonus === "supershot-15" ? "selected" : ""}>Supershot 15%</option>
+          </select></label>
+          <label>Special bonus<select id="obcPerchSpecialBonus">
+            <option value="">None / not entered</option>
+            <option value="tower-ward-25" ${perchDraft.specialBonus === "tower-ward-25" ? "selected" : ""}>Tower Ward 25% HP</option>
+            <option value="refund-supershot-25" ${perchDraft.specialBonus === "refund-supershot-25" ? "selected" : ""}>Refund Supershot 25%</option>
+            <option value="double-attack-20" ${perchDraft.specialBonus === "double-attack-20" ? "selected" : ""}>2× Attack 20%</option>
+          </select></label>
+        </fieldset>
+        <div class="obc-rider-command">
+          <div class="obc-section-heading"><div><p>DEFENSIVE RIDER</p><h3>Rider assignment</h3></div><span>${perchDraft.riderName ? "Assigned" : "Manual"}</span></div>
+          <div class="obc-perch-fields two">
+            <label>Perch rider<input id="obcPerchRider" list="obcDefensiveRiderList" maxlength="120" value="${escapeHtml(perchDraft.riderName)}" placeholder="Tap to search perch riders" autocomplete="off"></label>
+            <label>Rider level<input id="obcPerchRiderLevel" type="number" min="0" max="999" inputmode="numeric" value="${perchDraft.riderLevel || ""}"></label>
+          </div>
+          <details class="obc-rider-details" ${perchDraft.skills.length ? "open" : ""}>
+            <summary><span>Rider skills</span><small>${perchDraft.skills.length} selected</small></summary>
+            <p>Skill definitions are verified, but the catalogue does not reliably map every skill to a rider. Add only the skills this rider actually has.</p>
+            <div class="obc-skill-add"><input id="obcNewRiderSkill" list="obcRiderSkillList" maxlength="120" placeholder="Tap to search ${formatNumber(riderSkills().length)} skills" autocomplete="off"><button id="obcAddRiderSkill" type="button">Add skill</button></div>
+            <div class="obc-skill-list">
+              ${perchDraft.skills.map((skill, index) => {
+                const definition = riderSkills().find(item => item?.name === skill.name);
+                return `<article><strong>${escapeHtml(skill.name)}</strong><label>Level<input data-obc-skill-level="${index}" type="number" min="1" max="${definition?.maximumLevel || 99}" inputmode="numeric" value="${skill.level}"></label><button type="button" data-obc-remove-skill="${index}" aria-label="Remove ${escapeHtml(skill.name)}">Remove</button></article>`;
+              }).join("") || "<small>No rider skills entered.</small>"}
+            </div>
+          </details>
+          <details class="obc-rider-details" ${Object.values(perchDraft.gear).some(Boolean) ? "open" : ""}>
+            <summary><span>Rider gear</span><small>${Object.values(perchDraft.gear).filter(Boolean).length}/8 equipped</small></summary>
+            <p>Each slot uses the verified gear catalogue. Rarity and level are required before an effect contributes to the estimate.</p>
+            <div class="obc-gear-grid">
+              ${GEAR_SLOTS.map(([slot, label]) => {
+                const selection = perchDraft.gear[slot];
+                return `<article><label>${label}<input data-obc-gear-name="${slot}" list="obcGear${slot}List" maxlength="120" value="${escapeHtml(selection?.name || "")}" placeholder="Tap to search ${label.toLowerCase()} gear" autocomplete="off"></label><div><label>Rarity<select data-obc-gear-rarity="${slot}">${gearRarityOptions(slot, selection)}</select></label><label>Level<input data-obc-gear-level="${slot}" type="number" min="0" max="99" inputmode="numeric" value="${selection?.level || ""}"></label></div></article>`;
+              }).join("")}
+            </div>
+          </details>
+        </div>
+        ${renderPerchDatalists()}
+        <p class="obc-editor-evidence">Only verified building HP and attack modifiers enter the numerical estimate. Elemental resistance, supershot and special combat effects remain recorded but are not converted into invented DP.</p>
+        <div class="obc-editor-actions obc-perch-actions"><button id="obcSavePerch" class="primary" type="button">Save perch assignment</button><button id="obcCancelPerchBottom" type="button">Cancel</button></div>
+        <p id="obcPerchStatus" class="obc-editor-status" aria-live="polite"></p>
+      </section>
+    `;
+  }
+
+  function renderPerchNetwork() {
+    if (!layout) return "";
+    return `
+      <section class="obc-perch-network">
+        <div class="obc-section-heading"><div><p>BASE SUPPORT NETWORK</p><h3>Perches, dragons and riders</h3></div><span>Tap a perch</span></div>
+        <p class="obc-perch-intro">Perch coverage follows the existing verified NOIR model. Assign only what is actually on your base; nothing is inferred from tower inventory.</p>
+        <div class="obc-perch-cards">
+          ${layout.perches.map((perch, index) => `<button type="button" data-obc-perch="${index}" class="${selectedPerch === index ? "active" : ""}">${icon("shield")}<span><small>${escapeHtml(perchCoverageLabel(index))}</small><strong>${escapeHtml(perch.name)}</strong><em>${perch.dragonName ? `${escapeHtml(perch.dragonName)}${perch.riderName ? ` · ${escapeHtml(perch.riderName)}` : ""}` : "Not configured"}</em></span><b>${Object.values(perch.gear).filter(Boolean).length}/8 gear</b></button>`).join("")}
+        </div>
+        ${renderPerchEditor()}
+      </section>
+    `;
+  }
+
   function spotLabel(tower, islandIndex, spotIndex) {
     const base = `Island ${islandIndex + 1}, spot ${spotIndex + 1}`;
     if (!tower) return `${base}, empty. Tap to place a tower.`;
-    const estimate = towerEstimate(tower);
+    const estimate = towerEstimate(tower, islandIndex * SLOTS_PER_ISLAND + spotIndex, layout?.perches);
     return `${base}, ${tower.type}, level ${tower.level}, Estimated tower DP ${estimate === null ? "unavailable" : formatNumber(estimate)}.`;
   }
 
@@ -771,8 +1342,14 @@
   function renderIslandCommand() {
     const island = ISLANDS[selectedIsland] || ISLANDS[0];
     const slots = islandSlots(layout, selectedIsland);
-    const summary = estimateSlots(slots);
-    const baseline = savedSnapshot ? estimateSlots(islandSlots(savedSnapshot, selectedIsland)) : null;
+    const summary = estimateSlots(slots, selectedIsland * SLOTS_PER_ISLAND, layout.perches);
+    const baseline = savedSnapshot
+      ? estimateSlots(
+          islandSlots(savedSnapshot, selectedIsland),
+          selectedIsland * SLOTS_PER_ISLAND,
+          savedSnapshot.perches
+        )
+      : null;
     const start = selectedIsland * SLOTS_PER_ISLAND;
     return `
       <section class="obc-island-command" tabindex="-1">
@@ -787,7 +1364,7 @@
           <div class="obc-island-surface" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
           ${slots.map((tower, spotIndex) => {
             const absolute = start + spotIndex;
-            const estimate = towerEstimate(tower);
+            const estimate = towerEstimate(tower, absolute, layout.perches);
             return `<button type="button"
               data-obc-slot="${absolute}"
               class="obc-tower-spot spot-${spotIndex + 1} ${tower ? "occupied" : "empty"} ${selectedSlot === absolute ? "selected" : ""} ${moveFrom === absolute ? "moving" : ""}"
@@ -808,8 +1385,8 @@
 
   function renderBuilder() {
     if (!layout) return renderBuilderPrompt();
-    const total = estimateSlots(layout.slots);
-    const savedTotal = savedSnapshot ? estimateSlots(savedSnapshot.slots) : null;
+    const total = estimateSlots(layout.slots, 0, layout.perches);
+    const savedTotal = savedSnapshot ? estimateSlots(savedSnapshot.slots, 0, savedSnapshot.perches) : null;
     const populated = layout.slots.filter(Boolean).length;
     return `
       <section class="obc-command-summary">
@@ -823,7 +1400,8 @@
           <article><small>Towers placed</small><strong>${populated}/40</strong><span>Across 8 islands</span></article>
           ${renderEstimateMetric("Estimated total base DP", total, savedTotal)}
         </div>
-        <p class="obc-dp-disclaimer">Estimate uses the exact catalogue power row for each recognised tower and level. It does not include unverified placement, monument, rune, rider, research or seasonal multipliers.</p>
+        <p class="obc-dp-disclaimer">Estimate starts with exact tower power rows, then applies verified building HP and attack modifiers from entered runes, glyphs, relics, covered perch riders, rider gear and supported perch tower bonuses. It excludes unverified placement, resistance, supershot, special, research and seasonal effects.</p>
+        ${renderEstimateBreakdown(total)}
       </section>
 
       ${renderInventoryState(true)}
@@ -832,6 +1410,8 @@
         ${renderRouteMap()}
         ${renderIslandCommand()}
       </div>
+
+      ${renderPerchNetwork()}
 
       <section class="obc-save-dock">
         <div><strong>${profileSaved ? "Layout secured" : "Draft command state"}</strong><span>${escapeHtml(saveMessage || (dirty ? "Draft stored on this device." : "No unsaved changes."))}</span></div>
@@ -899,16 +1479,17 @@
       `;
     }
     const findings = advisorFindings(savedSnapshot);
-    const total = estimateSlots(savedSnapshot.slots);
+    const total = estimateSlots(savedSnapshot.slots, 0, savedSnapshot.perches);
     return `
       <section class="obc-source-banner advisor-ready">
         <strong>Saved geometry under review</strong>
-        <p>The advisor is reading only your last profile-saved manual layout and verified restriction records. It does not rank placements or invent combat bonuses.</p>
+        <p>The advisor is reading only your last profile-saved manual layout, entered monument and perch assignments, and verified restriction records. It does not rank placements or invent combat bonuses.</p>
       </section>
       <section class="obc-advisor-overview">
         ${renderEstimateMetric("Estimated saved-base DP", total)}
         <article><small>Verified restriction alerts</small><strong>${findings.length}</strong><span>${findings.length ? "Review required" : "None detected"}</span></article>
       </section>
+      ${renderEstimateBreakdown(total)}
       <section class="obc-panel obc-advisor-results">
         <div class="obc-section-heading"><div><p>RULE-BASED REVIEW</p><h3>Saved island checks</h3></div><span>${findings.length ? "Attention" : "Clear"}</span></div>
         ${findings.length ? findings.map(finding => `
@@ -1029,6 +1610,8 @@
     document.removeEventListener?.("keydown", handleModalKeydown);
     selectedSlot = null;
     editorDraft = null;
+    selectedPerch = null;
+    perchDraft = null;
     moveFrom = null;
     pendingSwap = null;
     lastFocused?.focus?.();
@@ -1038,9 +1621,41 @@
   function updateEditorEstimate(overlay) {
     const type = canonicalTowerType(overlay.querySelector("#obcSlotTowerType")?.value || "");
     const level = Number.parseInt(overlay.querySelector("#obcSlotTowerLevel")?.value, 10);
-    const estimate = towerEstimate({ type, level });
+    const tower = normaliseTower({
+      type,
+      level,
+      notes: overlay.querySelector("#obcSlotTowerNotes")?.value || "",
+      rune: {
+        name: overlay.querySelector("#obcSlotRune")?.value || "",
+        level: overlay.querySelector("#obcSlotRuneLevel")?.value
+      },
+      glyph: {
+        name: overlay.querySelector("#obcSlotGlyph")?.value || "",
+        level: overlay.querySelector("#obcSlotGlyphLevel")?.value
+      },
+      relic: {
+        name: overlay.querySelector("#obcSlotRelic")?.value || "",
+        level: overlay.querySelector("#obcSlotRelicLevel")?.value
+      }
+    });
+    const detail = towerEstimateDetails(tower, selectedSlot, layout?.perches);
     const output = overlay.querySelector("#obcEditorEstimate");
-    if (output) output.textContent = estimate === null ? "Unavailable" : `≈ ${formatNumber(estimate)}`;
+    if (output) output.textContent = detail === null ? "Unavailable" : `≈ ${formatNumber(detail.value)}`;
+    const breakdown = overlay.querySelector("#obcEditorBreakdown");
+    if (breakdown) breakdown.textContent = detail
+      ? `Base ${formatNumber(detail.base)} · monuments +${formatNumber(Math.round(detail.monumentGain))} · rider +${formatNumber(Math.round(detail.riderGain))} · perch +${formatNumber(Math.round(detail.perchGain))}`
+      : "An exact tower level row is required before bonuses can be estimated.";
+  }
+
+  function updatePerchPreview(overlay) {
+    const draft = readPerchDraft(overlay);
+    if (!draft) return;
+    perchDraft = draft;
+    const preview = perchPreview(draft);
+    const output = overlay.querySelector("#obcPerchEstimate");
+    const breakdown = overlay.querySelector("#obcPerchBreakdown");
+    if (output) output.textContent = estimateText(preview);
+    if (breakdown) breakdown.textContent = `Monuments +${formatNumber(Math.round(preview.monumentGain))} · riders +${formatNumber(Math.round(preview.riderGain))} · perch +${formatNumber(Math.round(preview.perchGain))}`;
   }
 
   function handleMoveDestination(destination) {
@@ -1122,6 +1737,8 @@
         activeTab = button.dataset.obcTab;
         selectedSlot = null;
         editorDraft = null;
+        selectedPerch = null;
+        perchDraft = null;
         moveFrom = null;
         pendingSwap = null;
         render({ focusSelector: `[data-obc-tab="${activeTab}"]` });
@@ -1146,6 +1763,8 @@
       selectedIsland = 0;
       selectedSlot = null;
       editorDraft = null;
+      selectedPerch = null;
+      perchDraft = null;
       markDirty("New manual layout draft created.");
       render({ focusSelector: '[data-obc-island="0"]' });
     });
@@ -1173,9 +1792,98 @@
         selectedIsland = Number(button.dataset.obcIsland);
         selectedSlot = null;
         editorDraft = null;
+        selectedPerch = null;
+        perchDraft = null;
         pendingSwap = null;
         render({ focusSelector: ".obc-island-command", scrollSelector: ".obc-island-command" });
       });
+    });
+
+    overlay.querySelectorAll("[data-obc-perch]").forEach(button => {
+      button.addEventListener("click", () => {
+        openPerchEditor(Number(button.dataset.obcPerch));
+        render({ focusSelector: "#obcPerchLevel", scrollSelector: ".obc-perch-sheet" });
+      });
+    });
+
+    const closePerchEditor = () => {
+      const index = selectedPerch;
+      selectedPerch = null;
+      perchDraft = null;
+      render({ focusSelector: index === null ? "[data-obc-perch=\"0\"]" : `[data-obc-perch="${index}"]` });
+    };
+    overlay.querySelector("#obcCancelPerch")?.addEventListener("click", closePerchEditor);
+    overlay.querySelector("#obcCancelPerchBottom")?.addEventListener("click", closePerchEditor);
+
+    [
+      "#obcPerchLevel",
+      "#obcPerchDragonLevel",
+      "#obcPerchRider",
+      "#obcPerchRiderLevel",
+      "#obcPerchResistance",
+      "#obcPerchTowerBonus",
+      "#obcPerchSpecialBonus"
+    ].forEach(selector => {
+      overlay.querySelector(selector)?.addEventListener("input", () => updatePerchPreview(overlay));
+      overlay.querySelector(selector)?.addEventListener("change", () => updatePerchPreview(overlay));
+    });
+    overlay.querySelectorAll("[data-obc-skill-level], [data-obc-gear-name], [data-obc-gear-rarity], [data-obc-gear-level]").forEach(field => {
+      field.addEventListener("input", () => updatePerchPreview(overlay));
+      field.addEventListener("change", () => updatePerchPreview(overlay));
+    });
+
+    overlay.querySelector("#obcPerchDragon")?.addEventListener("change", event => {
+      const draft = readPerchDraft(overlay);
+      if (!draft) return;
+      const dragon = dragons().find(item => item?.name === cleanText(event.target.value, 120));
+      const bonuses = KNOWN_DRAGON_PERCH_BONUSES[dragon?.name];
+      if (dragon) {
+        draft.dragonClass = dragon.dragonClass || draft.dragonClass;
+        draft.dragonTier = [dragon.rarity, dragon.tier ? `Tier ${dragon.tier}` : ""].filter(Boolean).join(" · ");
+      }
+      if (bonuses) Object.assign(draft, bonuses);
+      perchDraft = draft;
+      render({ focusSelector: "#obcPerchDragon", scrollSelector: ".obc-perch-sheet" });
+    });
+
+    overlay.querySelector("#obcAddRiderSkill")?.addEventListener("click", () => {
+      const draft = readPerchDraft(overlay);
+      const input = overlay.querySelector("#obcNewRiderSkill");
+      const name = cleanText(input?.value, 120);
+      const definition = riderSkills().find(item => item?.name === name);
+      const status = overlay.querySelector("#obcPerchStatus");
+      if (!definition) {
+        if (status) status.textContent = "Choose a verified rider skill from the catalogue.";
+        return;
+      }
+      if (draft.skills.some(skill => skill.name === name)) {
+        if (status) status.textContent = "That rider skill is already selected.";
+        return;
+      }
+      draft.skills.push({ name, level: 1 });
+      perchDraft = draft;
+      render({ focusSelector: "#obcNewRiderSkill", scrollSelector: ".obc-perch-sheet" });
+    });
+
+    overlay.querySelectorAll("[data-obc-remove-skill]").forEach(button => {
+      button.addEventListener("click", () => {
+        const draft = readPerchDraft(overlay);
+        draft.skills.splice(Number(button.dataset.obcRemoveSkill), 1);
+        perchDraft = draft;
+        render({ focusSelector: "#obcNewRiderSkill", scrollSelector: ".obc-perch-sheet" });
+      });
+    });
+
+    overlay.querySelector("#obcSavePerch")?.addEventListener("click", () => {
+      if (selectedPerch === null || !layout) return;
+      const index = selectedPerch;
+      const draft = readPerchDraft(overlay);
+      if (!draft) return;
+      layout.perches[index] = draft;
+      selectedPerch = null;
+      perchDraft = null;
+      markDirty("Perch assignment saved · Estimated base DP updated.");
+      render({ focusSelector: `[data-obc-perch="${index}"]`, scrollSelector: ".obc-perch-network" });
     });
 
     overlay.querySelectorAll("[data-obc-slot]").forEach(button => {
@@ -1192,6 +1900,8 @@
       const slot = selectedSlot;
       selectedSlot = null;
       editorDraft = null;
+      selectedPerch = null;
+      perchDraft = null;
       render({ focusSelector: `[data-obc-slot="${slot}"]` });
     });
 
@@ -1202,21 +1912,48 @@
         editorDraft = {
           type: record.type,
           level: record.level,
-          notes: editorDraft?.notes || ""
+          notes: editorDraft?.notes || "",
+          rune: editorDraft?.rune || null,
+          glyph: editorDraft?.glyph || null,
+          relic: editorDraft?.relic || null
         };
         render({ focusSelector: "#obcSlotTowerType", scrollSelector: ".obc-tower-sheet" });
       });
     });
 
-    overlay.querySelector("#obcSlotTowerType")?.addEventListener("input", () => updateEditorEstimate(overlay));
-    overlay.querySelector("#obcSlotTowerLevel")?.addEventListener("input", () => updateEditorEstimate(overlay));
+    [
+      "#obcSlotTowerType",
+      "#obcSlotTowerLevel",
+      "#obcSlotRune",
+      "#obcSlotRuneLevel",
+      "#obcSlotGlyph",
+      "#obcSlotGlyphLevel",
+      "#obcSlotRelic",
+      "#obcSlotRelicLevel"
+    ].forEach(selector => overlay.querySelector(selector)?.addEventListener("input", () => updateEditorEstimate(overlay)));
 
     overlay.querySelector("#obcSaveTower")?.addEventListener("click", () => {
       if (selectedSlot === null || !layout) return;
       const type = overlay.querySelector("#obcSlotTowerType")?.value || "";
       const level = Number.parseInt(overlay.querySelector("#obcSlotTowerLevel")?.value, 10);
       const notes = overlay.querySelector("#obcSlotTowerNotes")?.value || "";
-      const tower = normaliseTower({ type, level, notes });
+      const tower = normaliseTower({
+        type,
+        level,
+        notes,
+        rune: {
+          name: overlay.querySelector("#obcSlotRune")?.value || "",
+          level: overlay.querySelector("#obcSlotRuneLevel")?.value
+        },
+        glyph: {
+          name: overlay.querySelector("#obcSlotGlyph")?.value || "",
+          level: overlay.querySelector("#obcSlotGlyphLevel")?.value
+        },
+        relic: {
+          name: overlay.querySelector("#obcSlotRelic")?.value || "",
+          level: overlay.querySelector("#obcSlotRelicLevel")?.value
+        }
+      });
       if (!tower) {
         const status = overlay.querySelector("#obcEditorStatus");
         if (status) status.textContent = "Enter a tower type and a whole level from 1 to 999.";
@@ -1228,6 +1965,8 @@
       const focusSlot = selectedSlot;
       selectedSlot = null;
       editorDraft = null;
+      selectedPerch = null;
+      perchDraft = null;
       markDirty("Tower placed · Estimated DP updated.");
       render({
         focusSelector: `[data-obc-slot="${focusSlot}"]`,
@@ -1296,6 +2035,8 @@
         layout = clone(savedSnapshot);
         selectedSlot = null;
         editorDraft = null;
+        selectedPerch = null;
+        perchDraft = null;
         moveFrom = null;
         pendingSwap = null;
         updateDraftState();
@@ -1308,6 +2049,8 @@
       layout = null;
       selectedSlot = null;
       editorDraft = null;
+      selectedPerch = null;
+      perchDraft = null;
       moveFrom = null;
       pendingSwap = null;
       saveLocal();
@@ -1340,6 +2083,8 @@
       savedSnapshot = null;
       selectedSlot = null;
       editorDraft = null;
+      selectedPerch = null;
+      perchDraft = null;
       moveFrom = null;
       pendingSwap = null;
       saveLocal();
@@ -1380,9 +2125,13 @@
     const normalised = normaliseLayout(value);
     if (!normalised) return null;
     return {
-      total: clone(estimateSlots(normalised.slots)),
+      total: clone(estimateSlots(normalised.slots, 0, normalised.perches)),
       islands: ISLANDS.map((_, index) =>
-        clone(estimateSlots(islandSlots(normalised, index)))
+        clone(estimateSlots(
+          islandSlots(normalised, index),
+          index * SLOTS_PER_ISLAND,
+          normalised.perches
+        ))
       )
     };
   }
