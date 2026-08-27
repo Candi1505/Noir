@@ -31,8 +31,8 @@ assert.match(
   /live-predictor-ui\.js\?v=20260827-onyx-predictor-1/
 );
 assert.match(html, /onyx-tower-inventory-bridge\.js\?v=20260827-base-command-1/);
-assert.match(html, /onyx-base-command\.js\?v=20260827-dragon-route-1/);
-assert.match(html, /onyx-command\.css\?v=20260827-dragon-route-1/);
+assert.match(html, /onyx-base-command\.js\?v=20260827-clean-route-1/);
+assert.match(html, /onyx-command\.css\?v=20260827-clean-route-1/);
 assert.match(livePredictorSource, /ONYX COMMAND · CHEST INTELLIGENCE/);
 assert.match(livePredictorSource, /aria-pressed/);
 assert.match(livePredictorSource, /data-lp-chest-type/);
@@ -44,9 +44,10 @@ assert.match(baseSource, /TACTICAL MAP REQUIRED/);
 assert.match(baseSource, /Array\.from\(\{ length: TOTAL_SLOTS \}, \(\) => null\)/);
 assert.match(baseSource, /const MAP_WIDTH = 760/);
 assert.match(baseSource, /const MAP_HEIGHT = 500/);
-assert.match(baseSource, /class="base-zone zone-left-run"/);
-assert.match(baseSource, /class="base-zone zone-upper-right"/);
-assert.match(baseSource, /class="base-zone zone-lower-right"/);
+assert.doesNotMatch(baseSource, /class="base-zone/);
+assert.match(baseSource, /class="route-segment lower-right-run"/);
+assert.match(baseSource, /class="route-segment upper-right-run"/);
+assert.match(baseSource, /class="route-segment left-run"/);
 assert.match(baseSource, /marker-end="url\(#obcRouteArrow\)"/);
 assert.match(baseSource, /zone: "left-run"/);
 assert.match(baseSource, /zone: "upper-right"/);
