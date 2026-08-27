@@ -45,7 +45,8 @@ assert.match(html, /onyx-tower-inventory-bridge\.js\?v=20260827-base-command-1/)
 assert.match(html, /database\.js\?v=20260827-monuments-perches-1/);
 assert.match(html, /onyx-base-command\.js\?v=20260827-merge-calculator-1/);
 assert.match(html, /onyx-season-data\.js\?v=20260827-season-branch-1/);
-assert.match(html, /onyx-command\.js\?v=20260827-season-branch-1/);
+assert.match(html, /onyx-command\.js\?v=20260827-season-branch-2/);
+assert.doesNotMatch(commandSource, /Private source boundary/);
 assert.match(html, /onyx-command\.css\?v=20260827-season-branch-1/);
 assert.match(livePredictorSource, /ONYX COMMAND · CHEST INTELLIGENCE/);
 assert.match(livePredictorSource, /aria-pressed/);
