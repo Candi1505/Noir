@@ -31,8 +31,8 @@ assert.match(
   /live-predictor-ui\.js\?v=20260827-onyx-predictor-1/
 );
 assert.match(html, /onyx-tower-inventory-bridge\.js\?v=20260827-base-command-1/);
-assert.match(html, /onyx-base-command\.js\?v=20260827-blueprint-1/);
-assert.match(html, /onyx-command\.css\?v=20260827-blueprint-1/);
+assert.match(html, /onyx-base-command\.js\?v=20260827-base-overview-1/);
+assert.match(html, /onyx-command\.css\?v=20260827-base-overview-1/);
 assert.match(livePredictorSource, /ONYX COMMAND · CHEST INTELLIGENCE/);
 assert.match(livePredictorSource, /aria-pressed/);
 assert.match(livePredictorSource, /data-lp-chest-type/);
@@ -42,7 +42,11 @@ assert.doesNotMatch(livePredictorSource, /gold:\s*["']G["']/);
 
 assert.match(baseSource, /TACTICAL MAP REQUIRED/);
 assert.match(baseSource, /Array\.from\(\{ length: TOTAL_SLOTS \}, \(\) => null\)/);
-assert.match(baseSource, /M235 750 C178 744/);
+assert.match(baseSource, /const MAP_WIDTH = 760/);
+assert.match(baseSource, /const MAP_HEIGHT = 500/);
+assert.match(baseSource, /class="base-zone zone-western"/);
+assert.match(baseSource, /class="base-zone zone-northern"/);
+assert.match(baseSource, /class="base-zone zone-southern"/);
 assert.match(baseSource, /form: "bend-left"/);
 assert.match(baseSource, /form: "bend-right"/);
 assert.match(baseSource, /obc-island-axis/);
