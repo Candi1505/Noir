@@ -785,7 +785,7 @@
     } catch (error) {
 
       console.error(
-        "Chest Companion could not load local data:",
+        "Onyx Command could not load local data:",
         error
       );
 
@@ -825,7 +825,7 @@
     } catch (error) {
 
       console.error(
-        "Chest Companion could not save local data:",
+        "Onyx Command could not save local data:",
         error
       );
 
@@ -1379,7 +1379,7 @@
       );
     } catch (error) {
       console.warn(
-        "Chest Companion could not clear legacy shared data.",
+        "Onyx Command could not clear legacy shared data.",
         error
       );
     }
@@ -1473,7 +1473,7 @@
       if (!player?.user) {
         window.NoirAccessControl?.show?.({
           message:
-            "Sign in or create a player account to enter NOIR • I ZI."
+            "Sign in or create a player account to enter Onyx Command."
         });
         return;
       }
@@ -1482,7 +1482,7 @@
         currentUser = player.user;
         window.NoirAccessControl?.show?.({
           message:
-            "This player account is blocked. Ask a NOIR administrator if you think this is a mistake.",
+            "This player account is blocked. Ask an Onyx Command administrator if you think this is a mistake.",
           failed: true,
           signedIn: true
         });
@@ -1589,7 +1589,7 @@
     } catch (error) {
 
       console.error(
-        "NOIR secure access failed:",
+        "Onyx Command secure access failed:",
         error
       );
 
@@ -1612,7 +1612,7 @@
 
       window.NoirAccessControl?.show?.({
         message:
-          "NOIR could not verify secure access. Please try again shortly.",
+          "Onyx Command could not verify secure access. Please try again shortly.",
         failed: true,
         signedIn: Boolean(currentUser)
       });
@@ -1653,7 +1653,7 @@
   function showView(
     viewId,
     pageTitle =
-      "Chest Companion"
+      "Onyx Command"
   ) {
 
     getAllElements(
@@ -1735,6 +1735,11 @@
     });
 
   }
+
+  window.OnyxApp = {
+    ...(window.OnyxApp || {}),
+    showView
+  };
 
 
   /* =======================================================
@@ -2663,7 +2668,7 @@
 
       console.warn(
 
-        "Chest Companion could not find this reward:",
+        "Onyx Command could not find this reward:",
 
         rewardId
 
@@ -3702,7 +3707,7 @@ function getArmoryPage(position, positionsPerPage = 20) {
 
     if (
       !confirm(
-        "Reset all saved Chest Companion data?"
+        "Reset all saved Onyx Command data?"
       )
     ) {
 
@@ -3873,8 +3878,8 @@ function getArmoryPage(position, positionsPerPage = 20) {
         renderHomeScreen();
 
         showView(
-          "homeView",
-          "Home"
+          "chestCommandView",
+          "Chest Command"
         );
 
       }
@@ -3957,7 +3962,7 @@ function getArmoryPage(position, positionsPerPage = 20) {
       if (!currentUser) {
         window.NoirAccessControl?.show?.({
           message:
-            "NOIR could not verify secure access. Please refresh and try again.",
+            "Onyx Command could not verify secure access. Please refresh and try again.",
           failed: true
         });
       }
@@ -3975,7 +3980,7 @@ function getArmoryPage(position, positionsPerPage = 20) {
       if (!currentUser) {
         window.NoirAccessControl?.show?.({
           message:
-            "NOIR could not verify secure access. Please refresh and try again.",
+            "Onyx Command could not verify secure access. Please refresh and try again.",
           failed: true
         });
       }

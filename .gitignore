@@ -1,0 +1,22 @@
+# Private captures and extracted account data
+*.har
+*.har.zip
+*.pcap
+*.pcapng
+audit/private/
+private/
+
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Local tooling and generated test output
+node_modules/
+coverage/
+playwright-report/
+test-results/
+*.log
+.DS_Store

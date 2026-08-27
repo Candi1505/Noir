@@ -1,5 +1,5 @@
 /* ============================================================
-   NOIR • I ZI — AUTHENTICATED PLAYER GATE
+   Onyx Command — AUTHENTICATED PLAYER GATE
 
    The application shell is never opened by this module. It only
    verifies access and presents the private sign-in boundary.
@@ -149,7 +149,7 @@
       if (!access.isApproved) {
         show({
           message:
-            "This player account is blocked. Ask a NOIR administrator if you think this is a mistake.",
+            "This player account is blocked. Ask an Onyx Command administrator if you think this is a mistake.",
           failed: true,
           signedIn: true
         });
@@ -256,7 +256,7 @@
       if (!access.isApproved) {
         show({
           message:
-            "Your account was created but could not be opened. Ask a NOIR administrator to check it.",
+            "Your account was created but could not be opened. Ask an Onyx Command administrator to check it.",
           failed: true,
           signedIn: true
         });
