@@ -706,7 +706,7 @@
     ctx.strokeRect(45, 45, 990, 990);
     ctx.fillStyle = "#d8b757";
     ctx.font = "700 34px system-ui";
-    ctx.fillText("N O I R  ·  CHEST COMPANION", 90, 125);
+    ctx.fillText("O N Y X  ·  C O M M A N D", 90, 125);
     ctx.fillStyle = "#ffffff";
     ctx.font = "800 68px system-ui";
     ctx.fillText(`${meta.label} Chest`, 90, 230);
@@ -743,7 +743,7 @@
 
     canvas.toBlob(async blob => {
       const file = blob
-        ? new File([blob], "noir-chest-summary.png", { type: "image/png" })
+        ? new File([blob], "onyx-chest-summary.png", { type: "image/png" })
         : null;
       try {
         if (file && navigator.share && navigator.canShare?.({ files: [file] })) {
@@ -755,7 +755,7 @@
       }
 
       const link = document.createElement("a");
-      link.download = "noir-chest-summary.png";
+      link.download = "onyx-chest-summary.png";
       link.href = canvas.toDataURL("image/png");
       link.click();
     }, "image/png");

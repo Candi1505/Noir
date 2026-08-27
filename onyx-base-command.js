@@ -5,6 +5,7 @@
   const STORAGE_PREFIX = "onyxBaseLayoutV2";
   const LEGACY_STORAGE_PREFIX = "onyxBaseLayoutV1";
   const MERGE_STORAGE_PREFIX = "onyxTowerMergeV1";
+  const REFERENCE_STORAGE_PREFIX = "onyxBaseReferenceV1";
   const ISLAND_COUNT = 8;
   const SLOTS_PER_ISLAND = 5;
   const TOTAL_SLOTS = ISLAND_COUNT * SLOTS_PER_ISLAND;
@@ -126,6 +127,8 @@
   let mergeDraft = null;
   let mergeResult = null;
   let mergeMessage = "";
+  let referencePhotos = [];
+  let referenceMessage = "";
   let openedForUser = null;
   let cloudLoadedFor = null;
   let cloudLoadingFor = null;
@@ -306,6 +309,71 @@
       storageKey(MERGE_STORAGE_PREFIX),
       JSON.stringify(normaliseMergeDraft(mergeDraft))
     );
+  }
+
+  function readReferencePhotos() {
+    try {
+      const storedText = localStorage.getItem(storageKey(REFERENCE_STORAGE_PREFIX));
+      let value = JSON.parse(storedText || "[]");
+      if (!storedText) {
+        const legacy = JSON.parse(localStorage.getItem("noirBasePlannerV1") || "null");
+        const legacyLayout = Array.isArray(legacy?.layouts)
+          ? legacy.layouts.find(item => item?.id === legacy.activeId) || legacy.layouts[0]
+          : null;
+        value = legacyLayout?.referencePhotos || [];
+      }
+      referencePhotos = Array.isArray(value)
+        ? value.filter(photo => typeof photo === "string" && photo.startsWith("data:image/")).slice(0, 4)
+        : [];
+      if (!storedText && referencePhotos.length) {
+        saveReferencePhotos();
+        referenceMessage = "Your previous private reference board was brought into Onyx on this device.";
+        return;
+      }
+    } catch (error) {
+      referencePhotos = [];
+    }
+    referenceMessage = "";
+  }
+
+  function saveReferencePhotos() {
+    try {
+      if (referencePhotos.length) {
+        localStorage.setItem(storageKey(REFERENCE_STORAGE_PREFIX), JSON.stringify(referencePhotos));
+      } else {
+        localStorage.removeItem(storageKey(REFERENCE_STORAGE_PREFIX));
+      }
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  function prepareReferencePhoto(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = reject;
+      reader.onload = () => {
+        const image = new Image();
+        image.onerror = reject;
+        image.onload = () => {
+          const maximumSide = 1400;
+          const scale = Math.min(1, maximumSide / Math.max(image.naturalWidth, image.naturalHeight));
+          const canvas = document.createElement("canvas");
+          canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+          canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+          const context = canvas.getContext("2d");
+          if (!context) {
+            resolve(String(reader.result));
+            return;
+          }
+          context.drawImage(image, 0, 0, canvas.width, canvas.height);
+          resolve(canvas.toDataURL("image/jpeg", 0.78));
+        };
+        image.src = String(reader.result);
+      };
+      reader.readAsDataURL(file);
+    });
   }
 
   function mergeUpgradeValue(row) {
@@ -1498,7 +1566,7 @@
     return `
       <section class="obc-perch-network">
         <div class="obc-section-heading"><div><p>BASE SUPPORT NETWORK</p><h3>Perches, dragons and riders</h3></div><span>Tap a perch</span></div>
-        <p class="obc-perch-intro">Perch coverage follows the existing verified NOIR model. Assign only what is actually on your base; nothing is inferred from tower inventory.</p>
+        <p class="obc-perch-intro">Perch coverage follows the existing verified Onyx reference model. Assign only what is actually on your base; nothing is inferred from tower inventory.</p>
         <div class="obc-perch-cards">
           ${layout.perches.map((perch, index) => `<button type="button" data-obc-perch="${index}" class="${selectedPerch === index ? "active" : ""}">${icon("shield")}<span><small>${escapeHtml(perchCoverageLabel(index))}</small><strong>${escapeHtml(perch.name)}</strong><em>${perch.dragonName ? `${escapeHtml(perch.dragonName)}${perch.riderName ? ` · ${escapeHtml(perch.riderName)}` : ""}` : "Not configured"}</em></span><b>${Object.values(perch.gear).filter(Boolean).length}/8 gear</b></button>`).join("")}
         </div>
@@ -1571,6 +1639,40 @@
     `;
   }
 
+  function renderReferenceBoard() {
+    return `
+      <section class="obc-reference-board">
+        <div class="obc-section-heading">
+          <div><p>PRIVATE VISUAL REFERENCE</p><h3>Base screenshot board</h3></div>
+          <span>${referencePhotos.length}/4 · This device only</span>
+        </div>
+        <p class="obc-reference-copy">Keep up to four screenshots beside the tactical map while you manually reproduce each island. Images stay in this browser and are never added to the saved profile layout.</p>
+        <div class="obc-reference-actions">
+          <label class="obc-reference-add ${referencePhotos.length >= 4 ? "disabled" : ""}">
+            Add screenshots
+            <input id="obcReferenceInput" type="file" accept="image/*" multiple ${referencePhotos.length >= 4 ? "disabled" : ""}>
+          </label>
+          ${referencePhotos.length ? '<button id="obcClearReferences" type="button">Clear board</button>' : ""}
+        </div>
+        ${referenceMessage ? `<p class="obc-reference-message" role="status">${escapeHtml(referenceMessage)}</p>` : ""}
+        <div class="obc-reference-grid">
+          ${referencePhotos.length ? referencePhotos.map((photo, index) => `
+            <figure>
+              <img src="${photo}" alt="Private base reference ${index + 1}">
+              <figcaption><span>Reference ${index + 1}</span><button type="button" data-obc-remove-reference="${index}">Remove</button></figcaption>
+            </figure>
+          `).join("") : `
+            <div class="obc-reference-empty">
+              ${icon("route")}
+              <strong>No screenshots pinned</strong>
+              <span>Add your own base views when you need a side-by-side reference.</span>
+            </div>
+          `}
+        </div>
+      </section>
+    `;
+  }
+
   function renderBuilder() {
     if (!layout) return renderBuilderPrompt();
     const total = estimateSlots(layout.slots, 0, layout.perches);
@@ -1593,6 +1695,8 @@
       </section>
 
       ${renderInventoryState(true)}
+
+      ${renderReferenceBoard()}
 
       <div class="obc-tactical-grid">
         ${renderRouteMap()}
@@ -1832,6 +1936,8 @@
 
   function render(options = {}) {
     const overlay = ensureOverlay();
+    window.OnyxFortificationCommand?.setHostRender?.(nextOptions => render(nextOptions));
+    window.OnyxFortificationCommand?.init?.();
     const focusSelector = options.focusSelector
       || focusSelectorFor(document.activeElement, overlay);
     overlay.innerHTML = `
@@ -1845,6 +1951,7 @@
         <nav class="obc-tabs" role="tablist" aria-label="Base command sections">
           <button type="button" role="tab" aria-selected="${activeTab === "intelligence"}" aria-controls="obcCommandPanel" data-obc-tab="intelligence" class="${activeTab === "intelligence" ? "active" : ""}">Tower Intelligence</button>
           <button type="button" role="tab" aria-selected="${activeTab === "builder"}" aria-controls="obcCommandPanel" data-obc-tab="builder" class="${activeTab === "builder" ? "active" : ""}">Tactical Map</button>
+          <button type="button" role="tab" aria-selected="${activeTab === "fortification"}" aria-controls="obcCommandPanel" data-obc-tab="fortification" class="${activeTab === "fortification" ? "active" : ""}">Fort Planner</button>
           <button type="button" role="tab" aria-selected="${activeTab === "merge"}" aria-controls="obcCommandPanel" data-obc-tab="merge" class="${activeTab === "merge" ? "active" : ""}">Tower Merge</button>
           <button type="button" role="tab" aria-selected="${activeTab === "advisor"}" aria-controls="obcCommandPanel" data-obc-tab="advisor" class="${activeTab === "advisor" ? "active" : ""}">Base Advisor${profileSaved ? "" : '<span aria-hidden="true"></span>'}</button>
         </nav>
@@ -1853,6 +1960,8 @@
             ? renderIntelligence()
             : activeTab === "builder"
               ? renderBuilder()
+              : activeTab === "fortification"
+                ? window.OnyxFortificationCommand?.render?.() || '<section class="obc-honesty-note"><strong>Fortification Command is unavailable.</strong></section>'
               : activeTab === "merge"
                 ? renderMergeCalculator()
                 : renderAdvisor()}
@@ -2068,6 +2177,44 @@
       mergeMessage = "Merge calculator reset.";
       localStorage.removeItem(storageKey(MERGE_STORAGE_PREFIX));
       render({ focusSelector: "#obcMergeDestinationType" });
+    });
+
+    overlay.querySelector("#obcReferenceInput")?.addEventListener("change", async event => {
+      const files = Array.from(event.target.files || []).slice(0, Math.max(0, 4 - referencePhotos.length));
+      if (!files.length) return;
+      referenceMessage = "Preparing private screenshot references…";
+      render({ focusSelector: "#obcReferenceInput" });
+      const previous = referencePhotos.slice();
+      try {
+        for (const file of files) {
+          if (!String(file.type || "").startsWith("image/")) continue;
+          referencePhotos.push(String(await prepareReferencePhoto(file)));
+        }
+        if (!saveReferencePhotos()) throw new Error("storage quota");
+        referenceMessage = `${files.length} screenshot${files.length === 1 ? "" : "s"} pinned to this device.`;
+      } catch (error) {
+        referencePhotos = previous;
+        saveReferencePhotos();
+        referenceMessage = "The screenshots could not be stored. Try smaller images or remove an existing reference.";
+      }
+      render({ focusSelector: "#obcReferenceInput", scrollSelector: ".obc-reference-board" });
+    });
+
+    overlay.querySelectorAll("[data-obc-remove-reference]").forEach(button => {
+      button.addEventListener("click", () => {
+        referencePhotos.splice(Number(button.dataset.obcRemoveReference), 1);
+        saveReferencePhotos();
+        referenceMessage = "Screenshot removed from this device.";
+        render({ focusSelector: "#obcReferenceInput", scrollSelector: ".obc-reference-board" });
+      });
+    });
+
+    overlay.querySelector("#obcClearReferences")?.addEventListener("click", () => {
+      if (!window.confirm("Clear all private base screenshots from this device?")) return;
+      referencePhotos = [];
+      saveReferencePhotos();
+      referenceMessage = "Private screenshot board cleared.";
+      render({ focusSelector: "#obcReferenceInput", scrollSelector: ".obc-reference-board" });
     });
 
     overlay.querySelector("#obcCreateLayout")?.addEventListener("click", () => {
@@ -2399,10 +2546,12 @@
       activeTab = "builder";
       render({ focusSelector: '[data-obc-tab="builder"]' });
     });
+
+    window.OnyxFortificationCommand?.bind?.(overlay);
   }
 
   function open(tab = "intelligence") {
-    activeTab = ["builder", "merge", "advisor"].includes(tab) ? tab : "intelligence";
+    activeTab = ["builder", "fortification", "merge", "advisor"].includes(tab) ? tab : "intelligence";
     lastFocused = document.activeElement;
     const currentUser = userId() || "signed-out";
     if (openedForUser !== null && openedForUser !== currentUser) {
@@ -2412,6 +2561,8 @@
     openedForUser = currentUser;
     readLocal();
     readMergeDraft();
+    readReferencePhotos();
+    window.OnyxFortificationCommand?.init?.();
     refreshInventory();
     render();
     const overlay = ensureOverlay();
@@ -2440,11 +2591,13 @@
 
   window.addEventListener?.("onyx:tower-inventory-imported", event => {
     refreshInventory(event?.detail);
+    window.OnyxFortificationCommand?.refreshInventory?.(event?.detail);
     if (document.getElementById(OVERLAY_ID)?.classList.contains("open")) render();
   });
 
   window.addEventListener?.("onyx:tower-inventory-cleared", () => {
     inventorySnapshot = null;
+    window.OnyxFortificationCommand?.refreshInventory?.(null);
     if (document.getElementById(OVERLAY_ID)?.classList.contains("open")) render();
   });
 

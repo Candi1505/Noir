@@ -1,5 +1,5 @@
 /* =========================================================
-   CHEST COMPANION V2
+   ONYX COMMAND
    Database and Authentication
 
    
@@ -254,7 +254,7 @@ window.ChestDatabase = {
   /*
     Gets the current Supabase session.
 
-    Chest Companion never creates anonymous accounts. A player
+    Onyx Command never creates anonymous accounts. A player
     must explicitly sign in with an email and password.
   */
 
@@ -303,7 +303,7 @@ window.ChestDatabase = {
     Reads the player's profile.
 
     If a profile does not exist yet,
-    Chest Companion creates one automatically.
+    Onyx Command creates one automatically.
   */
 
   async getOrCreateProfile(user) {
@@ -397,11 +397,11 @@ window.ChestDatabase = {
 
 
   /*
-    Starts Chest Companion's cloud connection.
+    Starts Onyx Command's cloud connection.
 
     This returns:
 
-    - the anonymous Supabase user
+    - the authenticated Supabase user
     - the player's profile
   */
 
@@ -1126,5 +1126,5 @@ async publishLiveEvent(
 
 
 console.log(
-  "Chest Companion: Database tools loaded."
+  "Onyx Command: Database tools loaded."
 );

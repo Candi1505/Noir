@@ -4644,9 +4644,601 @@ body.onyx-modal-open {
   }
 }
 
-/* Four Base Command sections stay legible as a two-by-two tap grid. */
+/* Base Command sections stay legible as a two-column tap grid. */
 .obc-shell .obc-tabs {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+/* Fortification Command */
+.ofc-hero,
+.ofc-panel,
+.ofc-save-dock,
+.obc-reference-board {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(206, 210, 222, .18);
+  border-radius: 22px;
+  background:
+    linear-gradient(145deg, rgba(23, 20, 31, .96), rgba(8, 10, 14, .98));
+  box-shadow: 0 18px 44px rgba(0, 0, 0, .28), inset 0 1px rgba(255, 255, 255, .025);
+}
+
+.ofc-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  min-height: 174px;
+  padding: 26px;
+  border-color: rgba(220, 180, 75, .27);
+  background:
+    radial-gradient(circle at 88% 20%, rgba(151, 83, 226, .24), transparent 35%),
+    radial-gradient(circle at 10% 110%, rgba(210, 166, 61, .17), transparent 46%),
+    linear-gradient(145deg, rgba(25, 20, 34, .98), rgba(8, 10, 14, .98));
+}
+
+.ofc-hero p,
+.ofc-heading p {
+  margin: 0;
+  color: #dcb957;
+  font-size: .69rem;
+  font-weight: 900;
+  letter-spacing: .22em;
+}
+
+.ofc-hero h3 {
+  max-width: 580px;
+  margin: 7px 0 9px;
+  color: #f0edf3;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(2rem, 7vw, 3.55rem);
+  font-weight: 400;
+  line-height: .98;
+}
+
+.ofc-hero > div > span,
+.ofc-muted,
+.ofc-reference-copy {
+  color: #9999a5;
+  line-height: 1.55;
+}
+
+.ofc-hero-orbit {
+  width: 94px;
+  height: 94px;
+  flex: 0 0 auto;
+  padding: 18px;
+  border: 1px solid rgba(220, 180, 75, .28);
+  border-radius: 50%;
+  color: #dfbd60;
+  background: rgba(9, 10, 14, .66);
+  box-shadow: 0 0 36px rgba(151, 83, 226, .18);
+}
+
+.ofc-hero-orbit svg,
+.ofc-tower-mark svg {
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.55;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.ofc-panel,
+.ofc-save-dock,
+.obc-reference-board {
+  padding: 22px;
+}
+
+.ofc-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 17px;
+}
+
+.ofc-heading h3 {
+  margin: 5px 0 0;
+  color: #e7e5eb;
+  font-size: 1.22rem;
+}
+
+.ofc-heading > span {
+  padding: 7px 10px;
+  border: 1px solid rgba(218, 179, 77, .3);
+  border-radius: 999px;
+  color: #d7bb70;
+  background: rgba(87, 65, 23, .18);
+  font-size: .68rem;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.ofc-target-grid,
+.ofc-add-tower {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 11px;
+}
+
+.ofc-target-grid label,
+.ofc-add-tower label {
+  display: grid;
+  gap: 7px;
+  color: #92939d;
+  font-size: .7rem;
+  font-weight: 800;
+}
+
+.ofc-target-grid input,
+.ofc-add-tower input,
+.ofc-add-tower select,
+.ofc-inventory-list select {
+  width: 100%;
+  min-height: 47px;
+  border: 1px solid rgba(205, 209, 220, .19);
+  border-radius: 12px;
+  color: #e7e6eb;
+  background: rgba(5, 7, 10, .86);
+}
+
+.ofc-add-tower {
+  grid-template-columns: minmax(180px, 2fr) repeat(3, minmax(90px, 1fr)) auto;
+  align-items: end;
+  margin: 17px 0;
+  padding: 15px;
+  border: 1px solid rgba(121, 84, 175, .22);
+  border-radius: 16px;
+  background: rgba(6, 8, 12, .58);
+}
+
+.ofc-add-tower button,
+.ofc-snapshot,
+.ofc-save-dock button,
+.ofc-inventory-list .ofc-remove,
+.obc-reference-actions button,
+.obc-reference-grid figcaption button {
+  min-height: 47px;
+  padding: 9px 14px;
+  border: 1px solid rgba(205, 209, 220, .2);
+  border-radius: 12px;
+  color: #bfc0c8;
+  background: rgba(8, 10, 14, .92);
+  font-weight: 850;
+}
+
+.ofc-add-tower .primary,
+.ofc-save-dock .primary {
+  border-color: rgba(224, 184, 88, .62);
+  color: #fffaf0;
+  background: linear-gradient(135deg, rgba(171, 126, 41, .96), rgba(103, 60, 145, .94));
+  box-shadow: 0 8px 22px rgba(116, 71, 158, .2);
+}
+
+.ofc-save-dock button:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+
+.ofc-inventory .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+.ofc-snapshot {
+  border-color: rgba(98, 180, 220, .31);
+  color: #9dd8ef;
+  background: rgba(25, 86, 112, .15);
+}
+
+.ofc-inventory-list {
+  display: grid;
+  gap: 9px;
+}
+
+.ofc-inventory-list > article {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) minmax(170px, 220px) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid rgba(205, 209, 220, .14);
+  border-radius: 15px;
+  background: rgba(6, 8, 11, .65);
+}
+
+.ofc-tower-mark {
+  width: 40px;
+  height: 40px;
+  padding: 8px;
+  border: 1px solid rgba(167, 106, 231, .32);
+  border-radius: 50%;
+  color: #b478eb;
+  background: rgba(70, 31, 108, .22);
+}
+
+.ofc-tower-copy {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.ofc-tower-copy strong {
+  overflow: hidden;
+  color: #e3e2e7;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ofc-tower-copy span,
+.ofc-empty span {
+  color: #83858f;
+  font-size: .75rem;
+}
+
+.ofc-remove,
+.ofc-clear {
+  border-color: rgba(224, 117, 132, .22);
+  color: #d78c98;
+  background: rgba(103, 27, 40, .12);
+}
+
+.ofc-empty {
+  display: grid;
+  gap: 6px;
+  padding: 24px;
+  border: 1px dashed rgba(205, 209, 220, .18);
+  border-radius: 16px;
+  text-align: center;
+}
+
+.ofc-route.reached {
+  border-color: rgba(216, 181, 85, .32);
+  box-shadow: 0 18px 48px rgba(136, 77, 189, .11), inset 0 1px rgba(255, 255, 255, .025);
+}
+
+.ofc-route-meter {
+  height: 6px;
+  overflow: hidden;
+  margin-bottom: 17px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .06);
+}
+
+.ofc-route-meter i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #a76ae6, #deb955);
+  box-shadow: 0 0 18px rgba(221, 184, 83, .34);
+}
+
+.ofc-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.ofc-metrics article {
+  display: grid;
+  gap: 5px;
+  padding: 14px;
+  border: 1px solid rgba(205, 209, 220, .13);
+  border-radius: 14px;
+  background: rgba(5, 7, 10, .7);
+}
+
+.ofc-metrics small,
+.ofc-summary-list small,
+.ofc-resource-drawer small {
+  color: #82848e;
+}
+
+.ofc-metrics strong {
+  color: #e4c668;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.25rem;
+  font-weight: 400;
+}
+
+.ofc-metrics span,
+.ofc-status,
+.ofc-honesty,
+.ofc-blockers p {
+  color: #92939e;
+  font-size: .74rem;
+  line-height: 1.5;
+}
+
+.ofc-status {
+  margin: 15px 0;
+  padding-left: 12px;
+  border-left: 2px solid #b078e5;
+}
+
+.ofc-summary-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.ofc-summary-list article {
+  display: grid;
+  gap: 3px;
+  padding: 12px;
+  border: 1px solid rgba(205, 209, 220, .12);
+  border-radius: 13px;
+  background: rgba(7, 9, 12, .62);
+}
+
+.ofc-summary-list span {
+  color: #a5a5ae;
+  font-size: .72rem;
+}
+
+.ofc-summary-list strong {
+  color: #e6e4e9;
+}
+
+.ofc-resource-drawer {
+  margin-top: 13px;
+  border: 1px solid rgba(205, 209, 220, .13);
+  border-radius: 14px;
+  background: rgba(5, 7, 10, .62);
+}
+
+.ofc-resource-drawer summary {
+  padding: 13px;
+  color: #c7c5cc;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.ofc-resource-drawer > div {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  padding: 0 13px 13px;
+}
+
+.ofc-resource-drawer span {
+  display: grid;
+  gap: 3px;
+  padding: 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, .025);
+}
+
+.ofc-blockers,
+.ofc-honesty {
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid rgba(214, 139, 84, .2);
+  border-radius: 14px;
+  background: rgba(98, 49, 20, .1);
+}
+
+.ofc-blockers > strong,
+.ofc-honesty strong {
+  color: #d7b46d;
+}
+
+.ofc-blockers p {
+  margin: 6px 0 0;
+}
+
+.ofc-save-dock {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  border-color: rgba(219, 181, 77, .3);
+}
+
+.ofc-save-dock > div:first-child {
+  display: grid;
+  gap: 5px;
+}
+
+.ofc-save-dock > div:first-child strong {
+  color: #dfdde4;
+}
+
+.ofc-save-dock > div:first-child span {
+  color: #8c8e97;
+  font-size: .78rem;
+}
+
+.ofc-save-dock > div:nth-child(2) {
+  display: flex;
+  gap: 9px;
+}
+
+.ofc-save-dock .ofc-clear {
+  grid-column: 1 / -1;
+  justify-self: start;
+}
+
+/* Private tactical-map screenshot board */
+.obc-reference-board {
+  border-color: rgba(112, 172, 207, .24);
+  background:
+    radial-gradient(circle at 100% 0, rgba(74, 139, 178, .12), transparent 38%),
+    rgba(10, 12, 17, .96);
+}
+
+.obc-reference-copy {
+  margin: -6px 0 16px;
+}
+
+.obc-reference-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+
+.obc-reference-add {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 16px;
+  border: 1px solid rgba(222, 185, 87, .34);
+  border-radius: 12px;
+  color: #dcc477;
+  background: rgba(86, 64, 24, .16);
+  font-size: .78rem;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.obc-reference-add.disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+
+.obc-reference-add input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+}
+
+.obc-reference-message {
+  margin: 12px 0 0;
+  color: #9acbe0;
+  font-size: .76rem;
+}
+
+.obc-reference-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.obc-reference-grid figure {
+  overflow: hidden;
+  margin: 0;
+  border: 1px solid rgba(205, 209, 220, .17);
+  border-radius: 15px;
+  background: #05070a;
+}
+
+.obc-reference-grid img {
+  display: block;
+  width: 100%;
+  max-height: 360px;
+  object-fit: contain;
+  background: #030407;
+}
+
+.obc-reference-grid figcaption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 11px;
+  color: #8d8f98;
+  font-size: .72rem;
+}
+
+.obc-reference-grid figcaption button {
+  min-height: 34px;
+  color: #d38a96;
+  background: transparent;
+}
+
+.obc-reference-empty {
+  grid-column: 1 / -1;
+  display: grid;
+  place-items: center;
+  gap: 7px;
+  min-height: 150px;
+  padding: 20px;
+  border: 1px dashed rgba(205, 209, 220, .17);
+  border-radius: 15px;
+  color: #7fb3cd;
+  text-align: center;
+}
+
+.obc-reference-empty svg {
+  width: 38px;
+  height: 38px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.4;
+}
+
+.obc-reference-empty strong {
+  color: #d8d7dd;
+}
+
+.obc-reference-empty span {
+  color: #858791;
+  font-size: .76rem;
+}
+
+@media (max-width: 760px) {
+  .ofc-hero {
+    min-height: 150px;
+    padding: 20px;
+  }
+
+  .ofc-hero-orbit {
+    width: 70px;
+    height: 70px;
+    padding: 14px;
+  }
+
+  .ofc-target-grid,
+  .ofc-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ofc-add-tower {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ofc-add-tower label:first-child,
+  .ofc-add-tower button {
+    grid-column: 1 / -1;
+  }
+
+  .ofc-inventory-list > article {
+    grid-template-columns: 38px minmax(0, 1fr);
+  }
+
+  .ofc-inventory-list > article label,
+  .ofc-inventory-list > article .ofc-remove {
+    grid-column: 2;
+  }
+
+  .ofc-summary-list,
+  .ofc-resource-drawer > div,
+  .obc-reference-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ofc-save-dock {
+    grid-template-columns: 1fr;
+  }
+
+  .ofc-save-dock > div:nth-child(2) {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ofc-save-dock .ofc-clear {
+    grid-column: auto;
+  }
 }
 
 /* Season Command */

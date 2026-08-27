@@ -84,7 +84,7 @@
       if (title) title.textContent =
         "Reset Password";
       if (description) description.textContent =
-        "Choose a new password for your Chest Companion account.";
+        "Choose a new password for your Onyx Command account.";
       if (badge) badge.textContent = "Secure";
     } else if (access.isAdmin) {
       if (eyebrow) eyebrow.textContent =
@@ -95,7 +95,7 @@
         "Upload the current live-event data and publish the prepared chest rewards.";
     } else if (access.user) {
       if (eyebrow) eyebrow.textContent =
-        "CHEST COMPANION";
+        "ONYX COMMAND";
       if (title) title.textContent =
         "Live Predictor";
       if (description) description.textContent =
@@ -107,7 +107,7 @@
       if (title) title.textContent =
         "Invitation Required";
       if (description) description.textContent =
-        "NOIR • I ZI is private. Only approved invited accounts can enter.";
+        "Onyx Command requires a signed-in player account.";
       if (badge) badge.textContent = "Locked";
     }
 

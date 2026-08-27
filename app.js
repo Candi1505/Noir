@@ -1,5 +1,5 @@
 /* =========================================================
-   CHEST COMPANION V2
+   ONYX COMMAND
    Complete Main Application
 
    Built with ❤️ for the WD community 
@@ -785,7 +785,7 @@
     } catch (error) {
 
       console.error(
-        "Chest Companion could not load local data:",
+        "Onyx Command could not load local data:",
         error
       );
 
@@ -825,7 +825,7 @@
     } catch (error) {
 
       console.error(
-        "Chest Companion could not save local data:",
+        "Onyx Command could not save local data:",
         error
       );
 
@@ -1379,7 +1379,7 @@
       );
     } catch (error) {
       console.warn(
-        "Chest Companion could not clear legacy shared data.",
+        "Onyx Command could not clear legacy shared data.",
         error
       );
     }
@@ -1659,7 +1659,7 @@
   function showView(
     viewId,
     pageTitle =
-      "Chest Companion"
+      "Onyx Command"
   ) {
 
     getAllElements(
@@ -2669,7 +2669,7 @@
 
       console.warn(
 
-        "Chest Companion could not find this reward:",
+        "Onyx Command could not find this reward:",
 
         rewardId
 

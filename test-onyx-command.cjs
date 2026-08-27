@@ -7,6 +7,7 @@ const commandSource = fs.readFileSync("onyx-command.js", "utf8");
 const seasonSource = fs.readFileSync("onyx-season-data.js", "utf8");
 const riderDataSource = fs.readFileSync("onyx-rider-intelligence-data.js", "utf8");
 const baseSource = fs.readFileSync("onyx-base-command.js", "utf8");
+const fortificationSource = fs.readFileSync("onyx-fortification-command.js", "utf8");
 const commandCss = fs.readFileSync("onyx-command.css", "utf8");
 const chestToolsSource = fs.readFileSync("noir-chest-tools.js", "utf8");
 const livePredictorSource = fs.readFileSync("live-predictor-ui.js", "utf8");
@@ -20,6 +21,7 @@ assert.match(gitignore, /\*\.har\.zip/);
 assert.equal((html.match(/class="onyx-command-card /g) || []).length, 6);
 assert.equal((html.match(/class="navigation-button/g) || []).length, 3);
 assert.doesNotMatch(html, /<script[^>]+base-planner\.js/);
+assert.doesNotMatch(html, /<script[^>]+src="(?:base-adviser-catalog|predictor-ui|predictor-upload|noir-help|live-deck-inspector)\.js/);
 assert.match(commandSource, /max="40"/);
 assert.match(seasonSource, /Brickscale[\s\S]+19503/);
 assert.match(seasonSource, /Charged Volt Tower[\s\S]+38800/);
@@ -36,7 +38,7 @@ assert.doesNotMatch(
   /"(?:sessionToken|cookie|email|playerId|request|response|headers?)"\s*:/i
 );
 assert.doesNotMatch(
-  html + commandSource + seasonSource + chestToolsSource + livePredictorSource,
+  html + commandSource + seasonSource + chestToolsSource + livePredictorSource + fortificationSource,
   /\p{Extended_Pictographic}/u,
   "The Onyx mobile shell must use its SVG icon system instead of emoji."
 );
@@ -45,14 +47,15 @@ assert.match(
   /live-predictor-ui\.js\?v=20260827-onyx-predictor-1/
 );
 assert.match(html, /onyx-tower-inventory-bridge\.js\?v=20260827-base-command-1/);
-assert.match(html, /database\.js\?v=20260827-monuments-perches-1/);
-assert.match(html, /onyx-base-command\.js\?v=20260827-merge-calculator-1/);
+assert.match(html, /database\.js\?v=20260828-onyx-parity-1/);
+assert.match(html, /onyx-fortification-command\.js\?v=20260828-fortification-command-1/);
+assert.match(html, /onyx-base-command\.js\?v=20260828-fortification-command-1/);
 assert.match(html, /onyx-season-data\.js\?v=20260827-season-branch-1/);
 assert.match(html, /onyx-rider-intelligence-data\.js\?v=20260828-rider-command-1/);
 assert.match(html, /onyx-atlas-command\.js\?v=20260828-atlas-terms-1/);
 assert.match(html, /onyx-command\.js\?v=20260828-atlas-command-1/);
 assert.doesNotMatch(commandSource, /Private source boundary/);
-assert.match(html, /onyx-command\.css\?v=20260828-atlas-command-1/);
+assert.match(html, /onyx-command\.css\?v=20260828-fortification-command-1/);
 assert.match(html, /onyx-atlas-command\.css\?v=20260828-atlas-command-1/);
 assert.match(commandSource, /window\.OnyxAtlasCommand\?\.open\?\.\(\)/);
 assert.match(livePredictorSource, /ONYX COMMAND · CHEST INTELLIGENCE/);
@@ -99,10 +102,22 @@ assert.match(baseSource, /Estimated total base DP/);
 assert.match(baseSource, /DP SANDBOX/);
 assert.match(baseSource, /BASE SUPPORT NETWORK/);
 assert.match(baseSource, /data-obc-tab="merge"/);
+assert.match(baseSource, /data-obc-tab="fortification"/);
 assert.match(baseSource, /Tower Merge Intelligence/);
 assert.match(baseSource, /MERGE_TRANSFER_RATE = 0\.45/);
 assert.match(baseSource, /WD preview result level/);
 assert.match(baseSource, /Every figure is an estimate until WD shows the preview/);
+assert.match(baseSource, /Base screenshot board/);
+assert.match(baseSource, /This device only/);
+assert.match(baseSource, /REFERENCE_STORAGE_PREFIX = "onyxBaseReferenceV1"/);
+assert.doesNotMatch(baseSource, /verified NOIR model/);
+assert.match(fortificationSource, /FORTIFICATION COMMAND/);
+assert.match(fortificationSource, /Upgrade on route/);
+assert.match(fortificationSource, /Reserve for merge/);
+assert.match(fortificationSource, /Reserve for transform/);
+assert.match(fortificationSource, /Estimate only/);
+assert.match(fortificationSource, /exact published tower XP/);
+assert.doesNotMatch(fortificationSource, /type="file"|\.importHar\s*\(|JSON\.parse\(await file\.text/);
 assert.match(baseSource, /Monument loadout/);
 assert.match(baseSource, /Riverwatch Perch/);
 assert.match(baseSource, /Seagazer Perch/);
@@ -196,6 +211,7 @@ vm.runInContext(fs.readFileSync("base-adviser-catalog-towers.js", "utf8"), sandb
 vm.runInContext(fs.readFileSync("base-adviser-catalog-monuments.js", "utf8"), sandbox);
 vm.runInContext(fs.readFileSync("base-adviser-catalog-people.js", "utf8"), sandbox);
 vm.runInContext(riderDataSource, sandbox);
+vm.runInContext(fortificationSource, sandbox);
 vm.runInContext(baseSource, sandbox);
 vm.runInContext(seasonSource, sandbox);
 vm.runInContext(commandSource, sandbox);
@@ -275,6 +291,40 @@ assert.equal(blankLayout.perches.length, 3);
 assert.equal(blankLayout.perches[1].name, "Seagazer Perch");
 assert.equal(sandbox.OnyxBaseCommand.getTowerRecord("Archer Tower", 1).level, 1);
 assert.equal(sandbox.OnyxBaseCommand.getTowerRecord("Archer Tower", 999), null);
+
+const blankFort = JSON.parse(JSON.stringify(sandbox.OnyxFortificationCommand.blankDraft()));
+assert.equal(blankFort.currentPlayerLevel, 600);
+assert.equal(blankFort.targetPlayerLevel, 601);
+assert.equal(blankFort.inventory.length, 0);
+assert.ok(sandbox.OnyxFortificationCommand.playerXpForLevel(601) > 1959262);
+
+const fortRoute = JSON.parse(JSON.stringify(sandbox.OnyxFortificationCommand.planFortification({
+  currentPlayerLevel: 600,
+  targetPlayerLevel: 601,
+  currentProgressXp: 0,
+  maximumTowerLevel: 250,
+  inventory: [
+    { id: "route", type: "Archer Tower", level: 1, quantity: 1, location: "base", action: "upgrade" },
+    { id: "merge", type: "Cosmic Orrery", level: 230, quantity: 2, location: "storage", action: "merge" },
+    { id: "transform", type: "Crystal Howitzer", level: 230, quantity: 1, location: "storage", action: "transform" }
+  ]
+})));
+assert.equal(fortRoute.reached, true);
+assert.equal(fortRoute.simulatedPlayerLevel, 601);
+assert.ok(fortRoute.route.length > 0);
+assert.equal(fortRoute.route.every(step => step.type === "Archer Tower"), true);
+assert.equal(fortRoute.reserved.merge, 2);
+assert.equal(fortRoute.reserved.transform, 1);
+
+const heldFortRoute = sandbox.OnyxFortificationCommand.planFortification({
+  currentPlayerLevel: 600,
+  targetPlayerLevel: 601,
+  maximumTowerLevel: 250,
+  inventory: [{ id: "held", type: "Archer Tower", level: 1, quantity: 4, action: "hold" }]
+});
+assert.equal(heldFortRoute.ok, false);
+assert.equal(heldFortRoute.route.length, 0);
+assert.equal(heldFortRoute.reserved.hold, 4);
 
 const mergeEstimate = JSON.parse(JSON.stringify(sandbox.OnyxBaseCommand.estimateMerge({
   destinationType: "Crystal Howitzer",
