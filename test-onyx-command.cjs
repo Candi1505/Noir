@@ -31,8 +31,9 @@ assert.match(
   /live-predictor-ui\.js\?v=20260827-onyx-predictor-1/
 );
 assert.match(html, /onyx-tower-inventory-bridge\.js\?v=20260827-base-command-1/);
-assert.match(html, /onyx-base-command\.js\?v=20260827-swap-gateway-ember-1/);
-assert.match(html, /onyx-command\.css\?v=20260827-swap-gateway-ember-1/);
+assert.match(html, /database\.js\?v=20260827-monuments-perches-1/);
+assert.match(html, /onyx-base-command\.js\?v=20260827-monuments-perches-1/);
+assert.match(html, /onyx-command\.css\?v=20260827-monuments-perches-1/);
 assert.match(livePredictorSource, /ONYX COMMAND · CHEST INTELLIGENCE/);
 assert.match(livePredictorSource, /aria-pressed/);
 assert.match(livePredictorSource, /data-lp-chest-type/);
@@ -74,6 +75,13 @@ assert.match(baseSource, /Estimated tower DP/);
 assert.match(baseSource, /Estimated island DP/);
 assert.match(baseSource, /Estimated total base DP/);
 assert.match(baseSource, /DP SANDBOX/);
+assert.match(baseSource, /BASE SUPPORT NETWORK/);
+assert.match(baseSource, /Monument loadout/);
+assert.match(baseSource, /Riverwatch Perch/);
+assert.match(baseSource, /Seagazer Perch/);
+assert.match(baseSource, /Stonespear Perch/);
+assert.match(baseSource, /Rider gear/);
+assert.match(baseSource, /Only verified building HP and attack modifiers/);
 assert.match(baseSource, /BASE ADVISOR LOCKED/);
 assert.match(baseSource, /Move mode active/);
 assert.match(baseSource, /Swap towers/);
@@ -100,10 +108,12 @@ assert.ok(
   "A profile-backed layout must not disappear locally before cloud deletion succeeds."
 );
 assert.match(deleteFlow, /layout was kept because Onyx could not delete the profile copy/);
-assert.match(profileSql, /jsonb_array_length\(candidate -> 'slots'\) = 40/);
-assert.match(profileSql, /top_level\.key not in \('version', 'name', 'slots', 'updatedAt'\)/);
-assert.match(profileSql, /slot_field\.key not in \('type', 'level', 'notes'\)/);
-assert.match(profileSql, /octet_length\(candidate::text\) <= 32768/);
+assert.match(profileSql, /jsonb_array_length\(candidate -> 'slots'\) <> 40/);
+assert.match(profileSql, /top_level\.key not in \('version', 'name', 'slots', 'perches', 'updatedAt'\)/);
+assert.match(profileSql, /'type', 'level', 'notes', 'rune', 'glyph', 'relic'/);
+assert.match(profileSql, /jsonb_array_length\(candidate -> 'perches'\) <> 3/);
+assert.match(profileSql, /'head', 'chest', 'gloves', 'pants'/);
+assert.match(profileSql, /octet_length\(candidate::text\) <= 65536/);
 assert.match(profileSql, /alter table public\.player_base_layouts enable row level security/i);
 assert.match(profileSql, /revoke all on table public\.player_base_layouts from anon, authenticated/i);
 assert.match(profileSql, /\(select auth\.uid\(\)\) = user_id/g);
@@ -139,32 +149,71 @@ const sandbox = {
 sandbox.window = sandbox;
 vm.createContext(sandbox);
 vm.runInContext(fs.readFileSync("base-adviser-catalog-towers.js", "utf8"), sandbox);
+vm.runInContext(fs.readFileSync("base-adviser-catalog-monuments.js", "utf8"), sandbox);
+vm.runInContext(fs.readFileSync("base-adviser-catalog-people.js", "utf8"), sandbox);
 vm.runInContext(baseSource, sandbox);
 
 const blankLayout = sandbox.OnyxBaseCommand.createLayout("Test Base");
 assert.equal(blankLayout.name, "Test Base");
+assert.equal(blankLayout.version, 2);
 assert.equal(blankLayout.slots.length, 40);
 assert.equal(blankLayout.slots.every(slot => slot === null), true);
+assert.equal(blankLayout.perches.length, 3);
+assert.equal(blankLayout.perches[1].name, "Seagazer Perch");
 assert.equal(sandbox.OnyxBaseCommand.getTowerRecord("Archer Tower", 1).level, 1);
 assert.equal(sandbox.OnyxBaseCommand.getTowerRecord("Archer Tower", 999), null);
+
+blankLayout.slots[5] = {
+  type: "Archer Tower",
+  level: 100,
+  notes: "",
+  glyph: { name: "Common Archer Attack Glyph", level: 2 }
+};
+const monumentEstimate = sandbox.OnyxBaseCommand.estimateLayout(blankLayout);
+assert.ok(monumentEstimate.total.monumentGain > 0);
+assert.ok(monumentEstimate.total.value > monumentEstimate.total.baseValue);
+
+blankLayout.perches[1] = {
+  ...blankLayout.perches[1],
+  level: 30,
+  dragonName: "Aevros",
+  riderName: "Freeda",
+  towerBonus: "tower-health-15",
+  skills: [{ name: "Increase Archer Tower's HP", level: 5 }]
+};
+const perchEstimate = sandbox.OnyxBaseCommand.estimateLayout(blankLayout);
+assert.ok(perchEstimate.total.riderGain > 0);
+assert.ok(perchEstimate.total.perchGain > 0);
 
 blankLayout.slots[0] = { type: "Archer Tower", level: 1, notes: "" };
 blankLayout.slots[5] = { type: "Manual Future Tower", level: 301, notes: "Kept manually" };
 const estimate = JSON.parse(JSON.stringify(sandbox.OnyxBaseCommand.estimateLayout(blankLayout)));
 assert.deepEqual(estimate.total, {
   value: 8,
+  baseValue: 8,
+  monumentGain: 0,
+  riderGain: 0,
+  perchGain: 0,
   placed: 2,
   known: 1,
   unavailable: 1
 });
 assert.deepEqual(estimate.islands[0], {
   value: 8,
+  baseValue: 8,
+  monumentGain: 0,
+  riderGain: 0,
+  perchGain: 0,
   placed: 1,
   known: 1,
   unavailable: 0
 });
 assert.deepEqual(estimate.islands[1], {
   value: 0,
+  baseValue: 0,
+  monumentGain: 0,
+  riderGain: 0,
+  perchGain: 0,
   placed: 1,
   known: 0,
   unavailable: 1
