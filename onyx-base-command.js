@@ -108,7 +108,6 @@
   let dirty = false;
   let profileSaved = false;
   let saveMessage = "";
-  let importMessage = "";
   let inventorySnapshot = null;
   let openedForUser = null;
   let cloudLoadedFor = null;
@@ -826,14 +825,14 @@
     if (!summary.towers) {
       return `<section class="obc-inventory-state empty ${compact ? "compact" : ""}">
         ${icon("shield")}
-        <div><strong>No tower inventory detected</strong><p>Manual tower type and level entry remains available. A private import is used only in this browser session.</p></div>
-        <button id="obcOpenPrivateImport" type="button">Import tower inventory</button>
+        <div><strong>Published tower catalogue ready</strong><p>Verified tower types and exact level rows are available. Each player records their own inventory and island layout manually.</p></div>
+        <span class="obc-source-chip">SANITISED SOURCE</span>
       </section>`;
     }
     return `<section class="obc-inventory-state ready ${compact ? "compact" : ""}">
       ${icon("shield")}
-      <div><strong>Private tower inventory ready</strong><p>${formatNumber(summary.towers)} tower record${summary.towers === 1 ? "" : "s"} across ${formatNumber(summary.groups)} exact type and level group${summary.groups === 1 ? "" : "s"}. Placement is still entirely manual.</p></div>
-      <button id="obcOpenPrivateImport" type="button">Replace inventory</button>
+      <div><strong>Owner tower snapshot ready</strong><p>${formatNumber(summary.towers)} tower record${summary.towers === 1 ? "" : "s"} across ${formatNumber(summary.groups)} exact type and level group${summary.groups === 1 ? "" : "s"}. Placement is still entirely manual.</p></div>
+      <span class="obc-source-chip">OWNER SESSION</span>
     </section>`;
   }
 
@@ -916,7 +915,7 @@
 
       <section class="obc-honesty-note">
         <strong>Island geometry always remains manual.</strong>
-        <p>Tower intelligence can pre-fill an owned type and level when a verified private record exists. It never decides where that tower belongs.</p>
+        <p>Tower intelligence validates a manually entered type and exact level against the published catalogue. It never decides where that tower belongs.</p>
       </section>
     `;
   }
@@ -927,7 +926,7 @@
         <div class="obc-empty-orbit">${icon("route")}</div>
         <p>TACTICAL MAP REQUIRED</p>
         <h3>Chart your islands manually</h3>
-        <p>Your private import may know which towers and levels are available, but it does not establish your home-base island layout. Onyx will never guess where a tower sits. Open each island and build it manually.</p>
+        <p>Published intelligence knows which tower types and exact level rows exist, but it does not know a player's inventory or home-base island layout. Onyx will never guess where a tower sits. Open each island and build it manually.</p>
         ${renderInventoryState(true)}
         <label>Base name
           <input id="obcNewLayoutName" maxlength="60" value="My Base" autocomplete="off">
@@ -1055,16 +1054,14 @@
 
   function renderInventoryPicker() {
     const records = inventoryRecords();
-    if (!records.length) {
-      return '<div class="obc-picker-empty"><strong>No imported tower list is active.</strong><span>Enter the tower and level manually below.</span></div>';
-    }
+    if (!records.length) return "";
     return `
-      <div class="obc-inventory-picker" aria-label="Imported tower inventory">
+      <div class="obc-inventory-picker" aria-label="Owner tower snapshot">
         ${records.slice(0, 30).map((record, index) => {
           const available = availableInventory(record, selectedSlot);
           return `<button type="button" data-obc-inventory="${index}" ${available < 1 ? "disabled" : ""}>
             ${towerIcon(record.type)}
-            <span><strong>${escapeHtml(record.type)}</strong><small>Level ${record.level} · ${escapeHtml(record.location === "storage" ? "Stored" : record.location === "base" ? "Placed inventory" : "Imported")}</small></span>
+            <span><strong>${escapeHtml(record.type)}</strong><small>Level ${record.level} · ${escapeHtml(record.location === "storage" ? "Stored" : record.location === "base" ? "Placed inventory" : "Owner source")}</small></span>
             <em>${available} available</em>
           </button>`;
         }).join("")}
@@ -1105,9 +1102,10 @@
     if (selectedSlot === null || !layout || !editorDraft) return "";
     const tower = layout.slots[selectedSlot];
     const detail = towerEstimateDetails(editorDraft, selectedSlot, layout.perches);
-    const importedMatch = inventoryRecords().some(record =>
+    const sourceMatch = inventoryRecords().some(record =>
       record.type === editorDraft.type && Number(record.level) === Number(editorDraft.level)
     );
+    const inventoryPrefill = renderInventoryPicker();
     return `
       <section class="obc-tower-sheet" aria-label="Tower placement editor">
         <div class="obc-section-heading">
@@ -1118,14 +1116,13 @@
         <div class="obc-estimate-preview">
           ${towerIcon(editorDraft.type)}
           <div><small>Estimated tower DP</small><strong id="obcEditorEstimate">${detail === null ? "Unavailable" : `≈ ${formatNumber(detail.value)}`}</strong></div>
-          <span>${importedMatch ? "Private import match" : "Manual entry"}</span>
+          <span>${sourceMatch ? "Owner source match" : "Manual entry"}</span>
           <p id="obcEditorBreakdown">${detail
             ? `Base ${formatNumber(detail.base)} · monuments +${formatNumber(Math.round(detail.monumentGain))} · rider +${formatNumber(Math.round(detail.riderGain))} · perch +${formatNumber(Math.round(detail.perchGain))}`
             : "An exact tower level row is required before bonuses can be estimated."}</p>
         </div>
 
-        <div class="obc-picker-heading"><strong>Prefill from private inventory</strong><small>Optional · tap once</small></div>
-        ${renderInventoryPicker()}
+        ${inventoryPrefill ? `<div class="obc-picker-heading"><strong>Prefill from owner snapshot</strong><small>Owner session only · tap once</small></div>${inventoryPrefill}` : ""}
 
         <div class="obc-form-row obc-manual-fields">
           <label>Tower type
@@ -1536,7 +1533,6 @@
       <div class="obc-shell" role="dialog" aria-modal="true" aria-label="Base and Towers command centre">
         <div class="obc-mist mist-one" aria-hidden="true"></div>
         <div class="obc-mist mist-two" aria-hidden="true"></div>
-        <input id="obcPrivateInventoryFile" class="obc-private-file" type="file" accept=".har,.json,application/json" tabindex="-1" aria-hidden="true">
         <header class="obc-header">
           <div><p>ONYX COMMAND</p><h2>Base Command</h2></div>
           <button id="obcClose" class="obc-icon-button" type="button" aria-label="Close base command">${icon("close")}</button>
@@ -1547,7 +1543,6 @@
           <button type="button" role="tab" aria-selected="${activeTab === "advisor"}" aria-controls="obcCommandPanel" data-obc-tab="advisor" class="${activeTab === "advisor" ? "active" : ""}">Base Advisor${profileSaved ? "" : '<span aria-hidden="true"></span>'}</button>
         </nav>
         <main id="obcCommandPanel" class="obc-body" role="tabpanel">
-          ${importMessage ? `<p class="obc-private-import-status" aria-live="polite">${escapeHtml(importMessage)}</p>` : ""}
           ${activeTab === "intelligence" ? renderIntelligence() : activeTab === "builder" ? renderBuilder() : renderAdvisor()}
         </main>
       </div>
@@ -1699,34 +1694,6 @@
     if (dockMessage) dockMessage.textContent = saveMessage;
   }
 
-  async function importPrivateInventory(file) {
-    if (!file) return;
-    if (Number(file.size) > 220 * 1024 * 1024) {
-      importMessage = "That private file is too large to inspect safely in this browser session.";
-      render({ focusSelector: "#obcOpenPrivateImport" });
-      return;
-    }
-    importMessage = "Inspecting tower records locally…";
-    render({ focusSelector: "#obcOpenPrivateImport" });
-    try {
-      const bridge = window.OnyxTowerInventoryBridge;
-      if (typeof bridge?.importHar !== "function") {
-        throw new Error("Private tower inventory tools are unavailable.");
-      }
-      const parsed = JSON.parse(await file.text());
-      const snapshot = bridge.importHar(parsed);
-      refreshInventory(snapshot);
-      const summary = inventorySummary();
-      importMessage = summary.towers
-        ? `${formatNumber(summary.towers)} verified tower record${summary.towers === 1 ? "" : "s"} ready. The private file was not stored.`
-        : "No exact tower inventory records were detected. Manual entry remains available.";
-    } catch (error) {
-      importMessage = "Onyx could not verify tower inventory in that private file. Nothing was stored.";
-      console.warn("[Onyx Base] Private tower inventory import failed.", error);
-    }
-    render({ focusSelector: "#obcOpenPrivateImport" });
-  }
-
   function bindEvents(overlay) {
     overlay.querySelector("#obcClose")?.addEventListener("click", close);
     overlay.addEventListener("click", event => {
@@ -1767,18 +1734,6 @@
       perchDraft = null;
       markDirty("New manual layout draft created.");
       render({ focusSelector: '[data-obc-island="0"]' });
-    });
-
-    overlay.querySelectorAll("#obcOpenPrivateImport").forEach(button => {
-      button.addEventListener("click", () => {
-        overlay.querySelector("#obcPrivateInventoryFile")?.click?.();
-      });
-    });
-
-    overlay.querySelector("#obcPrivateInventoryFile")?.addEventListener("change", event => {
-      const file = event.target.files?.[0] || null;
-      event.target.value = "";
-      importPrivateInventory(file);
     });
 
     overlay.querySelector("#obcLayoutName")?.addEventListener("input", event => {
@@ -2105,7 +2060,6 @@
     const currentUser = userId() || "signed-out";
     if (openedForUser !== null && openedForUser !== currentUser) {
       inventorySnapshot = null;
-      importMessage = "";
       window.OnyxTowerInventoryBridge?.clear?.();
     }
     openedForUser = currentUser;
