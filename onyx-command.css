@@ -2138,26 +2138,6 @@ body.onyx-modal-open {
   padding: 14px;
 }
 
-.obc-private-file {
-  position: fixed;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  clip-path: inset(50%);
-  white-space: nowrap;
-}
-
-.obc-private-import-status {
-  padding: 10px 12px;
-  border: 1px solid rgba(102, 170, 215, .24);
-  border-radius: 12px;
-  background: rgba(29, 73, 103, .13);
-  color: #9bc9e5;
-  font-size: .72rem;
-  line-height: 1.4;
-}
-
 .obc-panel,
 .obc-source-banner,
 .obc-honesty-note,
@@ -2333,14 +2313,26 @@ body.onyx-modal-open {
   line-height: 1.42;
 }
 
-.obc-inventory-state > button {
-  min-height: 44px;
+.obc-source-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
   padding: 8px 12px;
   border: 1px solid rgba(102, 170, 215, .34);
-  border-radius: 11px;
+  border-radius: 999px;
   background: rgba(23, 61, 87, .22);
   color: #91c8e9;
+  font-size: .64rem;
   font-weight: 800;
+  letter-spacing: .08em;
+  white-space: nowrap;
+}
+
+.obc-inventory-state.ready .obc-source-chip {
+  border-color: rgba(77, 188, 143, .34);
+  background: rgba(24, 94, 69, .2);
+  color: #7fd2ad;
 }
 
 .obc-builder-empty {
@@ -3710,8 +3702,9 @@ body.onyx-modal-open {
     padding: 12px;
   }
 
-  .obc-inventory-state > button {
+  .obc-source-chip {
     grid-column: 1 / -1;
+    justify-self: start;
   }
 
   .obc-inventory-state.compact {

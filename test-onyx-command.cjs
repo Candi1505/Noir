@@ -32,8 +32,8 @@ assert.match(
 );
 assert.match(html, /onyx-tower-inventory-bridge\.js\?v=20260827-base-command-1/);
 assert.match(html, /database\.js\?v=20260827-monuments-perches-1/);
-assert.match(html, /onyx-base-command\.js\?v=20260827-monuments-perches-1/);
-assert.match(html, /onyx-command\.css\?v=20260827-monuments-perches-1/);
+assert.match(html, /onyx-base-command\.js\?v=20260827-owner-har-boundary-1/);
+assert.match(html, /onyx-command\.css\?v=20260827-owner-har-boundary-1/);
 assert.match(livePredictorSource, /ONYX COMMAND · CHEST INTELLIGENCE/);
 assert.match(livePredictorSource, /aria-pressed/);
 assert.match(livePredictorSource, /data-lp-chest-type/);
@@ -92,8 +92,10 @@ const intelSection = html.match(/<section id="intelView"[\s\S]*?<!-- ===========
 assert.doesNotMatch(intelSection, /\bHAR\b|captur|sanitis|labelled by source/i);
 assert.doesNotMatch(commandSource, /\bHAR\b|captur|sanitis/i);
 assert.doesNotMatch(baseSource, /(?:Upload|Import|Open|Choose|Review)[^"\n<]{0,40}\bHAR\b/i);
-assert.match(baseSource, /id="obcPrivateInventoryFile"/);
-assert.match(baseSource, /JSON\.parse\(await file\.text\(\)\)/);
+assert.doesNotMatch(baseSource, /obcPrivateInventoryFile|obcOpenPrivateImport|importPrivateInventory/);
+assert.doesNotMatch(baseSource, /JSON\.parse\(await file\.text\(\)\)|\.importHar\s*\(/);
+assert.match(baseSource, /Published tower catalogue ready/);
+assert.match(baseSource, /Each player records their own inventory and island layout manually/);
 assert.match(baseSource, /role="tablist"/);
 assert.match(baseSource, /aria-selected=/);
 assert.match(baseSource, /prefersReducedMotion\(\) \? "auto" : "smooth"/);
