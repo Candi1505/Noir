@@ -672,6 +672,20 @@
       };
     }
 
+    /*
+     * The base builder receives only a strict, sanitised tower snapshot.
+     * The parsed capture stays in this call frame and is never persisted or
+     * attached to the event result.
+     */
+    try {
+      window.OnyxTowerInventoryBridge?.importHar?.(parsed);
+    } catch (error) {
+      console.warn(
+        "[Onyx Command] No verified tower inventory could be prepared from this private import.",
+        error
+      );
+    }
+
     const extracted = extractAboutV2FromHar(parsed);
     const eventKey =
       findEventKey(extracted.payload);

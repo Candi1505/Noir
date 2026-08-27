@@ -44,9 +44,20 @@ as $$
   select
     jsonb_typeof(candidate) = 'object'
     and candidate @> '{"version":1}'::jsonb
+    and not exists (
+      select 1
+      from jsonb_object_keys(candidate) as top_level(key)
+      where top_level.key not in ('version', 'name', 'slots', 'updatedAt')
+    )
     and case
       when jsonb_typeof(candidate -> 'name') = 'string'
         then char_length(candidate ->> 'name') between 1 and 60
+      else false
+    end
+    and case
+      when not (candidate ? 'updatedAt') then true
+      when jsonb_typeof(candidate -> 'updatedAt') = 'string'
+        then char_length(candidate ->> 'updatedAt') between 1 and 64
       else false
     end
     and case
@@ -58,7 +69,12 @@ as $$
           where case jsonb_typeof(slot)
             when 'null' then false
             when 'object' then not (
-              jsonb_typeof(slot -> 'type') = 'string'
+              not exists (
+                select 1
+                from jsonb_object_keys(slot) as slot_field(key)
+                where slot_field.key not in ('type', 'level', 'notes')
+              )
+              and jsonb_typeof(slot -> 'type') = 'string'
               and char_length(slot ->> 'type') between 1 and 80
               and case
                 when jsonb_typeof(slot -> 'level') = 'number' then
@@ -78,7 +94,7 @@ as $$
         )
       else false
     end
-    and octet_length(candidate::text) <= 250000;
+    and octet_length(candidate::text) <= 32768;
 $$;
 
 revoke all on function public.is_valid_onyx_base_layout(jsonb) from public, anon;
