@@ -12,19 +12,19 @@
   const OVERLAY_ID = "noirDoubleArmoryOverlay";
   const BUTTON_ID = "noirDoubleArmoryButton";
   const CHEST_ICONS = {
-    gold: "🥇",
-    platinum: "💎",
-    draconic: "🐉",
-    freedom: "🦅",
-    arcane: "🔮"
+    gold: "G",
+    platinum: "P",
+    draconic: "D",
+    freedom: "F",
+    arcane: "A"
   };
   const STORAGE_PREFIX = "chestCompanionDoubleArmory";
   const PREFERENCE_LABELS = {
-    favourite: "⭐ Favourite",
-    wanted: "👍 Wanted",
+    favourite: "Favourite",
+    wanted: "Wanted",
     neutral: "Neutral",
-    avoid: "🚫 Avoid",
-    never: "⛔ Never recommend"
+    avoid: "Avoid",
+    never: "Never recommend"
   };
   const PREFERENCE_SCORES = { favourite: 80, wanted: 35, neutral: 0, avoid: -60, never: -1000 };
   let selectedChestType = "platinum";
@@ -538,7 +538,7 @@
           <button class="da-close" type="button" aria-label="Close">×</button>
         </header>
         <nav class="da-tabs" aria-label="Chest type">
-          ${available.map(type => `<button class="da-tab" type="button" data-chest="${escapeHTML(type)}" aria-selected="${type === selectedChestType}">${CHEST_ICONS[type] || "📦"} ${escapeHTML(data.sides.assault.chests[type].label)}</button>`).join("")}
+          ${available.map(type => `<button class="da-tab" type="button" data-chest="${escapeHTML(type)}" aria-selected="${type === selectedChestType}">${CHEST_ICONS[type] || "C"} ${escapeHTML(data.sides.assault.chests[type].label)}</button>`).join("")}
         </nav>
         <section class="da-solver">
           <p class="da-eyebrow">PERSONAL DA PREDICTOR</p>
@@ -574,7 +574,7 @@
         <div class="da-table">
           <div class="da-cell da-head">#</div><div class="da-cell da-head da-head-assault">◆ Assault</div><div class="da-cell da-head da-head-breeding">✦ Breeding</div>
           ${displayAssault.map((left, index) => `
-            <div class="da-cell da-number">${index + 1}${left.bonusAfter ? " 🎁" : ""}</div>
+            <div class="da-cell da-number">${index + 1}${left.bonusAfter ? " · BONUS" : ""}</div>
             ${rewardMarkup(left, solution.solved && index === 0)}${rewardMarkup(displayBreeding[index], solution.solved && index === 0)}
           `).join("")}
         </div>

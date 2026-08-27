@@ -29,12 +29,12 @@
     "ccLivePredictorStyles";
 
   const CHEST_ICONS = {
-    gold: "🥇",
-    platinum: "💎",
-    draconic: "🐉",
-    freedom: "🦅",
-    arcane: "🔮",
-    super_sigil: "✨"
+    gold: "G",
+    platinum: "P",
+    draconic: "D",
+    freedom: "F",
+    arcane: "A",
+    super_sigil: "S"
   };
 
   let bonusProgressRenderTimer =
@@ -2256,9 +2256,9 @@
               </h2>
 
               <p class="lp-muted">
-                Record consecutive chest rewards until NOIR • I ZI locates
+                Record consecutive chest rewards until Onyx Command locates
                 your sequence. Once predictions are ready, choose the
-                reward you want and NOIR • I ZI will show exactly how many
+                reward you want and Onyx Command will show exactly how many
                 regular chests away it is.
               </p>
             </div>
@@ -2336,7 +2336,7 @@
               id="lpRecorderConfidenceNote"
               class="lp-recorder-confidence-note"
             >
-              Keep recording consecutive rewards until NOIR • I ZI says
+              Keep recording consecutive rewards until Onyx Command says
               predictions are ready.
             </div>
           </div>
@@ -4298,7 +4298,7 @@
     let level =
       "low";
     let noteText =
-      "Keep recording consecutive rewards until NOIR • I ZI says predictions are ready.";
+      "Keep recording consecutive rewards until Onyx Command says predictions are ready.";
     let ready =
       false;
 
@@ -4368,7 +4368,7 @@
         matchCount !== null &&
         matchCount > 1
           ? `${formatNumber(matchCount)} possible positions remain. Enter the next consecutive reward.`
-          : "Enter the next consecutive reward so NOIR • I ZI can locate your position.";
+          : "Enter the next consecutive reward so Onyx Command can locate your position.";
     }
 
     title.textContent =

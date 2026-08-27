@@ -19,9 +19,9 @@
   const CHEST_META = {
     gold: { label: "Gold", icon: "◆" },
     platinum: { label: "Platinum", icon: "✦" },
-    draconic: { label: "Draconic", icon: "🐉" },
-    freedom: { label: "Freedom", icon: "🦅" },
-    arcane: { label: "Arcane", icon: "🔮" }
+    draconic: { label: "Draconic", icon: "D" },
+    freedom: { label: "Freedom", icon: "F" },
+    arcane: { label: "Arcane", icon: "A" }
   };
 
   const CATEGORIES = [
@@ -297,7 +297,7 @@
         <div>
           <h3>What should I open?</h3>
           <p>
-            Choose what you want. NOIR • I ZI compares regular and bonus
+            Choose what you want. Onyx Command compares regular and bonus
             rewards, then tells you the best chest.
           </p>
         </div>
@@ -321,7 +321,7 @@
         best.perChest > 0
           ? `
             <div class="cp-answer">
-              <span>NOIR • I ZI RECOMMENDS</span>
+              <span>ONYX COMMAND RECOMMENDS</span>
               <strong>
                 ${bestMeta.icon} Open ${bestMeta.label} Chests
               </strong>
@@ -371,7 +371,7 @@
         <div>
           <h3>Reach a resource goal</h3>
           <p>
-            Tell NOIR • I ZI what you need and what you already have.
+            Tell Onyx Command what you need and what you already have.
           </p>
         </div>
       </section>
@@ -451,7 +451,7 @@
                   required === null
                     ? "Not available"
                     : required === 0
-                      ? "Goal already reached 🙌🏻"
+                      ? "Goal already reached"
                       : `Around ${formatNumber(required, 0)} chests`
                 }
               </p>

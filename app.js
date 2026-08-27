@@ -1473,7 +1473,7 @@
       if (!player?.user) {
         window.NoirAccessControl?.show?.({
           message:
-            "Sign in or create a player account to enter NOIR • I ZI."
+            "Sign in or create a player account to enter Onyx Command."
         });
         return;
       }
@@ -1482,7 +1482,7 @@
         currentUser = player.user;
         window.NoirAccessControl?.show?.({
           message:
-            "This player account is blocked. Ask a NOIR administrator if you think this is a mistake.",
+            "This player account is blocked. Ask an Onyx administrator if you think this is a mistake.",
           failed: true,
           signedIn: true
         });
@@ -1586,10 +1586,16 @@
 
       accessGranted = true;
 
+      window.dispatchEvent(
+        new CustomEvent("onyx:player-ready", {
+          detail: { userId: currentUser.id }
+        })
+      );
+
     } catch (error) {
 
       console.error(
-        "NOIR secure access failed:",
+        "Onyx secure access failed:",
         error
       );
 
@@ -1612,7 +1618,7 @@
 
       window.NoirAccessControl?.show?.({
         message:
-          "NOIR could not verify secure access. Please try again shortly.",
+          "Onyx could not verify secure access. Please try again shortly.",
         failed: true,
         signedIn: Boolean(currentUser)
       });
@@ -2126,7 +2132,7 @@
           "activeSessionText"
         ),
 
-        "Open Gold, Platinum, Draconic or Freedom and record rewards to begin."
+        "Open Chest Command and record rewards to begin."
 
       );
 
@@ -3702,7 +3708,7 @@ function getArmoryPage(position, positionsPerPage = 20) {
 
     if (
       !confirm(
-        "Reset all saved Chest Companion data?"
+        "Reset all saved Onyx Command device data?"
       )
     ) {
 
@@ -3772,6 +3778,19 @@ function getArmoryPage(position, positionsPerPage = 20) {
 
   window.NoirRefreshApp =
     refreshApplication;
+
+  /*
+   * Stable bridge used by the Onyx Command shell. The existing predictor
+   * engine remains private to this module; the shell can only open a supported
+   * chest, change view, or read the signed-in player's public identifier.
+   */
+  window.OnyxCommandCore = Object.freeze({
+    openChest: openChestTracker,
+    showView,
+    renderHome: renderHomeScreen,
+    getCurrentUserId: () => currentUser?.id || null,
+    getProfile: () => ({ ...appState.profile })
+  });
 
 
   /* =======================================================
@@ -3957,7 +3976,7 @@ function getArmoryPage(position, positionsPerPage = 20) {
       if (!currentUser) {
         window.NoirAccessControl?.show?.({
           message:
-            "NOIR could not verify secure access. Please refresh and try again.",
+            "Onyx could not verify secure access. Please refresh and try again.",
           failed: true
         });
       }
@@ -3975,7 +3994,7 @@ function getArmoryPage(position, positionsPerPage = 20) {
       if (!currentUser) {
         window.NoirAccessControl?.show?.({
           message:
-            "NOIR could not verify secure access. Please refresh and try again.",
+            "Onyx could not verify secure access. Please refresh and try again.",
           failed: true
         });
       }

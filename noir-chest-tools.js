@@ -1,5 +1,5 @@
 /* ============================================================
-   NOIR • I ZI — CHEST TOOLS
+   ONYX COMMAND — CHEST INTELLIGENCE
 
    Event readiness, reward finder, chest budget, share cards and
    private on-device verification summaries. Reads only the
@@ -12,27 +12,27 @@
   const CHEST_ORDER = ["gold", "platinum", "draconic", "freedom", "arcane", "super_sigil"];
   const CHEST_META = {
     gold: {
-      label: "Gold", icon: "◆", bonusEvery: 30,
+      label: "Gold", icon: "G", bonusEvery: 30,
       singleCost: 500, tenPackCost: 4000
     },
     platinum: {
-      label: "Platinum", icon: "✦", bonusEvery: 30,
+      label: "Platinum", icon: "P", bonusEvery: 30,
       singleCost: 1350, tenPackCost: 12000
     },
     draconic: {
-      label: "Draconic", icon: "🐉", bonusEvery: 30,
+      label: "Draconic", icon: "D", bonusEvery: 30,
       singleCost: 1000, tenPackCost: 8000
     },
     freedom: {
-      label: "Freedom", icon: "🦅", bonusEvery: 15,
+      label: "Freedom", icon: "F", bonusEvery: 15,
       singleCost: 1350, tenPackCost: 12000
     },
     arcane: {
-      label: "Arcane", icon: "🔮", bonusEvery: 15,
+      label: "Arcane", icon: "A", bonusEvery: 15,
       singleCost: 1350, tenPackCost: 12000
     },
     super_sigil: {
-      label: "Super Sigil", icon: "✨", bonusEvery: 30,
+      label: "Super Sigil", icon: "S", bonusEvery: 30,
       singleCost: 625, tenPackCost: 8000
     }
   };
@@ -538,7 +538,7 @@
           <strong>Want to see what you should actually receive?</strong>
           <p>
             Complete your ${meta.label} chest predictions first if you want
-            NOIR • I ZI to estimate the rewards you’ll receive when spending your rubies.
+            Onyx Command to estimate the rewards you’ll receive when spending your rubies.
           </p>
         </article>
         <div class="nct-fields">
@@ -604,7 +604,7 @@
           ` : ""}
           ${prediction.limited ? `
             <p class="nct-budget-warning">
-              NOIR • I ZI displays the first 100 regular chest predictions at a time.
+              Onyx Command displays the first 100 regular chest predictions at a time.
             </p>
           ` : ""}
           <div class="nct-predicted-list">
@@ -678,7 +678,7 @@
     const eventName = getEventName(context.eventData);
     const rewards = expectedRewards(state.chestType, openings, context).slice(0, 5);
     return [
-      `NOIR • I ZI`,
+      `ONYX COMMAND`,
       `${eventName} · ${meta.label} Chest`,
       `Estimate for ${openings} regular chests`,
       ...rewards.map(item => `• ${item.name}: about ${formatNumber(item.amount)}`),
@@ -747,7 +747,7 @@
         : null;
       try {
         if (file && navigator.share && navigator.canShare?.({ files: [file] })) {
-          await navigator.share({ title: "NOIR • I ZI Chest Summary", text, files: [file] });
+          await navigator.share({ title: "Onyx Command Chest Summary", text, files: [file] });
           return;
         }
       } catch (error) {
@@ -808,7 +808,7 @@
     overlay.innerHTML = `
       <div class="nct-shell" role="dialog" aria-modal="true" aria-label="Chest Tools">
         <header class="nct-header">
-          <div><p class="eyebrow">NOIR • I ZI CHEST TOOLS</p><h2>${labels[state.view]}</h2></div>
+          <div><p class="eyebrow">ONYX COMMAND · CHEST INTELLIGENCE</p><h2>${labels[state.view]}</h2></div>
           <button id="nctClose" class="nct-close" type="button" aria-label="Close">×</button>
         </header>
         <nav class="nct-tabs">
@@ -869,7 +869,10 @@
     overlay.querySelector("#nctShareButton")?.addEventListener("click", shareCard);
   }
 
-  function open() {
+  function open(view) {
+    if (["finder", "budget", "share", "readiness"].includes(view)) {
+      state.view = view;
+    }
     render();
     const overlay = document.getElementById("noirChestToolsOverlay");
     overlay?.classList.add("open");
@@ -996,61 +999,11 @@
     if (document.getElementById("noirChestToolsOverlay")) return;
     installStyles();
 
-    const chestGrid = document.querySelector("#homeView .chest-grid");
-    const rateLaunch = document.querySelector(".cdr-launch");
-    const plannerLaunch = document.querySelector(".cp-launch");
-    const predictorProgress =
-      document.querySelector("#activeSessionTitle")?.closest(".content-panel");
-
-    const banner = document.createElement("section");
-    banner.id = "noirReadinessBanner";
-    banner.className = "nct-readiness-banner";
-    (predictorProgress || chestGrid)?.insertAdjacentElement("afterend", banner);
-
-    const tools = document.createElement("section");
-    tools.className = "nct-home-tools";
-    [
-      {
-        view: "finder",
-        title: "Reward Finder",
-        description: "Find any reward across every regular and bonus chest.",
-        icon: "⌕"
-      },
-      {
-        view: "budget",
-        title: "Chest Budget",
-        description: "See how many chests you can open and estimated returns.",
-        icon: "◈"
-      },
-      {
-        view: "share",
-        title: "Share Cards",
-        description: "Create clean NOIR • I ZI results ready to share with your team.",
-        icon: "↗"
-      }
-    ].forEach(tool => {
-      const launch = document.createElement("button");
-      launch.type = "button";
-      launch.className = `nct-launch nct-${tool.view}`;
-      launch.innerHTML = `
-        <span><strong>${tool.title}</strong><small>${tool.description}</small></span>
-        <span class="nct-launch-icon" aria-hidden="true">${tool.icon}</span>
-      `;
-      launch.addEventListener("click", () => {
-        state.view = tool.view;
-        open();
-      });
-      tools.appendChild(launch);
-    });
-
-    (plannerLaunch || rateLaunch || banner).insertAdjacentElement("afterend", tools);
-
     const overlay = document.createElement("section");
     overlay.id = "noirChestToolsOverlay";
     overlay.className = "nct-overlay";
     overlay.setAttribute("aria-hidden", "true");
     document.body.appendChild(overlay);
-    renderReadinessBanner();
   }
 
   const api = Object.freeze({

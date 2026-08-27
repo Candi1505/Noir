@@ -14,9 +14,10 @@
     content="noindex, nofollow, noarchive, nosnippet, noimageindex"
   >
 
-  <title>NOIR • I ZI — Chest Companion</title>
+  <title>Onyx Command — War Dragons Companion</title>
 
   <link rel="stylesheet" href="styles.css?v=20260730-arcane">
+  <link rel="stylesheet" href="onyx-command.css?v=20260827-rebuild-1">
 
   <style>
     .home-platform-statement {
@@ -55,9 +56,9 @@
 
     <div class="loading-card glass-panel">
 
-      <p class="eyebrow">NOIR • I ZI</p>
-<h1>Know what waits in the dark.</h1>
-<p class="muted-text">Chest Companion</p>
+      <p class="eyebrow">ONYX COMMAND</p>
+      <h1>Command the season.</h1>
+      <p class="muted-text">Private War Dragons intelligence</p>
 
       
 
@@ -65,11 +66,11 @@
       <div
         class="noir-loader"
         role="status"
-        aria-label="Loading NOIR I ZI Chest Companion"
+        aria-label="Loading Onyx Command"
       ></div>
 
       <p id="loadingStatus" class="muted-text">
-        Preparing the dark...
+        Waking the command crystal...
       </p>
 
     </div>
@@ -82,10 +83,10 @@
 
   <section id="accessGate" class="access-gate hidden">
     <div class="access-gate-card glass-panel">
-      <p class="eyebrow">NOIR • I ZI</p>
+      <p class="eyebrow">ONYX COMMAND</p>
       <h1>Player access</h1>
       <p id="accessGateMessage" class="muted-text">
-        Sign in or create a player account to enter.
+        Sign in or create a player account to enter Onyx Command.
       </p>
 
       <div id="accessGateCredentials" class="profile-form">
@@ -210,7 +211,7 @@
 
       <div>
         <p class="eyebrow">
-          NOIR • I ZI
+          ONYX COMMAND
         </p>
 
         <h1 id="pageTitle">
@@ -231,187 +232,90 @@
            HOME VIEW
       ======================================= -->
 
-      <section id="homeView" class="view active">
+      <section id="homeView" class="view active onyx-home-view">
+        <div class="onyx-home-header">
+          <button
+            id="onyxMenuButton"
+            class="onyx-icon-button"
+            type="button"
+            aria-label="Open command menu"
+            data-onyx-icon="menu"
+          ></button>
 
-        <div class="hero-card glass-panel">
+          <div class="onyx-wordmark" aria-label="Onyx Command">
+            <span class="onyx-crest" data-onyx-icon="crest" aria-hidden="true"></span>
+            <h2>ONYX COMMAND</h2>
+            <span class="onyx-wordmark-rule" aria-hidden="true"></span>
+          </div>
 
-          <p class="home-platform-statement">
-            The complete WD chest platform —
-            <span>predict, compare, plan and verify, all in one place.</span>
+          <p class="onyx-greeting">
+            Good <span id="onyxDaypart">day</span>,
+            <span id="welcomeName">Commander</span>
           </p>
-
-          <p class="eyebrow">
-            WELCOME BACK
-          </p>
-
-          <h2 id="welcomeName">
-            Tester
-          </h2>
-
-          <p class="muted-text">
-            Choose a chest to begin tracking.
-          </p>
-
         </div>
 
+        <section class="onyx-season-hero" aria-labelledby="onyxSeasonHeroTitle">
+          <div class="onyx-season-copy">
+            <p class="onyx-command-kicker">MISFITRISE</p>
+            <h2 id="onyxSeasonHeroTitle">Road to 20 Keys</h2>
+            <p id="onyxKeyProgressHelp">
+              Add your current key count to track the mythic unlock target.
+            </p>
+            <button class="onyx-text-action" type="button" data-command="season">
+              Open Season Command
+            </button>
+          </div>
 
-        <!-- CHEST CHOICES -->
+          <div class="onyx-key-orbit" id="onyxKeyProgressRing" style="--key-progress:0">
+            <span><strong id="onyxKeyProgressValue">—</strong><small id="onyxKeyProgressTarget">/20</small></span>
+            <span class="onyx-key-glyph" data-onyx-icon="key" aria-hidden="true"></span>
+          </div>
+        </section>
 
-        <div class="chest-grid">
-
-          <button
-            type="button"
-            class="chest-card gold-card"
-            data-open-chest="gold"
-          >
-
-            <span class="chest-symbol">
-              ◆
-            </span>
-
-            <span class="chest-card-text">
-
-              <strong>
-                Gold
-              </strong>
-
-              <small>
-                Track &amp; Predict
-              </small>
-
-            </span>
-
+        <section class="onyx-command-grid" aria-label="Command centres">
+          <button class="onyx-command-card season" type="button" data-command="season">
+            <span class="onyx-command-icon" data-onyx-icon="season" aria-hidden="true"></span>
+            <strong>Season Command</strong>
+            <small>Keys, branches and rewards</small>
           </button>
 
-
-          <button
-            type="button"
-            class="chest-card platinum-card"
-            data-open-chest="platinum"
-          >
-
-            <span class="chest-symbol">
-              ✦
-            </span>
-
-            <span class="chest-card-text">
-
-              <strong>
-                Platinum
-              </strong>
-
-              <small>
-                Track &amp; Predict
-              </small>
-
-            </span>
-
-          </button>
-          <button
-            type="button"
-            class="chest-card draconic-card"
-            data-open-chest="draconic"
-          >
-
-            <span class="chest-symbol">
-              🐉
-            </span>
-
-            <span class="chest-card-text">
-
-              <strong>
-                Draconic
-              </strong>
-
-              <small>
-                Track &amp; Predict
-              </small>
-
-            </span>
-
+          <button class="onyx-command-card chest" type="button" data-command="chest">
+            <span class="onyx-command-icon" data-onyx-icon="chest" aria-hidden="true"></span>
+            <strong>Chest Command</strong>
+            <small>Predictors and chest planning</small>
           </button>
 
-
-          <button
-            type="button"
-            class="chest-card freedom-card"
-            data-open-chest="freedom"
-          >
-
-            <span class="chest-symbol">
-              🦅
-            </span>
-
-            <span class="chest-card-text">
-
-              <strong>
-                Freedom
-              </strong>
-
-              <small>
-                Track &amp; Predict
-              </small>
-
-            </span>
-
+          <button class="onyx-command-card base" type="button" data-command="base">
+            <span class="onyx-command-icon" data-onyx-icon="base" aria-hidden="true"></span>
+            <strong>Base &amp; Towers</strong>
+            <small>Tower intelligence and layout builder</small>
           </button>
 
-          <button
-            type="button"
-            class="chest-card arcane-card"
-            data-open-chest="arcane"
-          >
-
-            <span class="chest-symbol">
-              🔮
-            </span>
-
-            <span class="chest-card-text">
-
-              <strong>
-                Arcane
-              </strong>
-
-              <small>
-                Temporary · Bonus at 15
-              </small>
-
-            </span>
-
+          <button class="onyx-command-card rider" type="button" data-command="rider">
+            <span class="onyx-command-icon" data-onyx-icon="rider" aria-hidden="true"></span>
+            <strong>Rider Intelligence</strong>
+            <small>Skills, gear and role matching</small>
           </button>
 
-          <button
-            type="button"
-            class="chest-card super-sigil-card"
-            data-open-chest="super_sigil"
-          >
-            <span class="chest-symbol">✨</span>
-            <span class="chest-card-text">
-              <strong>Super Sigil</strong>
-              <small>Track &amp; Predict · Bonus at 30</small>
-            </span>
+          <button class="onyx-command-card atlas" type="button" data-command="atlas">
+            <span class="onyx-command-icon" data-onyx-icon="atlas" aria-hidden="true"></span>
+            <strong>Atlas Command</strong>
+            <small>Authorised Atlas intelligence</small>
           </button>
-        </div>
 
+          <button class="onyx-command-card calculators" type="button" data-command="calculators">
+            <span class="onyx-command-icon" data-onyx-icon="calculators" aria-hidden="true"></span>
+            <strong>Calculators</strong>
+            <small>Budgets, drops and planning tools</small>
+          </button>
+        </section>
 
-        <!-- PREDICTOR PROGRESS CARD -->
-
-        <section class="glass-panel content-panel">
-
+        <section class="glass-panel content-panel onyx-progress-panel">
           <div class="section-heading">
-
             <div>
-
-              <p class="eyebrow">
-                PREDICTOR PROGRESS
-              </p>
-
-              <h3 id="activeSessionTitle">
-                No saved predictor progress
-              </h3>
-
+              <p class="eyebrow">CHEST PROGRESS</p>
+              <h3 id="activeSessionTitle">No saved predictor progress</h3>
             </div>
-
             <button
               id="resumeSessionButton"
               type="button"
@@ -419,15 +323,11 @@
             >
               Resume
             </button>
-
           </div>
-
-                    <p id="activeSessionText" class="muted-text">
-            Open a chest predictor and record rewards to locate your sequence.
+          <p id="activeSessionText" class="muted-text">
+            Open Chest Command and record rewards to locate your sequence.
           </p>
-
         </section>
-
       </section>
 
 
@@ -707,6 +607,40 @@
 
         </section>
 
+      </section>
+
+
+      <!-- ======================================
+           INTELLIGENCE VIEW
+      ======================================= -->
+
+      <section id="intelView" class="view onyx-intel-view">
+        <section class="onyx-intel-header">
+          <p class="onyx-command-kicker">COMMAND INTELLIGENCE</p>
+          <h2>What Onyx knows</h2>
+          <p>
+            Every result is labelled by source. Missing player data stays missing until you add it.
+          </p>
+        </section>
+
+        <div class="onyx-intel-grid">
+          <article class="onyx-intel-card verified">
+            <span data-onyx-icon="season" aria-hidden="true"></span>
+            <div><strong>Season graph</strong><small>Capture-verified Misfitrise Wave 1 branches and key paths.</small></div>
+          </article>
+          <article class="onyx-intel-card verified">
+            <span data-onyx-icon="base" aria-hidden="true"></span>
+            <div><strong>Tower catalogue</strong><small>HAR-backed tower descriptions, levels, costs and restrictions.</small></div>
+          </article>
+          <article class="onyx-intel-card limited">
+            <span data-onyx-icon="chest" aria-hidden="true"></span>
+            <div><strong>Chest data</strong><small>Uses the currently published sanitised event decks only.</small></div>
+          </article>
+          <article class="onyx-intel-card manual">
+            <span data-onyx-icon="layout" aria-hidden="true"></span>
+            <div><strong>Your base layout</strong><small>Manual by design—the HAR did not contain your home-base geometry.</small></div>
+          </article>
+        </div>
       </section>
 
 
@@ -1379,7 +1313,7 @@
           </p>
 
           <h2>
-            Chest Companion build v3
+            Onyx Command rebuild
           </h2>
 
 
@@ -1404,7 +1338,7 @@
           </h3>
 
           <p class="muted-text">
-            Fully reloads Noir from the live website without deleting
+            Fully reloads Onyx Command from the live website without deleting
             your predictor history, bonus progress or profile.
           </p>
 
@@ -1465,42 +1399,25 @@
     ========================================= -->
 
     <nav class="bottom-navigation glass-panel">
-
       <button
         type="button"
         class="navigation-button active"
         data-view="homeView"
         data-title="Home"
       >
-
-        <span class="navigation-icon">
-          ⌂
-        </span>
-
-        <span>
-          Home
-        </span>
-
+        <span class="navigation-icon" data-onyx-icon="home" aria-hidden="true"></span>
+        <span>Home</span>
       </button>
-
 
       <button
         type="button"
         class="navigation-button"
-        data-view="historyView"
-        data-title="History"
+        data-view="intelView"
+        data-title="Intel"
       >
-
-        <span class="navigation-icon">
-          ≡
-        </span>
-
-        <span>
-          History
-        </span>
-
+        <span class="navigation-icon" data-onyx-icon="intel" aria-hidden="true"></span>
+        <span>Intel</span>
       </button>
-
 
       <button
         type="button"
@@ -1508,52 +1425,9 @@
         data-view="profileView"
         data-title="Profile"
       >
-
-        <span class="navigation-icon">
-          ♙
-        </span>
-
-        <span>
-          Profile
-        </span>
-
+        <span class="navigation-icon" data-onyx-icon="profile" aria-hidden="true"></span>
+        <span>Profile</span>
       </button>
-      
-      <button
-         type="button"
-         class="navigation-button"
-         data-view="predictorView"
-         data-title="Predictors"
->
-
-         <span class="navigation-icon">
-    ✦
-        </span>
-
-       <span>
-         Predictors
-      </span>
-
-      </button>
-
-
-      <button
-        type="button"
-        class="navigation-button"
-        data-view="settingsView"
-        data-title="Settings"
-      >
-
-        <span class="navigation-icon">
-          ⚙
-        </span>
-
-        <span>
-          Settings
-        </span>
-
-      </button>
-
     </nav>
 
   </div>
@@ -1582,14 +1456,13 @@
 
 <script src="predictor-engine.js?v=20260730-arcane-fix1"></script>
 
-<script src="noir-help.js?v=20260730-arcane"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="base-adviser-catalog-towers.js?v=20260727-3"></script>
 <script src="base-adviser-catalog-monuments.js?v=20260727-2"></script>
 <script src="base-adviser-catalog-people.js?v=20260727-2"></script>
-    <script src="base-planner.js?v=20260729-2"></script>
-
-  <script src="app.js?v=20260813-open-signup"></script>
+  <script src="app.js?v=20260827-onyx-core-1"></script>
+  <script src="onyx-base-command.js?v=20260827-rebuild-1"></script>
+  <script src="onyx-command.js?v=20260827-rebuild-1"></script>
 
 </body>
 </html>

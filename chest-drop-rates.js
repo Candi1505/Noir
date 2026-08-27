@@ -32,7 +32,7 @@
     },
     draconic: {
       label: "Draconic",
-      icon: "🐉",
+      icon: "D",
       mainKey: "dragfrag_chest_tier3",
       bonusEvery: 30,
       bonusKeys: [
@@ -42,7 +42,7 @@
     },
     freedom: {
       label: "Freedom",
-      icon: "🦅",
+      icon: "F",
       mainKey: "freedom_chest",
       bonusEvery: 15,
       bonusKeys: [
@@ -52,7 +52,7 @@
     },
     arcane: {
       label: "Arcane",
-      icon: "🔮",
+      icon: "A",
       mainKey: "arcane_chest",
       bonusEvery: 15,
       bonusKeys: [
@@ -62,7 +62,7 @@
     },
     super_sigil: {
       label: "Super Sigil",
-      icon: "✨",
+      icon: "S",
       mainKey: "sigil_chest",
       bonusEvery: 30,
       bonusKeys: ["Legendary_sigil_drop"]

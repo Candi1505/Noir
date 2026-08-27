@@ -709,7 +709,7 @@ window.testEventParser = function testEventParser(
       EventParser.parse(rawData);
 
     console.group(
-      "🐉 Noir Event Parser"
+      "Onyx Command Event Parser"
     );
 
     console.log(
