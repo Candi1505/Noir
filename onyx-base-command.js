@@ -4,11 +4,25 @@
   const OVERLAY_ID = "onyxBaseCommandOverlay";
   const STORAGE_PREFIX = "onyxBaseLayoutV2";
   const LEGACY_STORAGE_PREFIX = "onyxBaseLayoutV1";
+  const MERGE_STORAGE_PREFIX = "onyxTowerMergeV1";
   const ISLAND_COUNT = 8;
   const SLOTS_PER_ISLAND = 5;
   const TOTAL_SLOTS = ISLAND_COUNT * SLOTS_PER_ISLAND;
   const MAP_WIDTH = 760;
   const MAP_HEIGHT = 500;
+  const MERGE_TRANSFER_RATE = 0.45;
+
+  const MERGE_VALUE_WEIGHTS = Object.freeze({
+    time: 0.002268982,
+    piercing: 0,
+    food: 0,
+    elementalEmber: 3.3898,
+    iceShard: 1.6949,
+    fireShard: 1.6949,
+    electrumBar: 5.0847,
+    cosmicCharge: 3660,
+    bloodstone: 11.17
+  });
 
   const GEAR_SLOTS = Object.freeze([
     ["head", "Head"],
@@ -109,6 +123,9 @@
   let profileSaved = false;
   let saveMessage = "";
   let inventorySnapshot = null;
+  let mergeDraft = null;
+  let mergeResult = null;
+  let mergeMessage = "";
   let openedForUser = null;
   let cloudLoadedFor = null;
   let cloudLoadingFor = null;
@@ -219,6 +236,180 @@
 
   function exactRow(type, level) {
     return rowsFor(type).find(row => Number(row?.level) === Number(level)) || null;
+  }
+
+  function maximumCatalogueLevel(type = "") {
+    const rows = type ? rowsFor(type) : towerTypes().flatMap(rowsFor);
+    return rows.reduce((maximum, row) => Math.max(maximum, Number(row?.level) || 0), 0);
+  }
+
+  function blankMergeDraft() {
+    const types = towerTypes();
+    return {
+      destinationType: types[0] || "",
+      destinationLevel: 1,
+      sourceType: types[1] || types[0] || "",
+      sourceLevel: 1,
+      quantity: 1,
+      maximumTowerLevel: maximumCatalogueLevel() || 250,
+      previewResultLevel: ""
+    };
+  }
+
+  function normaliseMergeDraft(value) {
+    const source = value && typeof value === "object" ? value : {};
+    const fallback = blankMergeDraft();
+    const wholeNumber = (number, minimum, maximum, defaultValue) => {
+      const parsed = Number.parseInt(number, 10);
+      return Number.isInteger(parsed) && parsed >= minimum && parsed <= maximum
+        ? parsed
+        : defaultValue;
+    };
+    const previewText = String(source.previewResultLevel ?? "").trim();
+    return {
+      destinationType: towerTypes().includes(source.destinationType)
+        ? source.destinationType
+        : fallback.destinationType,
+      destinationLevel: wholeNumber(source.destinationLevel, 1, 999, fallback.destinationLevel),
+      sourceType: towerTypes().includes(source.sourceType)
+        ? source.sourceType
+        : fallback.sourceType,
+      sourceLevel: wholeNumber(source.sourceLevel, 1, 999, fallback.sourceLevel),
+      quantity: wholeNumber(source.quantity, 1, 100, 1),
+      maximumTowerLevel: wholeNumber(
+        source.maximumTowerLevel,
+        1,
+        999,
+        fallback.maximumTowerLevel
+      ),
+      previewResultLevel: previewText
+        ? wholeNumber(previewText, 1, 999, "")
+        : ""
+    };
+  }
+
+  function readMergeDraft() {
+    try {
+      mergeDraft = normaliseMergeDraft(
+        JSON.parse(localStorage.getItem(storageKey(MERGE_STORAGE_PREFIX)) || "null")
+      );
+    } catch (error) {
+      mergeDraft = blankMergeDraft();
+    }
+    mergeResult = null;
+    mergeMessage = "";
+  }
+
+  function saveMergeDraft() {
+    if (!mergeDraft) return;
+    localStorage.setItem(
+      storageKey(MERGE_STORAGE_PREFIX),
+      JSON.stringify(normaliseMergeDraft(mergeDraft))
+    );
+  }
+
+  function mergeUpgradeValue(row) {
+    let value = (Number(row?.seconds) || 0) * MERGE_VALUE_WEIGHTS.time;
+    String(row?.cost || "").split(/[|;]/).forEach(part => {
+      const [resource, amount] = part.split(":");
+      value += (Number(amount) || 0) * (MERGE_VALUE_WEIGHTS[resource] || 0);
+    });
+    return value;
+  }
+
+  function accumulatedTowerValue(type, level) {
+    return rowsFor(type)
+      .filter(row => Number(row?.level) <= Number(level))
+      .reduce((sum, row) => sum + mergeUpgradeValue(row), 0);
+  }
+
+  function accumulatedTowerXp(type, level) {
+    return rowsFor(type)
+      .filter(row => Number(row?.level) <= Number(level))
+      .reduce((sum, row) => sum + (Number(row?.xp) || 0), 0);
+  }
+
+  function estimateMerge(value) {
+    const draft = normaliseMergeDraft(value);
+    const destinationRows = rowsFor(draft.destinationType);
+    const sourceRows = rowsFor(draft.sourceType);
+    if (!destinationRows.length || !sourceRows.length) {
+      return { ok: false, message: "Choose two towers with verified catalogue rows." };
+    }
+    if (!exactRow(draft.destinationType, draft.destinationLevel)) {
+      return { ok: false, message: `No exact ${draft.destinationType} level ${draft.destinationLevel} row is available.` };
+    }
+    if (!exactRow(draft.sourceType, draft.sourceLevel)) {
+      return { ok: false, message: `No exact ${draft.sourceType} level ${draft.sourceLevel} row is available.` };
+    }
+    const catalogueCap = maximumCatalogueLevel(draft.destinationType);
+    const effectiveCap = Math.min(draft.maximumTowerLevel, catalogueCap);
+    if (draft.destinationLevel > effectiveCap || draft.sourceLevel > draft.maximumTowerLevel) {
+      return { ok: false, message: "A tower level cannot exceed the tower cap entered for this merge." };
+    }
+
+    const destinationValue = accumulatedTowerValue(
+      draft.destinationType,
+      draft.destinationLevel
+    );
+    const sourceValue = accumulatedTowerValue(draft.sourceType, draft.sourceLevel);
+    const transferredValue = sourceValue * draft.quantity * MERGE_TRANSFER_RATE;
+    const availableValue = destinationValue + transferredValue;
+    const modelResultLevel = destinationRows
+      .filter(row =>
+        Number(row?.level) <= effectiveCap &&
+        accumulatedTowerValue(draft.destinationType, row.level) <= availableValue
+      )
+      .reduce(
+        (highest, row) => Math.max(highest, Number(row?.level) || 0),
+        draft.destinationLevel
+      );
+
+    const previewLevel = draft.previewResultLevel === ""
+      ? null
+      : Number(draft.previewResultLevel);
+    if (previewLevel !== null) {
+      if (previewLevel < draft.destinationLevel || previewLevel > effectiveCap) {
+        return { ok: false, message: "The WD preview level must be between the kept tower level and the entered tower cap." };
+      }
+      if (!exactRow(draft.destinationType, previewLevel)) {
+        return { ok: false, message: `No exact ${draft.destinationType} level ${previewLevel} row is available for the WD preview.` };
+      }
+    }
+
+    const resultLevel = previewLevel ?? modelResultLevel;
+    const destinationXp = accumulatedTowerXp(
+      draft.destinationType,
+      draft.destinationLevel
+    );
+    const sourceXpEach = accumulatedTowerXp(draft.sourceType, draft.sourceLevel);
+    const sourceXp = sourceXpEach * draft.quantity;
+    const resultXp = accumulatedTowerXp(draft.destinationType, resultLevel);
+    const xpDebt = Math.max(0, destinationXp + sourceXp - resultXp);
+
+    return {
+      ok: true,
+      ...draft,
+      transferRate: MERGE_TRANSFER_RATE,
+      destinationValue,
+      sourceValue,
+      transferredValue,
+      availableValue,
+      catalogueCap,
+      effectiveCap,
+      modelResultLevel,
+      previewLevel,
+      resultLevel,
+      resultSource: previewLevel === null ? "model" : "wd-preview",
+      levelsGained: Math.max(0, resultLevel - draft.destinationLevel),
+      destinationXp,
+      sourceXpEach,
+      sourceXp,
+      combinedXp: destinationXp + sourceXp,
+      resultXp,
+      xpDebt,
+      capped: modelResultLevel === effectiveCap && effectiveCap < catalogueCap
+    };
   }
 
   function monumentItems(kind = "") {
@@ -1463,6 +1654,120 @@
     return findings;
   }
 
+  function mergeTowerOptions(selected) {
+    return towerTypes().map(type =>
+      `<option value="${escapeHtml(type)}" ${type === selected ? "selected" : ""}>${escapeHtml(type)}</option>`
+    ).join("");
+  }
+
+  function renderMergeCalculator() {
+    if (!mergeDraft) mergeDraft = blankMergeDraft();
+    const draft = normaliseMergeDraft(mergeDraft);
+    const result = mergeResult?.ok ? mergeResult : null;
+    const resultLabel = result?.resultSource === "wd-preview"
+      ? "WD preview result"
+      : "Estimated result";
+    const modelDifference = result?.previewLevel !== null &&
+      result?.previewLevel !== result?.modelResultLevel
+      ? `<p class="obc-merge-variance">The 45% model estimated level ${formatNumber(result.modelResultLevel)}, while the WD preview shows level ${formatNumber(result.previewLevel)}. Onyx is using the WD preview for the XP calculation.</p>`
+      : "";
+    return `
+      <section class="obc-source-banner merge-ready">
+        <strong>Tower Merge Intelligence</strong>
+        <p>Estimate the kept tower's resulting level using the verified 45% transferable-value model. If WD shows a preview level, enter it and the game preview becomes the source of truth.</p>
+      </section>
+
+      <section class="obc-merge-command">
+        <div class="obc-section-heading obc-merge-heading">
+          <div><p>MERGE CALCULATOR</p><h3>Build the merge before you confirm it</h3></div>
+          <span>Tap-first · estimate</span>
+        </div>
+
+        <div class="obc-merge-pair">
+          <article class="obc-merge-tower kept">
+            <div class="obc-merge-step"><span>01</span><div><small>TOWER BEING KEPT</small><strong>Destination tower</strong></div></div>
+            <div class="obc-merge-tower-mark">${towerIcon(draft.destinationType)}</div>
+            <label>Tower type
+              <select id="obcMergeDestinationType">${mergeTowerOptions(draft.destinationType)}</select>
+            </label>
+            <label>Current level
+              <input id="obcMergeDestinationLevel" type="number" min="1" max="999" inputmode="numeric" value="${draft.destinationLevel}">
+            </label>
+          </article>
+
+          <div class="obc-merge-transfer" aria-hidden="true">
+            <span>45%</span>
+            <svg viewBox="0 0 64 32"><path d="M4 16h48M42 6l12 10-12 10"/></svg>
+          </div>
+
+          <article class="obc-merge-tower consumed">
+            <div class="obc-merge-step"><span>02</span><div><small>TOWER BEING CONSUMED</small><strong>Source tower</strong></div></div>
+            <div class="obc-merge-tower-mark">${towerIcon(draft.sourceType)}</div>
+            <label>Tower type
+              <select id="obcMergeSourceType">${mergeTowerOptions(draft.sourceType)}</select>
+            </label>
+            <div class="obc-form-row">
+              <label>Current level
+                <input id="obcMergeSourceLevel" type="number" min="1" max="999" inputmode="numeric" value="${draft.sourceLevel}">
+              </label>
+              <label>Quantity
+                <input id="obcMergeQuantity" type="number" min="1" max="100" inputmode="numeric" value="${draft.quantity}">
+              </label>
+            </div>
+          </article>
+        </div>
+
+        <article class="obc-merge-limits">
+          <div class="obc-merge-step"><span>03</span><div><small>LIMITS &amp; VERIFICATION</small><strong>Set the current cap</strong></div></div>
+          <div class="obc-form-row">
+            <label>Your current maximum tower level
+              <input id="obcMergeMaximumLevel" type="number" min="1" max="999" inputmode="numeric" value="${draft.maximumTowerLevel}">
+            </label>
+            <label>WD preview result level <em>Optional</em>
+              <input id="obcMergePreviewLevel" type="number" min="1" max="999" inputmode="numeric" value="${escapeHtml(draft.previewResultLevel)}" placeholder="Leave blank to estimate">
+            </label>
+          </div>
+          <p>The tower cap is your maximum buildable tower level, not your player level.</p>
+        </article>
+
+        <div class="obc-merge-actions">
+          <button id="obcCalculateMerge" class="primary" type="button">Calculate estimated merge</button>
+          <button id="obcResetMerge" type="button">Reset</button>
+        </div>
+        ${mergeMessage ? `<p class="obc-merge-message ${mergeResult?.ok === false ? "error" : ""}" role="status">${escapeHtml(mergeMessage)}</p>` : ""}
+      </section>
+
+      ${result ? `
+        <section class="obc-merge-result ${result.levelsGained ? "gain" : "flat"}">
+          <div class="obc-merge-result-hero">
+            <div>${towerIcon(result.destinationType)}</div>
+            <span><small>${escapeHtml(resultLabel)}</small><strong>Level ${formatNumber(result.resultLevel)}</strong><em>+${formatNumber(result.levelsGained)} level${result.levelsGained === 1 ? "" : "s"}</em></span>
+            <b>≈</b>
+          </div>
+          <div class="obc-merge-route-copy">
+            <article><small>Keep</small><strong>${escapeHtml(result.destinationType)}</strong><span>Level ${formatNumber(result.destinationLevel)}</span></article>
+            <article><small>Consume</small><strong>${result.quantity > 1 ? `${formatNumber(result.quantity)} × ` : ""}${escapeHtml(result.sourceType)}</strong><span>Level ${formatNumber(result.sourceLevel)}</span></article>
+            <article><small>Result source</small><strong>${result.resultSource === "wd-preview" ? "WD preview" : "45% model"}</strong><span>${result.resultSource === "wd-preview" ? "Verified in game" : "Estimated only"}</span></article>
+          </div>
+          <div class="obc-merge-xp-grid">
+            <article><small>XP in kept tower</small><strong>${formatNumber(result.destinationXp)}</strong></article>
+            <article><small>XP in consumed tower${result.quantity === 1 ? "" : "s"}</small><strong>${formatNumber(result.sourceXp)}</strong></article>
+            <article><small>XP retained by result</small><strong>${formatNumber(result.resultXp)}</strong></article>
+            <article class="debt"><small>Estimated player XP debt</small><strong>≈ ${formatNumber(result.xpDebt)}</strong></article>
+          </div>
+          ${modelDifference}
+          ${result.capped ? '<p class="obc-merge-cap-note">The estimated result reached the cap you entered. A higher cap may change the result.</p>' : ""}
+          ${result.levelsGained ? "" : '<p class="obc-merge-cap-note">This combination does not contain enough transferable value to raise the kept tower by an exact catalogue level.</p>'}
+        </section>
+      ` : ""}
+
+      <section class="obc-honesty-note obc-merge-honesty">
+        <strong>Every figure is an estimate until WD shows the preview.</strong>
+        <p>The model transfers 45% of recorded eligible construction value, applies the tower cap, and uses exact catalogue XP rows. Always compare the result with WD before confirming the merge.</p>
+      </section>
+    `;
+  }
+
   function renderAdvisor() {
     if (!savedSnapshot || dirty || !profileSaved) {
       return `
@@ -1540,10 +1845,17 @@
         <nav class="obc-tabs" role="tablist" aria-label="Base command sections">
           <button type="button" role="tab" aria-selected="${activeTab === "intelligence"}" aria-controls="obcCommandPanel" data-obc-tab="intelligence" class="${activeTab === "intelligence" ? "active" : ""}">Tower Intelligence</button>
           <button type="button" role="tab" aria-selected="${activeTab === "builder"}" aria-controls="obcCommandPanel" data-obc-tab="builder" class="${activeTab === "builder" ? "active" : ""}">Tactical Map</button>
+          <button type="button" role="tab" aria-selected="${activeTab === "merge"}" aria-controls="obcCommandPanel" data-obc-tab="merge" class="${activeTab === "merge" ? "active" : ""}">Tower Merge</button>
           <button type="button" role="tab" aria-selected="${activeTab === "advisor"}" aria-controls="obcCommandPanel" data-obc-tab="advisor" class="${activeTab === "advisor" ? "active" : ""}">Base Advisor${profileSaved ? "" : '<span aria-hidden="true"></span>'}</button>
         </nav>
         <main id="obcCommandPanel" class="obc-body" role="tabpanel">
-          ${activeTab === "intelligence" ? renderIntelligence() : activeTab === "builder" ? renderBuilder() : renderAdvisor()}
+          ${activeTab === "intelligence"
+            ? renderIntelligence()
+            : activeTab === "builder"
+              ? renderBuilder()
+              : activeTab === "merge"
+                ? renderMergeCalculator()
+                : renderAdvisor()}
         </main>
       </div>
     `;
@@ -1694,6 +2006,18 @@
     if (dockMessage) dockMessage.textContent = saveMessage;
   }
 
+  function readMergeForm(overlay) {
+    return normaliseMergeDraft({
+      destinationType: overlay.querySelector("#obcMergeDestinationType")?.value,
+      destinationLevel: overlay.querySelector("#obcMergeDestinationLevel")?.value,
+      sourceType: overlay.querySelector("#obcMergeSourceType")?.value,
+      sourceLevel: overlay.querySelector("#obcMergeSourceLevel")?.value,
+      quantity: overlay.querySelector("#obcMergeQuantity")?.value,
+      maximumTowerLevel: overlay.querySelector("#obcMergeMaximumLevel")?.value,
+      previewResultLevel: overlay.querySelector("#obcMergePreviewLevel")?.value
+    });
+  }
+
   function bindEvents(overlay) {
     overlay.querySelector("#obcClose")?.addEventListener("click", close);
     overlay.addEventListener("click", event => {
@@ -1721,6 +2045,29 @@
     overlay.querySelector("#obcTowerLevel")?.addEventListener("change", event => {
       selectedLevel = Number.parseInt(event.target.value, 10) || 1;
       render({ focusSelector: "#obcTowerLevel" });
+    });
+
+    overlay.querySelector("#obcCalculateMerge")?.addEventListener("click", () => {
+      mergeDraft = readMergeForm(overlay);
+      mergeResult = estimateMerge(mergeDraft);
+      mergeMessage = mergeResult.ok
+        ? mergeResult.resultSource === "wd-preview"
+          ? "WD preview applied · estimated XP debt updated."
+          : "Estimated merge calculated from exact catalogue rows."
+        : mergeResult.message;
+      saveMergeDraft();
+      render({
+        focusSelector: "#obcCalculateMerge",
+        scrollSelector: mergeResult.ok ? ".obc-merge-result" : ".obc-merge-message"
+      });
+    });
+
+    overlay.querySelector("#obcResetMerge")?.addEventListener("click", () => {
+      mergeDraft = blankMergeDraft();
+      mergeResult = null;
+      mergeMessage = "Merge calculator reset.";
+      localStorage.removeItem(storageKey(MERGE_STORAGE_PREFIX));
+      render({ focusSelector: "#obcMergeDestinationType" });
     });
 
     overlay.querySelector("#obcCreateLayout")?.addEventListener("click", () => {
@@ -2055,7 +2402,7 @@
   }
 
   function open(tab = "intelligence") {
-    activeTab = ["builder", "advisor"].includes(tab) ? tab : "intelligence";
+    activeTab = ["builder", "merge", "advisor"].includes(tab) ? tab : "intelligence";
     lastFocused = document.activeElement;
     const currentUser = userId() || "signed-out";
     if (openedForUser !== null && openedForUser !== currentUser) {
@@ -2064,6 +2411,7 @@
     }
     openedForUser = currentUser;
     readLocal();
+    readMergeDraft();
     refreshInventory();
     render();
     const overlay = ensureOverlay();
@@ -2105,6 +2453,7 @@
     close,
     createLayout,
     estimateLayout,
+    estimateMerge,
     getLayout: () => clone(layout),
     getTowerRecord: (type, level) => clone(exactRow(type, level))
   });
