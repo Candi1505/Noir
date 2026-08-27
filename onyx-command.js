@@ -436,7 +436,7 @@
         <div><p class="onyx-command-kicker">BRANCH EXPLORER</p><h3>Misfitrise command map</h3></div>
         <span class="onyx-source-chip">${release.branchCount} branches</span>
       </div>
-      <p class="onyx-branch-intro">Tap-first reference cards show branch purpose, size, completion cost and every verified key stop without exposing the private source file.</p>
+      <p class="onyx-branch-intro">Tap-first reference cards show branch purpose, size, completion cost and every verified key stop.</p>
       <div class="onyx-branch-grid">
         ${release.branches.map(branch => {
           const cost = branch.completionCost === null
@@ -469,10 +469,6 @@
           <article><span>03</span><strong>${release.mythicUnlockKeys}-key mythic gate</strong><p>Patchmaw and Smirkle each require their own unlock decision.</p></article>
           <article><span>04</span><strong>No self-funding unlock</strong><p>Keys returned inside a mythic branch do not count toward opening that same branch.</p></article>
         </div>
-      </section>
-      <section class="onyx-source-banner manual">
-        <strong>Private source boundary</strong>
-        <p>Only reviewed branch totals and checkpoints ship with Onyx. Account details, credentials and the private source file never enter the public app or player profile.</p>
       </section>
     `;
   }
