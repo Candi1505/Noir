@@ -24,9 +24,12 @@ assert.doesNotMatch(
   "The Onyx mobile shell must use its SVG icon system instead of emoji."
 );
 
-assert.match(baseSource, /YOUR LAYOUT IS NOT IN THE HAR/);
+assert.match(baseSource, /ADD YOUR BASE LAYOUT/);
 assert.match(baseSource, /Array\.from\(\{ length: TOTAL_SLOTS \}, \(\) => null\)/);
 assert.doesNotMatch(baseSource, /Math\.pow|defensivePower\s*=|estimatedDp/i);
+const intelSection = html.match(/<section id="intelView"[\s\S]*?<!-- ======================================\s+HISTORY VIEW/)[0];
+assert.doesNotMatch(intelSection, /\bHAR\b|captur|sanitis|labelled by source/i);
+assert.doesNotMatch(commandSource + baseSource, /\bHAR\b|captur|sanitis/i);
 assert.match(profileSql, /jsonb_array_length\(candidate -> 'slots'\) = 40/);
 assert.match(profileSql, /alter table public\.player_base_layouts enable row level security/i);
 assert.match(profileSql, /revoke all on table public\.player_base_layouts from anon, authenticated/i);

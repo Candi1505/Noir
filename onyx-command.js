@@ -191,15 +191,15 @@
     const value = commandState.currentKeys === null ? "" : commandState.currentKeys;
     return shell("Season Command", "MISFITRISE · WAVE 1", `
       <section class="onyx-source-banner verified">
-        <strong>Capture-verified season graph</strong>
-        <p>12 captured branches and 558 logical nodes. This route is recalculated from Wave 1 data, not treated as permanent.</p>
+        <strong>Verified Wave 1 season graph</strong>
+        <p>12 verified branches and 558 mapped nodes. This route is calculated for Wave 1 and is not treated as permanent.</p>
       </section>
 
       <section class="onyx-command-section onyx-key-entry">
         <div>
           <p class="onyx-command-kicker">YOUR PROGRESS</p>
           <h3>How many keys have you earned?</h3>
-          <p>This is manual because the captured file does not prove your current claimed-key count.</p>
+          <p>Your claimed-key count belongs to your profile, so you add and update it yourself.</p>
         </div>
         <label>
           <span>Current keys</span>
@@ -211,7 +211,7 @@
 
       <section class="onyx-command-section">
         <div class="onyx-section-heading">
-          <div><p class="onyx-command-kicker">ROAD TO 20 KEYS</p><h3>Lowest captured Wave 1 route</h3></div>
+          <div><p class="onyx-command-kicker">ROAD TO 20 KEYS</p><h3>Lowest verified Wave 1 route</h3></div>
           <span class="onyx-source-chip">90,803 sigils</span>
         </div>
         <div class="onyx-route-list">
@@ -277,12 +277,12 @@
     const gear = Array.isArray(catalogue.riderGear) ? catalogue.riderGear : [];
     return shell("Rider Intelligence", "RIDER CATALOGUE", `
       <section class="onyx-source-banner verified">
-        <strong>Captured rider, skill and gear catalogue</strong>
+        <strong>Verified rider, skill and gear catalogue</strong>
         <p>${formatNumber(riders.length)} rider names · ${formatNumber(skills.length)} skill definitions · ${formatNumber(gear.length)} gear definitions. This does not imply player ownership or a skill-to-rider association.</p>
       </section>
       <section class="onyx-command-section">
         <p class="onyx-command-kicker">SEARCH</p>
-        <h3>Explore captured intelligence</h3>
+        <h3>Explore rider intelligence</h3>
         <div class="onyx-rider-filters" role="group" aria-label="Rider catalogue type">
           ${[
             ["riders", "Riders"],
@@ -292,11 +292,11 @@
         </div>
         <input id="onyxRiderSearch" class="onyx-search" type="search" placeholder="Search this catalogue" value="${escapeHtml(riderCatalogueQuery)}" autocomplete="off">
         <div id="onyxRiderResults" class="onyx-rider-results">
-          <p class="onyx-empty-state">Loading captured catalogue…</p>
+          <p class="onyx-empty-state">Loading rider catalogue…</p>
         </div>
       </section>
       <section class="onyx-evidence-note onyx-rider-note">
-        Onyx shows only fields present in the sanitised catalogue. It does not infer which riders, levels, skills or gear belong to your account.
+        Onyx shows only verified catalogue fields. It does not infer which riders, levels, skills or gear belong to your account.
       </section>
     `);
   }
@@ -419,13 +419,13 @@
             <small>${category === "riders"
               ? `${item.defensive ? "Defensive / perch" : "Dragon rider"}${item.tier ? ` · Tier ${formatNumber(item.tier)}` : ""}`
               : category === "skills"
-                ? `Up to level ${formatNumber(item.maximumLevel)} · ${formatNumber(item.effects?.length || 0)} captured effect${item.effects?.length === 1 ? "" : "s"}`
+                ? `Up to level ${formatNumber(item.maximumLevel)} · ${formatNumber(item.effects?.length || 0)} verified effect${item.effects?.length === 1 ? "" : "s"}`
                 : `${escapeHtml(item.slotName || item.slot || "Gear")} · ${escapeHtml(item.element || "No element label")} · up to level ${formatNumber(item.maximumLevel)}`
             }</small>
             ${category === "gear" && Array.isArray(item.rarities) ? `<em>${item.rarities.map(escapeHtml).join(" · ")}</em>` : ""}
           </article>
         `).join("")
-      : `<p class="onyx-empty-state">No captured ${category} match that search.</p>`;
+      : `<p class="onyx-empty-state">No ${category} match that search.</p>`;
   }
 
   function bindOverlay(overlay) {

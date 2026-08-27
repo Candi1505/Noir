@@ -498,7 +498,7 @@
 
     if (!Array.isArray(entries)) {
       throw new Error(
-        "This file is JSON, but it is not a valid HAR capture."
+        "This private update file is not supported."
       );
     }
 
@@ -536,7 +536,7 @@
 
     if (!candidates.length) {
       throw new Error(
-        "No readable WD event/about_v2 response was found in this HAR file."
+        "No usable event intelligence was found in this private update."
       );
     }
 

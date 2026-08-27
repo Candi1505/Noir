@@ -752,7 +752,7 @@
   function parseHar(har) {
     if (!isHarObject(har)) {
       throw new Error(
-        "This file does not appear to be a valid HAR export."
+        "This private update file is not supported."
       );
     }
 
@@ -913,14 +913,14 @@
 
       if (!text) {
         throw new Error(
-          "The selected HAR file is empty."
+          "The selected private update file is empty."
         );
       }
 
       parsedData =
         parseJsonText(
           text,
-          "The selected HAR file"
+          "The selected private update file"
         );
     }
 
@@ -957,7 +957,7 @@
           HarGachaParser.parse(rawData);
 
         console.group(
-          "Onyx Command HAR Gacha Parser"
+          "Onyx Command Private Update Parser"
         );
 
         console.log(

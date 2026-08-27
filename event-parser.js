@@ -113,7 +113,7 @@ class EventParser {
 
     if (!gacha) {
       throw new Error(
-        "No gacha data was found in this about_v2 response."
+        "No chest data was found in this event update."
       );
     }
 

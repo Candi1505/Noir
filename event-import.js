@@ -296,12 +296,12 @@ document.addEventListener("DOMContentLoaded", () => {
         <div class="developer-summary">
 
           <p class="eyebrow">
-            HAR CHEST HISTORY
+            PRIVATE CHEST UPDATE
           </p>
 
           <h3>
             ${gachaOpeningCount}
-            opening request${gachaOpeningCount === 1 ? "" : "s"}
+            opening record${gachaOpeningCount === 1 ? "" : "s"}
           </h3>
 
           <p class="muted-text">
@@ -320,12 +320,12 @@ document.addEventListener("DOMContentLoaded", () => {
           </p>
 
           <h3>
-            No use_gacha history detected
+            No opening history detected
           </h3>
 
           <p class="muted-text">
-            Event data was imported successfully, but this
-            file did not contain HAR chest-opening requests.
+            Event intelligence was updated successfully, but
+            no usable chest-opening history was included.
           </p>
 
         </div>
@@ -647,7 +647,7 @@ document.addEventListener("DOMContentLoaded", () => {
       );
 
       statusText.textContent =
-        "Please choose an about_v2 JSON, text or HAR file first.";
+        "Please choose a supported private event update first.";
 
       results.classList.add("hidden");
 
