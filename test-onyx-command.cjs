@@ -4,6 +4,7 @@ const vm = require("node:vm");
 
 const html = fs.readFileSync("index.html", "utf8");
 const commandSource = fs.readFileSync("onyx-command.js", "utf8");
+const seasonSource = fs.readFileSync("onyx-season-data.js", "utf8");
 const baseSource = fs.readFileSync("onyx-base-command.js", "utf8");
 const commandCss = fs.readFileSync("onyx-command.css", "utf8");
 const chestToolsSource = fs.readFileSync("noir-chest-tools.js", "utf8");
@@ -17,12 +18,22 @@ assert.equal((html.match(/class="onyx-command-card /g) || []).length, 6);
 assert.equal((html.match(/class="navigation-button/g) || []).length, 3);
 assert.doesNotMatch(html, /<script[^>]+base-planner\.js/);
 assert.match(commandSource, /max="40"/);
-assert.match(commandSource, /Brickscale[\s\S]+19503/);
-assert.match(commandSource, /Charged Volt Tower[\s\S]+38800/);
-assert.match(commandSource, /90,803 sigils/);
+assert.match(seasonSource, /Brickscale[\s\S]+19503/);
+assert.match(seasonSource, /Charged Volt Tower[\s\S]+38800/);
+assert.match(seasonSource, /logicalNodeCount: 558/);
+assert.match(seasonSource, /preMythicKeyCount: 25/);
+assert.equal((seasonSource.match(/slug: "/g) || []).length, 12);
 assert.match(commandSource, /Wave 1/);
+assert.match(commandSource, /planSeasonRoute/);
+assert.match(commandSource, /Branch Explorer/);
+assert.match(commandSource, /Current sigils/);
+assert.match(commandSource, /Checkpoint detail needed/);
 assert.doesNotMatch(
-  html + commandSource + chestToolsSource + livePredictorSource,
+  seasonSource,
+  /"(?:sessionToken|cookie|email|playerId|request|response|headers?)"\s*:/i
+);
+assert.doesNotMatch(
+  html + commandSource + seasonSource + chestToolsSource + livePredictorSource,
   /\p{Extended_Pictographic}/u,
   "The Onyx mobile shell must use its SVG icon system instead of emoji."
 );
@@ -33,7 +44,9 @@ assert.match(
 assert.match(html, /onyx-tower-inventory-bridge\.js\?v=20260827-base-command-1/);
 assert.match(html, /database\.js\?v=20260827-monuments-perches-1/);
 assert.match(html, /onyx-base-command\.js\?v=20260827-merge-calculator-1/);
-assert.match(html, /onyx-command\.css\?v=20260827-merge-calculator-1/);
+assert.match(html, /onyx-season-data\.js\?v=20260827-season-branch-1/);
+assert.match(html, /onyx-command\.js\?v=20260827-season-branch-1/);
+assert.match(html, /onyx-command\.css\?v=20260827-season-branch-1/);
 assert.match(livePredictorSource, /ONYX COMMAND · CHEST INTELLIGENCE/);
 assert.match(livePredictorSource, /aria-pressed/);
 assert.match(livePredictorSource, /data-lp-chest-type/);
@@ -117,6 +130,11 @@ assert.ok(
 );
 assert.match(deleteFlow, /layout was kept because Onyx could not delete the profile copy/);
 assert.match(profileSql, /jsonb_array_length\(candidate -> 'slots'\) <> 40/);
+assert.match(profileSql, /is_valid_onyx_command_preferences/);
+assert.match(profileSql, /misfitrise-wave-1/);
+assert.match(profileSql, /'Patchmaw', 'Smirkle'/);
+assert.match(profileSql, /"charged-volt-tower": 6/);
+assert.match(profileSql, /currentSigils/);
 assert.match(profileSql, /top_level\.key not in \('version', 'name', 'slots', 'perches', 'updatedAt'\)/);
 assert.match(profileSql, /'type', 'level', 'notes', 'rune', 'glyph', 'relic'/);
 assert.match(profileSql, /jsonb_array_length\(candidate -> 'perches'\) <> 3/);
@@ -160,6 +178,51 @@ vm.runInContext(fs.readFileSync("base-adviser-catalog-towers.js", "utf8"), sandb
 vm.runInContext(fs.readFileSync("base-adviser-catalog-monuments.js", "utf8"), sandbox);
 vm.runInContext(fs.readFileSync("base-adviser-catalog-people.js", "utf8"), sandbox);
 vm.runInContext(baseSource, sandbox);
+vm.runInContext(seasonSource, sandbox);
+vm.runInContext(commandSource, sandbox);
+
+const zeroRoute = JSON.parse(JSON.stringify(sandbox.OnyxCommand.planSeasonRoute()));
+assert.equal(zeroRoute.claimedKeys, 0);
+assert.equal(zeroRoute.plannedKeys, 20);
+assert.equal(zeroRoute.additionalSigils, 90803);
+assert.deepEqual(
+  zeroRoute.selection.map(item => [item.branch, item.addedKeys, item.sigils]),
+  [
+    ["Brickscale", 6, 19503],
+    ["Mission Bonus", 1, 6600],
+    ["Base Boost", 6, 19500],
+    ["Charged Volt Tower", 6, 38800],
+    ["Cosmic Orrery", 1, 6400]
+  ]
+);
+
+const progressedRoute = JSON.parse(JSON.stringify(sandbox.OnyxCommand.planSeasonRoute({
+  branchKeys: {
+    "brickscale": 6,
+    "mission-bonus": 1,
+    "base-boost": 6,
+    "charged-volt-tower": 6,
+    "cosmic-orrery": 0,
+    "bloodstone": 0
+  }
+})));
+assert.equal(progressedRoute.claimedKeys, 19);
+assert.equal(progressedRoute.additionalKeys, 1);
+assert.equal(progressedRoute.additionalSigils, 6400);
+assert.deepEqual(progressedRoute.selection.map(item => item.branch), ["Cosmic Orrery"]);
+
+const savedSeasonState = JSON.parse(JSON.stringify(sandbox.OnyxCommand.normaliseCommandState({
+  currentKeys: 23,
+  currentSigils: 45678,
+  mythicChoice: "Smirkle",
+  branchKeys: { "brickscale": 99, "bloodstone": 2, unknown: 4 }
+})));
+assert.equal(savedSeasonState.version, 2);
+assert.equal(savedSeasonState.currentSigils, 45678);
+assert.equal(savedSeasonState.mythicChoice, "Smirkle");
+assert.equal(savedSeasonState.branchKeys.brickscale, 6);
+assert.equal(savedSeasonState.branchKeys.bloodstone, 2);
+assert.equal("unknown" in savedSeasonState.branchKeys, false);
 
 const blankLayout = sandbox.OnyxBaseCommand.createLayout("Test Base");
 assert.equal(blankLayout.name, "Test Base");

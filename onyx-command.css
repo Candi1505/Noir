@@ -4302,3 +4302,775 @@ body.onyx-modal-open {
 .obc-shell .obc-tabs {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
+
+/* Season Command */
+.onyx-season-tabs {
+  position: sticky;
+  top: 82px;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
+  padding: 6px;
+  border: 1px solid rgba(219, 190, 103, .2);
+  border-radius: 16px;
+  background: rgba(6, 7, 10, .94);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, .28);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.onyx-season-tabs button {
+  min-height: 45px;
+  padding: 8px 7px;
+  border: 1px solid transparent;
+  border-radius: 11px;
+  background: transparent;
+  color: #7f818b;
+  font-size: .72rem;
+  font-weight: 850;
+}
+
+.onyx-season-tabs button.active {
+  border-color: rgba(226, 187, 85, .46);
+  background:
+    radial-gradient(circle at 50% 120%, rgba(149, 79, 228, .25), transparent 62%),
+    rgba(67, 48, 35, .28);
+  color: #e6c971;
+  box-shadow: inset 0 -2px rgba(145, 82, 225, .52), 0 0 18px rgba(209, 167, 60, .08);
+}
+
+.onyx-season-tab-panel {
+  display: grid;
+  gap: 13px;
+}
+
+.onyx-season-hero-panel {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: 145px minmax(0, 1fr);
+  align-items: center;
+  gap: 18px;
+  min-height: 230px;
+  padding: 21px;
+  overflow: hidden;
+  border: 1px solid rgba(216, 184, 93, .28);
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at 12% 40%, rgba(130, 68, 222, .25), transparent 30%),
+    radial-gradient(circle at 92% 12%, rgba(220, 178, 65, .12), transparent 32%),
+    linear-gradient(145deg, rgba(20, 18, 25, .98), rgba(7, 8, 12, .98));
+  box-shadow: 0 18px 38px rgba(0, 0, 0, .34), inset 0 1px rgba(255, 255, 255, .035);
+}
+
+.onyx-season-hero-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  opacity: .42;
+  background-image:
+    linear-gradient(rgba(201, 206, 220, .035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(201, 206, 220, .035) 1px, transparent 1px);
+  background-size: 29px 29px;
+  mask-image: linear-gradient(90deg, transparent, #000 25%, #000);
+}
+
+.onyx-season-hero-panel > div:nth-child(2) h3 {
+  color: #ebe7e1;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(1.45rem, 5vw, 2.2rem);
+  font-weight: 400;
+  line-height: 1.08;
+}
+
+.onyx-season-hero-panel > div:nth-child(2) > p:last-child {
+  max-width: 430px;
+  margin-top: 9px;
+  color: #92939e;
+  font-size: .8rem;
+  line-height: 1.45;
+}
+
+.onyx-season-orbit {
+  --season-progress: 0;
+  position: relative;
+  width: 132px;
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, #0a0b0f 0 59%, transparent 60%),
+    conic-gradient(from 210deg, #d8ad42 calc(var(--season-progress) * 1%), #28242f 0);
+  box-shadow: inset 0 0 0 7px #0a0b0f, 0 0 0 1px rgba(212, 216, 227, .26), 0 0 32px rgba(130, 65, 224, .22);
+}
+
+.onyx-season-orbit::before {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border: 1px dashed rgba(180, 139, 241, .34);
+  border-radius: 50%;
+}
+
+.onyx-season-orbit > span:first-child {
+  display: flex;
+  align-items: baseline;
+  color: #dedde3;
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+.onyx-season-orbit strong {
+  color: #e1bb57;
+  font-size: 2.8rem;
+  font-weight: 400;
+  line-height: 1;
+}
+
+.onyx-season-orbit small {
+  color: #9a98a3;
+  font-size: .9rem;
+}
+
+.onyx-season-orbit-key {
+  position: absolute;
+  bottom: 18px;
+  width: 18px;
+  height: 18px;
+  color: #b98bfa;
+}
+
+.onyx-season-orbit-key svg,
+.onyx-season-intel-glyph svg,
+.onyx-branch-name .onyx-svg-icon svg {
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.onyx-season-orbit-key svg .fill,
+.onyx-season-intel-glyph svg .fill,
+.onyx-branch-name .onyx-svg-icon svg .fill {
+  fill: currentColor;
+  opacity: .36;
+}
+
+.onyx-season-metrics {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.onyx-season-metrics article {
+  padding: 12px;
+  border: 1px solid rgba(207, 211, 222, .14);
+  border-radius: 13px;
+  background: rgba(5, 6, 9, .66);
+}
+
+.onyx-season-metrics span,
+.onyx-season-metrics strong,
+.onyx-season-metrics small {
+  display: block;
+}
+
+.onyx-season-metrics span {
+  color: #81838d;
+  font-size: .62rem;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.onyx-season-metrics strong {
+  margin-top: 5px;
+  color: #e3c065;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.35rem;
+  font-weight: 400;
+}
+
+.onyx-season-metrics small {
+  margin-top: 2px;
+  color: #737580;
+  font-size: .62rem;
+}
+
+.onyx-season-metrics article.short strong {
+  color: #e17f84;
+}
+
+.onyx-season-field-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.onyx-season-field-grid label {
+  display: grid;
+  gap: 6px;
+}
+
+.onyx-season-field-grid label > span,
+.onyx-mythic-choice > span {
+  color: #aaabb4;
+  font-size: .72rem;
+  font-weight: 800;
+}
+
+.onyx-season-field-grid input {
+  width: 100%;
+  min-height: 49px;
+  border: 1px solid rgba(211, 215, 226, .23);
+  border-radius: 12px;
+  background: rgba(5, 6, 9, .82);
+  color: #e5e3e8;
+}
+
+.onyx-season-field-grid label small {
+  color: #777985;
+  font-size: .65rem;
+}
+
+.onyx-mythic-choice {
+  display: grid;
+  grid-template-columns: minmax(90px, .6fr) repeat(2, minmax(0, 1fr));
+  align-items: center;
+  gap: 8px;
+  margin-top: 15px;
+}
+
+.onyx-mythic-choice button {
+  min-height: 43px;
+  border: 1px solid rgba(181, 125, 245, .24);
+  border-radius: 12px;
+  background: rgba(10, 9, 14, .82);
+  color: #9895a2;
+  font-weight: 850;
+}
+
+.onyx-mythic-choice button.active {
+  border-color: rgba(223, 182, 76, .58);
+  background: linear-gradient(135deg, rgba(183, 137, 42, .21), rgba(112, 57, 180, .24));
+  color: #eed487;
+  box-shadow: inset 0 -2px rgba(153, 86, 235, .48), 0 0 16px rgba(207, 164, 56, .08);
+}
+
+.onyx-season-warning {
+  margin-top: 14px;
+  padding: 12px 13px;
+  border: 1px solid rgba(225, 133, 81, .34);
+  border-left: 3px solid #d98956;
+  border-radius: 11px;
+  background: rgba(113, 56, 29, .12);
+}
+
+.onyx-season-warning strong {
+  display: block;
+  color: #e8b18d;
+  font-size: .78rem;
+}
+
+.onyx-season-warning p {
+  margin-top: 4px;
+  color: #a18d82;
+  font-size: .72rem;
+  line-height: 1.4;
+}
+
+.onyx-season-progress-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.onyx-season-progress-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 92px;
+  padding: 12px;
+  border: 1px solid rgba(209, 213, 224, .15);
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(140, 73, 222, .1), transparent 40%),
+    #090a0e;
+}
+
+.onyx-season-progress-card span,
+.onyx-season-progress-card strong,
+.onyx-season-progress-card small {
+  display: block;
+}
+
+.onyx-season-progress-card > div:first-child > span {
+  color: #a17bd5;
+  font-size: .56rem;
+  font-weight: 850;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.onyx-season-progress-card strong {
+  margin-top: 3px;
+  color: #d9d8df;
+  font-size: .8rem;
+}
+
+.onyx-season-progress-card > div:first-child > small {
+  margin-top: 4px;
+  color: #747680;
+  font-size: .62rem;
+}
+
+.onyx-stepper {
+  display: grid;
+  grid-template-columns: 34px 44px 34px;
+  align-items: center;
+  overflow: hidden;
+  border: 1px solid rgba(209, 177, 84, .25);
+  border-radius: 11px;
+  background: #050609;
+}
+
+.onyx-stepper button {
+  min-height: 42px;
+  border: 0;
+  background: rgba(118, 67, 182, .14);
+  color: #d2ae57;
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+.onyx-stepper button:disabled {
+  color: #444650;
+  opacity: .55;
+}
+
+.onyx-stepper output {
+  color: #e0dee4;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.15rem;
+  text-align: center;
+}
+
+.onyx-stepper output small {
+  display: inline;
+  color: #747681;
+  font-size: .62rem;
+}
+
+.onyx-branch-intro {
+  margin: -3px 0 14px !important;
+}
+
+.onyx-branch-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.onyx-branch-card {
+  --branch-tone: #a06ee6;
+  position: relative;
+  isolation: isolate;
+  min-height: 215px;
+  padding: 14px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--branch-tone) 35%, #2e3038);
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--branch-tone) 12%, transparent), transparent 42%),
+    linear-gradient(145deg, rgba(16, 17, 22, .97), rgba(7, 8, 11, .99));
+}
+
+.onyx-branch-card.current { --branch-tone: #d3ad4d; }
+.onyx-branch-card.daily { --branch-tone: #69c8a1; }
+.onyx-branch-card.mythic { --branch-tone: #a16aee; }
+.onyx-branch-card.history { --branch-tone: #6c7688; }
+
+.onyx-branch-card::after {
+  content: "";
+  position: absolute;
+  right: 14%;
+  bottom: 0;
+  left: 14%;
+  height: 1px;
+  background: var(--branch-tone);
+  box-shadow: 0 0 10px var(--branch-tone);
+  opacity: .7;
+}
+
+.onyx-branch-card > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.onyx-branch-card > header span {
+  color: var(--branch-tone);
+  font-size: .57rem;
+  font-weight: 900;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+}
+
+.onyx-branch-card > header b {
+  color: #747681;
+  font-size: .61rem;
+}
+
+.onyx-branch-name {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.onyx-branch-name .onyx-svg-icon {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  padding: 7px;
+  border: 1px solid color-mix(in srgb, var(--branch-tone) 48%, #30313a);
+  border-radius: 50%;
+  color: var(--branch-tone);
+  background: rgba(3, 4, 6, .56);
+}
+
+.onyx-branch-name strong,
+.onyx-branch-name small {
+  display: block;
+}
+
+.onyx-branch-name strong {
+  color: #dedde3;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1rem;
+  font-weight: 400;
+}
+
+.onyx-branch-name small {
+  margin-top: 3px;
+  color: #7f818c;
+  font-size: .65rem;
+}
+
+.onyx-branch-cost {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 15px;
+  padding-top: 11px;
+  border-top: 1px solid rgba(206, 210, 222, .12);
+}
+
+.onyx-branch-cost span {
+  color: #777985;
+  font-size: .62rem;
+}
+
+.onyx-branch-cost strong {
+  color: #d9b859;
+  font-size: .73rem;
+  text-align: right;
+}
+
+.onyx-checkpoint-rail {
+  display: flex;
+  gap: 5px;
+  margin-top: 12px;
+  overflow-x: auto;
+  padding-bottom: 3px;
+  scrollbar-width: thin;
+}
+
+.onyx-checkpoint-rail span {
+  min-width: 60px;
+  padding: 6px 7px;
+  border: 1px solid rgba(213, 177, 76, .18);
+  border-radius: 9px;
+  background: rgba(3, 4, 6, .52);
+  color: #9b8a61;
+  font-size: .58rem;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.onyx-checkpoint-rail b {
+  display: block;
+  margin-bottom: 2px;
+  color: #bd8ef4;
+  font-size: .55rem;
+}
+
+.onyx-branch-note {
+  min-height: 42px;
+  margin-top: 12px;
+  color: #85838d;
+  font-size: .65rem;
+  line-height: 1.4;
+}
+
+.onyx-season-intel-hero {
+  display: grid;
+  grid-template-columns: 78px minmax(0, 1fr);
+  align-items: center;
+  gap: 17px;
+  min-height: 165px;
+  padding: 20px;
+  border: 1px solid rgba(212, 175, 74, .24);
+  border-radius: 19px;
+  background:
+    radial-gradient(circle at 0 50%, rgba(133, 70, 220, .22), transparent 35%),
+    linear-gradient(145deg, #111116, #08090d);
+}
+
+.onyx-season-intel-glyph {
+  width: 76px;
+  height: 76px;
+  padding: 16px;
+  border: 1px solid rgba(204, 165, 64, .32);
+  border-radius: 50%;
+  color: #dcb757;
+  background: rgba(4, 5, 8, .68);
+  box-shadow: 0 0 25px rgba(133, 67, 220, .18);
+}
+
+.onyx-season-intel-hero h3 {
+  color: #e3e0e3;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.65rem;
+  font-weight: 400;
+}
+
+.onyx-season-intel-hero div > p:last-child {
+  margin-top: 7px;
+  color: #858791;
+  font-size: .75rem;
+  line-height: 1.45;
+}
+
+.onyx-season-rule-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.onyx-season-rule-grid article {
+  min-height: 125px;
+  padding: 13px;
+  border: 1px solid rgba(208, 212, 223, .14);
+  border-radius: 13px;
+  background: #090a0e;
+}
+
+.onyx-season-rule-grid span {
+  display: block;
+  color: #9e70dc;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.25rem;
+}
+
+.onyx-season-rule-grid strong {
+  display: block;
+  margin-top: 7px;
+  color: #d8d7de;
+  font-size: .8rem;
+}
+
+.onyx-season-rule-grid p {
+  margin-top: 5px;
+  color: #797b85;
+  font-size: .68rem;
+  line-height: 1.4;
+}
+
+.onyx-season-save-bar {
+  position: sticky;
+  bottom: max(4px, env(safe-area-inset-bottom));
+  z-index: 2;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 11px;
+  padding: 13px;
+  border: 1px solid rgba(211, 176, 76, .37);
+  border-radius: 16px;
+  background: rgba(9, 9, 13, .95);
+  box-shadow: 0 -12px 28px rgba(0, 0, 0, .44), inset 0 1px rgba(255, 255, 255, .035);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.onyx-season-save-bar strong,
+.onyx-season-save-bar small {
+  display: block;
+}
+
+.onyx-season-save-bar strong {
+  color: #d9d7dc;
+  font-size: .82rem;
+}
+
+.onyx-season-save-bar small {
+  margin-top: 3px;
+  color: #777984;
+  font-size: .63rem;
+}
+
+.onyx-season-save-bar > div:nth-child(2) {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 7px;
+}
+
+.onyx-season-save-bar button {
+  min-height: 43px;
+  padding: 8px 14px;
+  border-radius: 11px;
+  font-weight: 850;
+}
+
+.onyx-season-save-bar button.secondary {
+  border: 1px solid rgba(208, 212, 223, .2);
+  background: #0a0b0f;
+  color: #a4a5ae;
+}
+
+.onyx-season-save-bar button.primary {
+  border: 1px solid rgba(226, 185, 76, .64);
+  background: linear-gradient(135deg, #a6762f, #6b3e95);
+  color: #fff9e9;
+}
+
+.onyx-season-save-bar > p {
+  grid-column: 1 / -1;
+  min-height: 0;
+  color: #8fbaa0;
+  font-size: .67rem;
+}
+
+@media (max-width: 620px) {
+  .onyx-season-tabs {
+    top: 82px;
+  }
+
+  .onyx-season-hero-panel {
+    grid-template-columns: 105px minmax(0, 1fr);
+    gap: 12px;
+    padding: 16px;
+  }
+
+  .onyx-season-orbit {
+    width: 98px;
+  }
+
+  .onyx-season-orbit strong {
+    font-size: 2.15rem;
+  }
+
+  .onyx-season-orbit-key {
+    bottom: 12px;
+    width: 15px;
+    height: 15px;
+  }
+
+  .onyx-season-progress-grid,
+  .onyx-branch-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .onyx-branch-card {
+    min-height: 0;
+  }
+}
+
+@media (max-width: 470px) {
+  .onyx-season-tabs button {
+    min-height: 42px;
+    padding: 6px 3px;
+    font-size: .62rem;
+  }
+
+  .onyx-season-hero-panel {
+    grid-template-columns: 88px minmax(0, 1fr);
+    border-radius: 16px;
+  }
+
+  .onyx-season-orbit {
+    width: 82px;
+  }
+
+  .onyx-season-orbit strong {
+    font-size: 1.8rem;
+  }
+
+  .onyx-season-orbit-key {
+    display: none;
+  }
+
+  .onyx-season-hero-panel > div:nth-child(2) h3 {
+    font-size: 1.25rem;
+  }
+
+  .onyx-season-hero-panel > div:nth-child(2) > p:last-child {
+    font-size: .7rem;
+  }
+
+  .onyx-season-metrics {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .onyx-season-metrics article:first-child {
+    grid-column: 1 / -1;
+  }
+
+  .onyx-season-field-grid,
+  .onyx-season-rule-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .onyx-mythic-choice {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .onyx-mythic-choice > span {
+    grid-column: 1 / -1;
+  }
+
+  .onyx-season-progress-card {
+    grid-template-columns: minmax(0, 1fr) 112px;
+    padding: 10px;
+  }
+
+  .onyx-stepper {
+    grid-template-columns: 32px 44px 32px;
+  }
+
+  .onyx-season-save-bar {
+    grid-template-columns: 1fr;
+  }
+
+  .onyx-season-save-bar > div:nth-child(2) {
+    grid-template-columns: 1fr 1.3fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .onyx-season-orbit::before {
+    animation: none;
+  }
+}

@@ -93,13 +93,45 @@ vm.runInContext(fs.readFileSync("database.js", "utf8"), sandbox);
 (async () => {
   const database = sandbox.window.ChestDatabase;
 
-  await database.saveOnyxCommandState({ currentKeys: 23 });
+  await database.saveOnyxCommandState({
+    currentKeys: 23,
+    currentSigils: 45678,
+    mythicChoice: "Smirkle",
+    branchKeys: {
+      "brickscale": 6,
+      "mission-bonus": 1,
+      "base-boost": 6,
+      "charged-volt-tower": 6,
+      "cosmic-orrery": 1,
+      "bloodstone": 0
+    },
+    rawSourceFile: "never persist"
+  });
   assert.deepEqual(operations.at(-1).filters, [["user_id", "player-one"]]);
-  assert.equal(operations.at(-1).payload.onyx_command_preferences.currentKeys, 23);
+  const seasonPreferences = operations.at(-1).payload.onyx_command_preferences;
+  assert.equal(seasonPreferences.version, 2);
+  assert.equal(seasonPreferences.currentKeys, 23);
+  assert.equal(seasonPreferences.currentSigils, 45678);
+  assert.equal(seasonPreferences.seasonRelease, "misfitrise-wave-1");
+  assert.equal(seasonPreferences.seasonTarget, 20);
+  assert.equal(seasonPreferences.mythicChoice, "Smirkle");
+  assert.equal(seasonPreferences.branchKeys["charged-volt-tower"], 6);
+  assert.equal("rawSourceFile" in seasonPreferences, false);
 
   await assert.rejects(
     database.saveOnyxCommandState({ currentKeys: 41 }),
     /0 to 40/
+  );
+  await assert.rejects(
+    database.saveOnyxCommandState({ currentKeys: 1, currentSigils: 100000001 }),
+    /100,000,000/
+  );
+  await assert.rejects(
+    database.saveOnyxCommandState({
+      currentKeys: 1,
+      branchKeys: { "brickscale": 7 }
+    }),
+    /brickscale/
   );
 
   const layout = {

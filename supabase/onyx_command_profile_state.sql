@@ -8,24 +8,136 @@ alter table public.profiles
   not null
   default '{"version":1,"currentKeys":null}'::jsonb;
 
+create or replace function public.is_valid_onyx_command_preferences(candidate jsonb)
+returns boolean
+language plpgsql
+immutable
+strict
+parallel safe
+set search_path = pg_catalog
+as $$
+declare
+  preference_version integer;
+  field_name text;
+  checkpoint_value jsonb;
+  checkpoint_limits jsonb := '{
+    "brickscale": 6,
+    "mission-bonus": 2,
+    "base-boost": 6,
+    "charged-volt-tower": 6,
+    "cosmic-orrery": 2,
+    "bloodstone": 3
+  }'::jsonb;
+begin
+  if jsonb_typeof(candidate) <> 'object'
+    or not (candidate ? 'version')
+    or jsonb_typeof(candidate -> 'version') <> 'number'
+    or candidate ->> 'version' not in ('1', '2')
+    or not (candidate ? 'currentKeys')
+    or jsonb_typeof(candidate -> 'currentKeys') not in ('null', 'number')
+    or exists (
+      select 1
+      from jsonb_object_keys(candidate) as top_level(key)
+      where top_level.key not in (
+        'version', 'currentKeys', 'currentSigils', 'seasonRelease',
+        'seasonTarget', 'mythicChoice', 'branchKeys', 'updatedAt'
+      )
+    )
+    or (
+      candidate ? 'updatedAt'
+      and (
+        jsonb_typeof(candidate -> 'updatedAt') <> 'string'
+        or char_length(candidate ->> 'updatedAt') not between 1 and 64
+      )
+    )
+  then
+    return false;
+  end if;
+
+  if jsonb_typeof(candidate -> 'currentKeys') = 'number'
+    and (
+      (candidate ->> 'currentKeys')::numeric not between 0 and 40
+      or (candidate ->> 'currentKeys')::numeric <>
+        trunc((candidate ->> 'currentKeys')::numeric)
+    )
+  then
+    return false;
+  end if;
+
+  preference_version := (candidate ->> 'version')::integer;
+  if preference_version = 1 then
+    return not (
+      candidate ? 'currentSigils'
+      or candidate ? 'seasonRelease'
+      or candidate ? 'seasonTarget'
+      or candidate ? 'mythicChoice'
+      or candidate ? 'branchKeys'
+    ) and octet_length(candidate::text) <= 4096;
+  end if;
+
+  if not (candidate ?& array[
+      'currentSigils', 'seasonRelease', 'seasonTarget',
+      'mythicChoice', 'branchKeys'
+    ])
+    or jsonb_typeof(candidate -> 'currentSigils') not in ('null', 'number')
+    or jsonb_typeof(candidate -> 'seasonRelease') <> 'string'
+    or candidate ->> 'seasonRelease' <> 'misfitrise-wave-1'
+    or jsonb_typeof(candidate -> 'seasonTarget') <> 'number'
+    or candidate ->> 'seasonTarget' <> '20'
+    or jsonb_typeof(candidate -> 'mythicChoice') <> 'string'
+    or candidate ->> 'mythicChoice' not in ('', 'Patchmaw', 'Smirkle')
+    or jsonb_typeof(candidate -> 'branchKeys') <> 'object'
+  then
+    return false;
+  end if;
+
+  if jsonb_typeof(candidate -> 'currentSigils') = 'number'
+    and (
+      (candidate ->> 'currentSigils')::numeric not between 0 and 100000000
+      or (candidate ->> 'currentSigils')::numeric <>
+        trunc((candidate ->> 'currentSigils')::numeric)
+    )
+  then
+    return false;
+  end if;
+
+  for field_name in select key from jsonb_object_keys(candidate -> 'branchKeys') as keys(key) loop
+    if not (checkpoint_limits ? field_name) then
+      return false;
+    end if;
+  end loop;
+
+  for field_name in select key from jsonb_object_keys(checkpoint_limits) as keys(key) loop
+    if not ((candidate -> 'branchKeys') ? field_name) then
+      return false;
+    end if;
+    checkpoint_value := candidate -> 'branchKeys' -> field_name;
+    if jsonb_typeof(checkpoint_value) <> 'number'
+      or (checkpoint_value #>> '{}')::numeric not between 0 and (checkpoint_limits ->> field_name)::numeric
+      or (checkpoint_value #>> '{}')::numeric <> trunc((checkpoint_value #>> '{}')::numeric)
+    then
+      return false;
+    end if;
+  end loop;
+
+  return octet_length(candidate::text) <= 4096;
+exception
+  when others then
+    return false;
+end;
+$$;
+
+revoke all on function public.is_valid_onyx_command_preferences(jsonb)
+  from public, anon;
+grant execute on function public.is_valid_onyx_command_preferences(jsonb)
+  to authenticated, service_role;
+
 alter table public.profiles
   drop constraint if exists profiles_onyx_command_preferences_valid;
 
 alter table public.profiles
   add constraint profiles_onyx_command_preferences_valid
-  check (
-    jsonb_typeof(onyx_command_preferences) = 'object'
-    and onyx_command_preferences @> '{"version":1}'::jsonb
-    and case jsonb_typeof(onyx_command_preferences -> 'currentKeys')
-      when 'null' then true
-      when 'number' then
-        (onyx_command_preferences ->> 'currentKeys')::numeric between 0 and 40
-        and (onyx_command_preferences ->> 'currentKeys')::numeric =
-          trunc((onyx_command_preferences ->> 'currentKeys')::numeric)
-      else false
-    end
-    and octet_length(onyx_command_preferences::text) <= 4096
-  );
+  check (public.is_valid_onyx_command_preferences(onyx_command_preferences));
 
 create table if not exists public.player_base_layouts (
   user_id uuid primary key references auth.users(id) on delete cascade,
