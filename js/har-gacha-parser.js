@@ -957,7 +957,7 @@
           HarGachaParser.parse(rawData);
 
         console.group(
-          "🐉 Chest Companion HAR Gacha Parser"
+          "Onyx Command HAR Gacha Parser"
         );
 
         console.log(

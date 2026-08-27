@@ -771,7 +771,7 @@ document.addEventListener("DOMContentLoaded", () => {
       });
 
       console.group(
-        "🐉 Noir Live Event Import"
+        "Onyx Command Live Event Import"
       );
 
       console.log(

@@ -149,7 +149,7 @@
       if (!access.isApproved) {
         show({
           message:
-            "This player account is blocked. Ask a NOIR administrator if you think this is a mistake.",
+            "This player account is blocked. Ask an Onyx administrator if you think this is a mistake.",
           failed: true,
           signedIn: true
         });
@@ -256,7 +256,7 @@
       if (!access.isApproved) {
         show({
           message:
-            "Your account was created but could not be opened. Ask a NOIR administrator to check it.",
+            "Your account was created but could not be opened. Ask an Onyx administrator to check it.",
           failed: true,
           signedIn: true
         });
@@ -325,7 +325,7 @@
 
   function beginPasswordRecovery({
     message =
-      "Choose and confirm your new Noir password."
+      "Choose and confirm your new Onyx password."
   } = {}) {
     passwordRecoveryActive = true;
     show({ message });
@@ -339,7 +339,7 @@
     ) {
       beginPasswordRecovery({
         message:
-          "Your Noir invitation is confirmed. Create and confirm your password to finish setting up your account."
+          "Your Onyx invitation is confirmed. Create and confirm your password to finish setting up your account."
       });
     }
   }
@@ -376,7 +376,7 @@
         .updateMemberPassword(password);
 
       setMessage(
-        "Password updated. Opening Noir..."
+        "Password updated. Opening Onyx Command..."
       );
       passwordRecoveryActive = false;
 

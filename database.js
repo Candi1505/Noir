@@ -84,7 +84,7 @@ window.ChestDatabase = {
         .signOut();
 
       throw new Error(
-        "This account does not have Noir administrator access."
+        "This account does not have Onyx administrator access."
       );
     }
 
@@ -511,6 +511,132 @@ window.ChestDatabase = {
     return data;
 
   },
+
+  async getAuthenticatedProfileUser() {
+    const supabaseClient = window.chestSupabase;
+
+    if (!supabaseClient) {
+      throw new Error("Supabase is not connected.");
+    }
+
+    const { data, error } = await supabaseClient.auth.getUser();
+
+    if (error) throw error;
+    if (!data.user) {
+      throw new Error("Sign in to sync your Onyx profile.");
+    }
+
+    return data.user;
+  },
+
+  async loadOnyxCommandState() {
+    const user = await this.getAuthenticatedProfileUser();
+    const { data, error } = await window.chestSupabase
+      .from("profiles")
+      .select("onyx_command_preferences")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (error) throw error;
+    return data?.onyx_command_preferences || null;
+  },
+
+  async saveOnyxCommandState(state) {
+    const rawKeys = state?.currentKeys;
+    const currentKeys = rawKeys === null || rawKeys === undefined
+      ? null
+      : Number(rawKeys);
+
+    if (
+      currentKeys !== null &&
+      (!Number.isInteger(currentKeys) || currentKeys < 0 || currentKeys > 40)
+    ) {
+      throw new Error("Current keys must be a whole number from 0 to 40.");
+    }
+
+    const user = await this.getAuthenticatedProfileUser();
+    const preferences = {
+      version: 1,
+      currentKeys,
+      updatedAt: new Date().toISOString()
+    };
+    const { data, error } = await window.chestSupabase
+      .from("profiles")
+      .update({ onyx_command_preferences: preferences })
+      .eq("user_id", user.id)
+      .select("onyx_command_preferences")
+      .single();
+
+    if (error) throw error;
+    return data.onyx_command_preferences;
+  },
+
+  async loadOnyxBaseLayout() {
+    const user = await this.getAuthenticatedProfileUser();
+    const { data, error } = await window.chestSupabase
+      .from("player_base_layouts")
+      .select("layout")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (error) throw error;
+    return data?.layout || null;
+  },
+
+  async saveOnyxBaseLayout(layout) {
+    let cleanLayout = null;
+
+    if (layout !== null) {
+      if (!layout || !Array.isArray(layout.slots) || layout.slots.length !== 40) {
+        throw new Error("An Onyx base layout must contain exactly 40 slots.");
+      }
+
+      const cleanSlots = layout.slots.map(slot => {
+        if (slot === null) return null;
+        const type = String(slot?.type || "").trim().slice(0, 80);
+        const level = Number(slot?.level);
+        const notes = String(slot?.notes || "").trim().slice(0, 250);
+
+        if (!type || !Number.isInteger(level) || level < 1 || level > 999) {
+          throw new Error("Each recorded tower needs a tower type and valid level.");
+        }
+
+        return { type, level, notes };
+      });
+
+      cleanLayout = {
+        version: 1,
+        name: String(layout.name || "My Base").trim().slice(0, 60) || "My Base",
+        slots: cleanSlots,
+        updatedAt: new Date().toISOString()
+      };
+    }
+
+    const user = await this.getAuthenticatedProfileUser();
+
+    if (cleanLayout === null) {
+      const { error } = await window.chestSupabase
+        .from("player_base_layouts")
+        .delete()
+        .eq("user_id", user.id);
+
+      if (error) throw error;
+      return null;
+    }
+
+    const { data, error } = await window.chestSupabase
+      .from("player_base_layouts")
+      .upsert(
+        { user_id: user.id, layout: cleanLayout },
+        { onConflict: "user_id" }
+      )
+      .select("layout")
+      .single();
+
+    if (error) throw error;
+    return data.layout;
+  },
+
   async getPredictor(chestType) {
 
   const supabaseClient =
