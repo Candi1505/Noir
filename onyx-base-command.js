@@ -615,25 +615,28 @@
                 <feGaussianBlur stdDeviation="5" result="blur"/>
                 <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
               </filter>
-              <pattern id="obcBlueprintHatch" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(34)">
-                <line x1="0" y1="0" x2="0" y2="10" class="zone-hatch-line"/>
-              </pattern>
               <marker id="obcRouteArrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
                 <path class="route-arrow-head" d="M1 1 9 5 1 9 3.5 5Z"/>
               </marker>
             </defs>
-            <path class="base-zone zone-left-run" d="M116 34 C60 52 43 130 64 207 C37 275 54 410 126 465 C191 514 286 467 278 389 C272 329 235 300 261 248 C299 173 286 91 225 48 C190 23 150 22 116 34 Z"/>
-            <path class="base-zone zone-upper-right" d="M346 74 C434 36 567 34 660 66 C733 91 747 161 700 215 C651 272 574 250 505 247 C441 245 413 296 346 302 C285 308 250 273 271 224 C293 174 294 96 346 74 Z"/>
-            <path class="base-zone zone-lower-right" d="M350 256 C430 229 536 243 652 277 C730 300 741 382 679 437 C606 501 459 510 351 476 C272 451 246 385 278 326 C298 289 320 267 350 256 Z"/>
-            <path class="route-shadow" d="M658 433 C564 418 465 396 386 356 C320 323 274 290 305 231 C345 157 489 78 655 112 C635 180 547 226 421 229 C337 231 286 270 252 331 C222 384 173 407 151 366 C125 315 142 180 207 99"/>
-            <path class="route-bed" d="M658 433 C564 418 465 396 386 356 C320 323 274 290 305 231 C345 157 489 78 655 112 C635 180 547 226 421 229 C337 231 286 270 252 331 C222 384 173 407 151 366 C125 315 142 180 207 99"/>
-            <path class="route-glow" filter="url(#obcRouteGlow)" d="M658 433 C564 418 465 396 386 356 C320 323 274 290 305 231 C345 157 489 78 655 112 C635 180 547 226 421 229 C337 231 286 270 252 331 C222 384 173 407 151 366 C125 315 142 180 207 99"/>
-            <path class="route-direction" marker-end="url(#obcRouteArrow)" d="M670 437 C578 423 490 402 405 365"/>
-            <path class="route-direction" marker-end="url(#obcRouteArrow)" d="M650 108 C575 91 465 119 379 190"/>
-            <path class="route-direction" marker-end="url(#obcRouteArrow)" d="M158 388 C126 308 151 178 207 96"/>
-            <circle class="route-node start" cx="658" cy="433" r="7"/>
-            <circle class="route-node crossover" cx="300" cy="261" r="5"/>
-            <circle class="route-node end" cx="207" cy="99" r="7"/>
+            <g class="route-segment lower-right-run">
+              <path class="route-shadow" d="M666 432 C600 420 510 397 428 368 C365 347 326 321 300 287"/>
+              <path class="route-bed" d="M666 432 C600 420 510 397 428 368 C365 347 326 321 300 287"/>
+              <path class="route-glow" filter="url(#obcRouteGlow)" d="M666 432 C600 420 510 397 428 368 C365 347 326 321 300 287"/>
+              <path class="route-direction" marker-end="url(#obcRouteArrow)" d="M666 432 C600 420 510 397 428 368 C365 347 326 321 300 287"/>
+            </g>
+            <g class="route-segment upper-right-run">
+              <path class="route-shadow" d="M666 107 C590 102 510 119 444 153 C382 184 337 219 301 257"/>
+              <path class="route-bed" d="M666 107 C590 102 510 119 444 153 C382 184 337 219 301 257"/>
+              <path class="route-glow" filter="url(#obcRouteGlow)" d="M666 107 C590 102 510 119 444 153 C382 184 337 219 301 257"/>
+              <path class="route-direction" marker-end="url(#obcRouteArrow)" d="M666 107 C590 102 510 119 444 153 C382 184 337 219 301 257"/>
+            </g>
+            <g class="route-segment left-run">
+              <path class="route-shadow" d="M167 408 C139 354 136 282 146 218 C156 158 178 113 211 82"/>
+              <path class="route-bed" d="M167 408 C139 354 136 282 146 218 C156 158 178 113 211 82"/>
+              <path class="route-glow" filter="url(#obcRouteGlow)" d="M167 408 C139 354 136 282 146 218 C156 158 178 113 211 82"/>
+              <path class="route-direction" marker-end="url(#obcRouteArrow)" d="M167 408 C139 354 136 282 146 218 C156 158 178 113 211 82"/>
+            </g>
           </svg>
           ${ISLANDS.map((island, islandIndex) => {
             const slots = islandSlots(layout, islandIndex);
