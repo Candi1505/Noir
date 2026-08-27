@@ -10,14 +10,14 @@
   const MAP_HEIGHT = 500;
 
   const ISLANDS = Object.freeze([
-    { name: "Gateway", form: "long", zone: "lower-right", x: 530, y: 326, width: 176, height: 108, tilt: -5 },
-    { name: "Ember Bend", form: "bend-left", zone: "lower-right", x: 338, y: 354, width: 178, height: 108, tilt: 5 },
-    { name: "Veil", form: "short", zone: "upper-right", x: 548, y: 82, width: 164, height: 104, tilt: 4 },
-    { name: "Northglass Bend", form: "bend-right", zone: "upper-right", x: 432, y: 152, width: 164, height: 106, tilt: -5 },
-    { name: "Pivot Reach", form: "long", zone: "upper-right", x: 294, y: 198, width: 174, height: 108, tilt: 6 },
-    { name: "Goldwake Bend", form: "bend-left", zone: "left-run", x: 106, y: 332, width: 170, height: 108, tilt: -4 },
-    { name: "Spire", form: "short", zone: "left-run", x: 84, y: 194, width: 164, height: 106, tilt: 4 },
-    { name: "Command Crown", form: "long", zone: "left-run", x: 116, y: 58, width: 184, height: 108, tilt: -3 }
+    { name: "Gateway", form: "long", zone: "lower-right", x: 445, y: 260, width: 180, height: 108, tilt: -5 },
+    { name: "Ember Bend", form: "bend-left", zone: "lower-right", x: 321, y: 340, width: 180, height: 108, tilt: 5 },
+    { name: "Veil", form: "short", zone: "upper-right", x: 518, y: 92, width: 170, height: 104, tilt: 4 },
+    { name: "Northglass Bend", form: "bend-right", zone: "upper-right", x: 338, y: 140, width: 170, height: 106, tilt: -5 },
+    { name: "Pivot Reach", form: "long", zone: "upper-right", x: 293, y: 220, width: 176, height: 108, tilt: 6 },
+    { name: "Goldwake Bend", form: "bend-left", zone: "left-run", x: 115, y: 310, width: 174, height: 108, tilt: -4 },
+    { name: "Spire", form: "short", zone: "left-run", x: 82, y: 190, width: 166, height: 106, tilt: 4 },
+    { name: "Command Crown", form: "long", zone: "left-run", x: 134, y: 78, width: 188, height: 108, tilt: -3 }
   ]);
 
   const RESOURCE_NAMES = Object.freeze({
@@ -620,22 +620,22 @@
               </marker>
             </defs>
             <g class="route-segment lower-right-run">
-              <path class="route-shadow" d="M666 432 C600 420 510 397 428 368 C365 347 326 321 300 287"/>
-              <path class="route-bed" d="M666 432 C600 420 510 397 428 368 C365 347 326 321 300 287"/>
-              <path class="route-glow" filter="url(#obcRouteGlow)" d="M666 432 C600 420 510 397 428 368 C365 347 326 321 300 287"/>
-              <path class="route-direction" marker-end="url(#obcRouteArrow)" d="M666 432 C600 420 510 397 428 368 C365 347 326 321 300 287"/>
+              <path class="route-shadow" d="M680 430 C588 427 480 409 410 370 C470 337 516 309 535 290 C450 276 365 268 300 270"/>
+              <path class="route-bed" d="M680 430 C588 427 480 409 410 370 C470 337 516 309 535 290 C450 276 365 268 300 270"/>
+              <path class="route-glow" filter="url(#obcRouteGlow)" d="M680 430 C588 427 480 409 410 370 C470 337 516 309 535 290 C450 276 365 268 300 270"/>
+              <path class="route-direction" marker-end="url(#obcRouteArrow)" d="M680 430 C588 427 480 409 410 370 C470 337 516 309 535 290 C450 276 365 268 300 270"/>
             </g>
             <g class="route-segment upper-right-run">
-              <path class="route-shadow" d="M666 107 C590 102 510 119 444 153 C382 184 337 219 301 257"/>
-              <path class="route-bed" d="M666 107 C590 102 510 119 444 153 C382 184 337 219 301 257"/>
-              <path class="route-glow" filter="url(#obcRouteGlow)" d="M666 107 C590 102 510 119 444 153 C382 184 337 219 301 257"/>
-              <path class="route-direction" marker-end="url(#obcRouteArrow)" d="M666 107 C590 102 510 119 444 153 C382 184 337 219 301 257"/>
+              <path class="route-shadow" d="M680 105 C635 101 612 112 600 125 C528 134 463 147 422 170 C392 195 381 223 380 250 C349 259 323 266 300 270"/>
+              <path class="route-bed" d="M680 105 C635 101 612 112 600 125 C528 134 463 147 422 170 C392 195 381 223 380 250 C349 259 323 266 300 270"/>
+              <path class="route-glow" filter="url(#obcRouteGlow)" d="M680 105 C635 101 612 112 600 125 C528 134 463 147 422 170 C392 195 381 223 380 250 C349 259 323 266 300 270"/>
+              <path class="route-direction" marker-end="url(#obcRouteArrow)" d="M680 105 C635 101 612 112 600 125 C528 134 463 147 422 170 C392 195 381 223 380 250 C349 259 323 266 300 270"/>
             </g>
             <g class="route-segment left-run">
-              <path class="route-shadow" d="M167 408 C139 354 136 282 146 218 C156 158 178 113 211 82"/>
-              <path class="route-bed" d="M167 408 C139 354 136 282 146 218 C156 158 178 113 211 82"/>
-              <path class="route-glow" filter="url(#obcRouteGlow)" d="M167 408 C139 354 136 282 146 218 C156 158 178 113 211 82"/>
-              <path class="route-direction" marker-end="url(#obcRouteArrow)" d="M167 408 C139 354 136 282 146 218 C156 158 178 113 211 82"/>
+              <path class="route-shadow" d="M181 410 C190 379 198 355 200 340 C185 292 166 252 165 220 C171 168 201 130 230 110"/>
+              <path class="route-bed" d="M181 410 C190 379 198 355 200 340 C185 292 166 252 165 220 C171 168 201 130 230 110"/>
+              <path class="route-glow" filter="url(#obcRouteGlow)" d="M181 410 C190 379 198 355 200 340 C185 292 166 252 165 220 C171 168 201 130 230 110"/>
+              <path class="route-direction" marker-end="url(#obcRouteArrow)" d="M181 410 C190 379 198 355 200 340 C185 292 166 252 165 220 C171 168 201 130 230 110"/>
             </g>
           </svg>
           ${ISLANDS.map((island, islandIndex) => {
