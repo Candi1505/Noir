@@ -1,6 +1,6 @@
 /* ============================================================
-   CHEST COMPANION BETA
-   LIVE PREDICTOR UI
+   ONYX COMMAND
+   LIVE CHEST PREDICTOR UI
 
    Must load after:
    - event-parser.js
@@ -16,7 +16,7 @@
 
   if (!Engine) {
     console.error(
-      "[Chest Companion] live-predictor-engine.js did not load."
+      "[Onyx Command] live-predictor-engine.js did not load."
     );
 
     return;
@@ -28,14 +28,20 @@
   const STYLE_ID =
     "ccLivePredictorStyles";
 
-  const CHEST_ICONS = {
-    gold: "G",
-    platinum: "P",
-    draconic: "D",
-    freedom: "F",
-    arcane: "A",
-    super_sigil: "S"
-  };
+  const ONYX_CREST = `<svg viewBox="0 0 64 76" aria-hidden="true" focusable="false"><path class="lp-icon-fill" d="m32 3 15 18-5 34-10 16-10-16-5-34Z"/><path d="m32 3 15 18-5 34-10 16-10-16-5-34Zm0 8v52M18 22l14 10 14-10M22 55l10-9 10 9"/></svg>`;
+
+  const CLOSE_ICON = `<svg viewBox="0 0 48 48" aria-hidden="true" focusable="false"><path d="m12 12 24 24M36 12 12 36"/></svg>`;
+
+  const CHEVRON_ICON = `<svg viewBox="0 0 48 48" aria-hidden="true" focusable="false"><path d="m19 10 14 14-14 14"/></svg>`;
+
+  const CHEST_ICONS = Object.freeze({
+    gold: `<svg viewBox="0 0 64 64" aria-hidden="true" focusable="false"><path d="M12 27h40v25H12zM9 27h46l-6-14H15ZM12 37h40"/><path class="lp-icon-fill" d="M27 32h10v14H27z"/></svg>`,
+    platinum: `<svg viewBox="0 0 64 64" aria-hidden="true" focusable="false"><path d="m32 8 18 14-7 29H21l-7-29Z"/><path d="m14 22 12 8 6-22 6 22 12-8M21 51l11-21 11 21"/><path class="lp-icon-fill" d="m32 15 5 9-5 6-5-6Z"/></svg>`,
+    draconic: `<svg viewBox="0 0 64 64" aria-hidden="true" focusable="false"><path d="M12 47c7-16 16-27 31-34-2 7 1 12 9 15-10 1-15 7-17 18-4-7-10-9-23 1Z"/><path d="m23 40 10-12 9 3M35 19l8 9"/><path class="lp-icon-fill" d="m41 24 5 3-5 3Z"/></svg>`,
+    freedom: `<svg viewBox="0 0 64 64" aria-hidden="true" focusable="false"><path d="M8 39c13-1 23-10 29-26 4 11 10 17 19 20-8 2-15 8-20 18-5-8-14-12-28-12Z"/><path d="M18 39c8-3 14-8 19-15M29 44c5-5 10-9 17-12"/><path class="lp-icon-fill" d="m36 16 4 8-5 6-3-7Z"/></svg>`,
+    arcane: `<svg viewBox="0 0 64 64" aria-hidden="true" focusable="false"><circle cx="32" cy="31" r="19"/><path d="m32 6 6 9-6 8-6-8ZM32 42v15M20 57h24M14 31h36"/><path class="lp-icon-fill" d="m32 22 7 9-7 10-7-10Z"/></svg>`,
+    super_sigil: `<svg viewBox="0 0 64 64" aria-hidden="true" focusable="false"><path d="m32 7 21 12v26L32 57 11 45V19Z"/><path d="m32 16 10 16-10 16-10-16ZM11 19l11 13-11 13M53 19 42 32l11 13"/><circle class="lp-icon-fill" cx="32" cy="32" r="4"/></svg>`
+  });
 
   let bonusProgressRenderTimer =
     null;
@@ -1994,19 +2000,745 @@
         font-size: 12px;
         line-height: 1.5;
       }
+
+      /* ======================================================
+         ONYX COMMAND · LIVE PREDICTOR REDESIGN
+      ====================================================== */
+
+      #${OVERLAY_ID} {
+        --lp-onyx: #9b67ff;
+        --lp-onyx-soft: #c7a8ff;
+        --lp-gold: #d8b866;
+        --lp-silver: #d9d9e2;
+
+        padding-left: 14px;
+        padding-right: 14px;
+
+        background:
+          radial-gradient(circle at 84% 3%, rgba(152, 94, 255, 0.17), transparent 30%),
+          radial-gradient(circle at 8% 26%, rgba(216, 184, 102, 0.10), transparent 28%),
+          radial-gradient(circle at 50% 92%, rgba(77, 42, 145, 0.11), transparent 38%),
+          linear-gradient(180deg, #05040a 0%, #020205 48%, #050308 100%);
+      }
+
+      #${OVERLAY_ID}::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        opacity: 0.16;
+        background-image:
+          linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+        background-size: 34px 34px;
+        mask-image: linear-gradient(to bottom, black, transparent 72%);
+        -webkit-mask-image: linear-gradient(to bottom, black, transparent 72%);
+      }
+
+      .lp-shell {
+        position: relative;
+        z-index: 1;
+      }
+
+      .lp-topbar {
+        top: max(8px, env(safe-area-inset-top));
+        margin: 0 0 17px;
+        padding: 14px 14px 14px 12px;
+        border: 1px solid rgba(151, 105, 235, 0.28);
+        border-radius: 23px;
+        background:
+          linear-gradient(125deg, rgba(21, 15, 35, 0.94), rgba(5, 5, 10, 0.97) 64%),
+          rgba(5, 5, 9, 0.95);
+        box-shadow:
+          0 22px 54px rgba(0, 0, 0, 0.52),
+          inset 0 1px rgba(255, 255, 255, 0.04),
+          0 0 40px rgba(109, 61, 191, 0.08);
+      }
+
+      .lp-topbar::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        pointer-events: none;
+        background: radial-gradient(circle at 15% -20%, rgba(216, 184, 102, 0.13), transparent 40%);
+      }
+
+      .lp-topbar-main,
+      .lp-brand-lockup,
+      .lp-brand-copy,
+      .lp-close {
+        position: relative;
+        z-index: 1;
+      }
+
+      .lp-brand-lockup {
+        display: flex;
+        align-items: center;
+        min-width: 0;
+        gap: 12px;
+      }
+
+      .lp-brand-copy {
+        min-width: 0;
+      }
+
+      .lp-brand-crest {
+        flex: 0 0 auto;
+        display: grid;
+        place-items: center;
+        width: 46px;
+        height: 54px;
+        color: var(--lp-onyx-soft);
+        filter: drop-shadow(0 0 13px rgba(155, 103, 255, 0.42));
+      }
+
+      .lp-brand-crest svg {
+        width: 31px;
+        height: 39px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+
+      .lp-brand-crest .lp-icon-fill {
+        fill: rgba(155, 103, 255, 0.13);
+      }
+
+      .lp-eyebrow,
+      .lp-section-kicker {
+        background: linear-gradient(90deg, #e2c575, #bca067 48%, #ae83ff);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+
+      .lp-topbar h1 {
+        color: #f1eff5;
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: clamp(21px, 5.4vw, 29px);
+        font-weight: 400;
+        letter-spacing: -0.035em;
+        text-shadow: 0 0 24px rgba(166, 124, 243, 0.08);
+      }
+
+      .lp-subtitle {
+        color: #9995a6;
+      }
+
+      .lp-close {
+        width: 46px;
+        height: 46px;
+        border-color: rgba(172, 137, 233, 0.32);
+        background:
+          radial-gradient(circle at 35% 25%, rgba(166, 119, 246, 0.17), transparent 54%),
+          linear-gradient(180deg, #18131f, #08070c);
+        color: #ded8e8;
+        box-shadow:
+          0 12px 26px rgba(0, 0, 0, 0.42),
+          inset 0 1px rgba(255, 255, 255, 0.05);
+      }
+
+      .lp-close svg {
+        width: 23px;
+        height: 23px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2.4;
+        stroke-linecap: round;
+      }
+
+      .lp-card {
+        margin-top: 13px;
+        padding: 19px;
+        border-color: rgba(135, 119, 161, 0.25);
+        background:
+          radial-gradient(circle at 100% 0, rgba(129, 76, 225, 0.075), transparent 32%),
+          linear-gradient(145deg, rgba(18, 17, 24, 0.98), rgba(5, 5, 9, 0.99));
+        box-shadow:
+          0 24px 54px rgba(0, 0, 0, 0.5),
+          inset 0 1px rgba(255, 255, 255, 0.035);
+      }
+
+      .lp-open .lp-card {
+        animation: lp-onyx-rise 0.48s cubic-bezier(0.22, 0.76, 0.28, 1) both;
+      }
+
+      .lp-open .lp-card:nth-of-type(2) {
+        animation-delay: 45ms;
+      }
+
+      .lp-open .lp-card:nth-of-type(3) {
+        animation-delay: 90ms;
+      }
+
+      .lp-card::before {
+        background: linear-gradient(90deg, transparent, rgba(219, 190, 116, 0.28), rgba(165, 111, 255, 0.34), transparent);
+      }
+
+      .lp-card::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        pointer-events: none;
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.012);
+      }
+
+      .lp-event-card {
+        min-height: 178px;
+        display: block;
+        border-color: rgba(216, 184, 102, 0.27);
+        background:
+          radial-gradient(circle at 94% 26%, rgba(216, 184, 102, 0.13), transparent 34%),
+          radial-gradient(circle at 9% 100%, rgba(145, 88, 241, 0.11), transparent 40%),
+          linear-gradient(135deg, rgba(18, 16, 20, 0.98), rgba(5, 5, 8, 0.99));
+      }
+
+      .lp-event-header {
+        position: relative;
+        z-index: 2;
+        width: 100%;
+        align-items: center;
+      }
+
+      .lp-event-sigil {
+        position: absolute;
+        z-index: 0;
+        top: 6px;
+        right: -14px;
+        width: 154px;
+        height: 154px;
+        color: #d8b866;
+        opacity: 0.08;
+        transform: rotate(-9deg);
+        transition: opacity 0.3s ease, transform 0.4s ease;
+        pointer-events: none;
+      }
+
+      .lp-event-sigil svg {
+        width: 100%;
+        height: 100%;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.5;
+      }
+
+      .lp-event-card.lp-event-ready .lp-event-sigil {
+        opacity: 0.16;
+        transform: rotate(-4deg) scale(1.03);
+      }
+
+      .lp-event-name {
+        color: #f0edf4;
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: clamp(25px, 6.4vw, 31px);
+        font-weight: 400;
+        letter-spacing: -0.035em;
+      }
+
+      .lp-status {
+        position: relative;
+        gap: 8px;
+        padding: 9px 13px;
+        border-width: 1px;
+        box-shadow: inset 0 1px rgba(255, 255, 255, 0.035);
+      }
+
+      .lp-status::before {
+        content: "";
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: currentColor;
+        box-shadow: 0 0 10px currentColor;
+      }
+
+      .lp-status-ready::before {
+        animation: lp-ready-pulse 2.4s ease-in-out infinite;
+      }
+
+      .lp-card-header {
+        position: relative;
+        z-index: 2;
+        align-items: center;
+      }
+
+      .lp-section-kicker {
+        margin: 0 0 6px;
+        font-size: 10px;
+        font-weight: 900;
+        letter-spacing: 0.2em;
+      }
+
+      .lp-section-index {
+        flex: 0 0 auto;
+        display: grid;
+        place-items: center;
+        width: 38px;
+        height: 38px;
+        border: 1px solid rgba(166, 117, 247, 0.22);
+        border-radius: 13px;
+        background: rgba(112, 61, 195, 0.07);
+        color: #9c7cc8;
+        font-size: 11px;
+        font-weight: 900;
+        letter-spacing: 0.08em;
+      }
+
+      .lp-card h2 {
+        color: #ece9f0;
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: 21px;
+        font-weight: 400;
+        letter-spacing: -0.025em;
+      }
+
+      .lp-chest-grid {
+        gap: 11px;
+        margin-top: 16px;
+      }
+
+      .lp-chest,
+      .lp-selected-card {
+        --lp-chest-accent: #d8b866;
+        --lp-chest-rgb: 216, 184, 102;
+      }
+
+      .lp-chest[data-lp-chest-type="platinum"],
+      .lp-selected-card[data-lp-chest-type="platinum"] {
+        --lp-chest-accent: #c6d1e7;
+        --lp-chest-rgb: 198, 209, 231;
+      }
+
+      .lp-chest[data-lp-chest-type="draconic"],
+      .lp-selected-card[data-lp-chest-type="draconic"] {
+        --lp-chest-accent: #a47af5;
+        --lp-chest-rgb: 164, 122, 245;
+      }
+
+      .lp-chest[data-lp-chest-type="freedom"],
+      .lp-selected-card[data-lp-chest-type="freedom"] {
+        --lp-chest-accent: #cf7b62;
+        --lp-chest-rgb: 207, 123, 98;
+      }
+
+      .lp-chest[data-lp-chest-type="arcane"],
+      .lp-selected-card[data-lp-chest-type="arcane"] {
+        --lp-chest-accent: #7d72df;
+        --lp-chest-rgb: 125, 114, 223;
+      }
+
+      .lp-chest[data-lp-chest-type="super_sigil"],
+      .lp-selected-card[data-lp-chest-type="super_sigil"] {
+        --lp-chest-accent: #d58ecb;
+        --lp-chest-rgb: 213, 142, 203;
+      }
+
+      .lp-chest {
+        min-height: 166px;
+        padding: 14px;
+        border-color: rgba(137, 123, 158, 0.28);
+        border-radius: 20px;
+        background:
+          radial-gradient(circle at 14% 7%, rgba(var(--lp-chest-rgb), 0.09), transparent 36%),
+          linear-gradient(145deg, rgba(20, 19, 25, 0.98), rgba(6, 6, 10, 0.99));
+        color: #cbc7d1;
+        box-shadow:
+          inset 0 1px rgba(255, 255, 255, 0.025),
+          0 14px 28px rgba(0, 0, 0, 0.24);
+        transition:
+          transform 0.2s ease,
+          border-color 0.25s ease,
+          box-shadow 0.25s ease,
+          background 0.25s ease;
+      }
+
+      .lp-chest::before {
+        inset: 0;
+        width: auto;
+        border-radius: inherit;
+        background: radial-gradient(circle at 0 0, rgba(var(--lp-chest-rgb), 0.11), transparent 45%);
+        opacity: 0.75;
+        pointer-events: none;
+      }
+
+      .lp-chest::after {
+        content: "";
+        position: absolute;
+        inset: -70% -55%;
+        pointer-events: none;
+        background: linear-gradient(110deg, transparent 42%, rgba(255, 255, 255, 0.13) 50%, transparent 58%);
+        transform: translateX(-48%) rotate(8deg);
+        opacity: 0;
+      }
+
+      .lp-chest.lp-active {
+        border-color: rgba(var(--lp-chest-rgb), 0.66);
+        background:
+          radial-gradient(circle at 16% 5%, rgba(var(--lp-chest-rgb), 0.23), transparent 42%),
+          linear-gradient(145deg, rgba(25, 21, 31, 0.99), rgba(7, 6, 11, 0.99));
+        box-shadow:
+          inset 0 1px rgba(255, 255, 255, 0.05),
+          0 0 0 1px rgba(var(--lp-chest-rgb), 0.08),
+          0 16px 34px rgba(0, 0, 0, 0.34),
+          0 0 28px rgba(var(--lp-chest-rgb), 0.09);
+        transform: translateY(-2px);
+      }
+
+      .lp-chest.lp-active::before {
+        background: radial-gradient(circle at 0 0, rgba(var(--lp-chest-rgb), 0.25), transparent 48%);
+      }
+
+      .lp-chest.lp-active::after {
+        animation: lp-active-glint 5.2s ease-in-out infinite;
+      }
+
+      .lp-chest:hover {
+        border-color: rgba(var(--lp-chest-rgb), 0.48);
+        transform: translateY(-2px);
+      }
+
+      .lp-chest-icon {
+        position: relative;
+        z-index: 1;
+        display: grid;
+        place-items: center;
+        width: 49px;
+        height: 49px;
+        margin-bottom: 17px;
+        border: 1px solid rgba(var(--lp-chest-rgb), 0.28);
+        border-radius: 16px;
+        background:
+          radial-gradient(circle at 38% 22%, rgba(var(--lp-chest-rgb), 0.18), transparent 58%),
+          rgba(9, 8, 13, 0.84);
+        color: var(--lp-chest-accent);
+        box-shadow:
+          inset 0 1px rgba(255, 255, 255, 0.04),
+          0 0 18px rgba(var(--lp-chest-rgb), 0.07);
+        transition: transform 0.24s ease, box-shadow 0.24s ease;
+      }
+
+      .lp-chest.lp-active .lp-chest-icon {
+        transform: translateY(-1px) scale(1.04);
+        box-shadow:
+          inset 0 1px rgba(255, 255, 255, 0.06),
+          0 0 22px rgba(var(--lp-chest-rgb), 0.16);
+      }
+
+      .lp-chest-icon svg,
+      .lp-inline-chest-icon svg {
+        width: 31px;
+        height: 31px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.9;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+
+      .lp-chest-icon .lp-icon-fill,
+      .lp-inline-chest-icon .lp-icon-fill {
+        fill: rgba(var(--lp-chest-rgb), 0.16);
+      }
+
+      .lp-chest-top {
+        position: relative;
+        z-index: 1;
+        align-items: flex-start;
+      }
+
+      .lp-chest-name {
+        color: #ebe7ef;
+        font-size: 16px;
+        letter-spacing: -0.02em;
+      }
+
+      .lp-chest-readiness {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding-top: 3px;
+      }
+
+      .lp-chest-readiness i {
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        background: currentColor;
+        box-shadow: 0 0 8px currentColor;
+      }
+
+      .lp-chest-stats {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        align-items: baseline;
+        gap: 5px;
+        margin-top: 9px;
+      }
+
+      .lp-chest-stats strong {
+        color: var(--lp-chest-accent);
+        font-size: 17px;
+        line-height: 1;
+      }
+
+      .lp-chest-stats span {
+        color: #85818d;
+        font-size: 10px;
+        line-height: 1.25;
+      }
+
+      .lp-chest-chevron {
+        position: absolute;
+        right: 11px;
+        bottom: 10px;
+        display: grid;
+        place-items: center;
+        width: 22px;
+        height: 22px;
+        color: rgba(var(--lp-chest-rgb), 0.46);
+        opacity: 0;
+        transform: translateX(-4px);
+        transition: opacity 0.2s ease, transform 0.2s ease;
+      }
+
+      .lp-chest-chevron svg {
+        width: 16px;
+        height: 16px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2;
+      }
+
+      .lp-chest.lp-active .lp-chest-chevron {
+        opacity: 1;
+        transform: translateX(0);
+      }
+
+      .lp-selected-card {
+        border-color: rgba(var(--lp-chest-rgb), 0.28);
+        background:
+          radial-gradient(circle at 100% 0, rgba(var(--lp-chest-rgb), 0.10), transparent 34%),
+          linear-gradient(145deg, rgba(18, 17, 24, 0.98), rgba(5, 5, 9, 0.99));
+      }
+
+      #lpSelectedHeading {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+      }
+
+      .lp-inline-chest-icon {
+        display: grid;
+        place-items: center;
+        width: 34px;
+        height: 34px;
+        border: 1px solid rgba(var(--lp-chest-rgb), 0.28);
+        border-radius: 11px;
+        background: rgba(var(--lp-chest-rgb), 0.07);
+        color: var(--lp-chest-accent);
+      }
+
+      .lp-inline-chest-icon svg {
+        width: 22px;
+        height: 22px;
+      }
+
+      .lp-selected-stat {
+        border-color: rgba(var(--lp-chest-rgb), 0.18);
+        background:
+          radial-gradient(circle at 100% 0, rgba(var(--lp-chest-rgb), 0.055), transparent 45%),
+          linear-gradient(145deg, rgba(17, 16, 22, 0.98), rgba(6, 6, 9, 0.98));
+      }
+
+      .lp-selected-stat strong {
+        color: var(--lp-chest-accent);
+      }
+
+      .lp-refresh {
+        border-color: rgba(196, 157, 255, 0.38);
+        background:
+          linear-gradient(125deg, #d9bd72 0%, #b38bed 58%, #8f5ddd 100%);
+        color: #09070d;
+        box-shadow: 0 12px 28px rgba(93, 47, 166, 0.18);
+      }
+
+      .lp-input:focus,
+      .lp-select:focus {
+        border-color: rgba(156, 98, 255, 0.68);
+        box-shadow: 0 0 0 3px rgba(135, 73, 236, 0.13);
+      }
+
+      .lp-close:focus-visible,
+      .lp-chest:focus-visible,
+      .lp-refresh:focus-visible,
+      .lp-primary-button:focus-visible,
+      .lp-secondary-button:focus-visible,
+      .lp-danger-button:focus-visible,
+      .lp-record-button:focus-visible,
+      .lp-reward-option:focus-visible,
+      .lp-jump-bonus:focus-visible {
+        outline: 2px solid rgba(199, 168, 255, 0.92);
+        outline-offset: 3px;
+      }
+
+      @keyframes lp-onyx-rise {
+        from {
+          opacity: 0;
+          transform: translateY(11px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @keyframes lp-ready-pulse {
+        0%, 100% {
+          opacity: 0.68;
+          transform: scale(0.88);
+        }
+        50% {
+          opacity: 1;
+          transform: scale(1.14);
+        }
+      }
+
+      @keyframes lp-active-glint {
+        0%, 72%, 100% {
+          opacity: 0;
+          transform: translateX(-48%) rotate(8deg);
+        }
+        80% {
+          opacity: 0.65;
+        }
+        91% {
+          opacity: 0;
+          transform: translateX(48%) rotate(8deg);
+        }
+      }
+
+      @media (max-width: 620px) {
+        .lp-topbar {
+          padding: 12px 12px 12px 10px;
+        }
+
+        .lp-brand-lockup {
+          gap: 9px;
+        }
+
+        .lp-brand-crest {
+          width: 38px;
+          height: 47px;
+        }
+
+        .lp-brand-crest svg {
+          width: 27px;
+          height: 34px;
+        }
+
+        .lp-eyebrow {
+          font-size: 9px;
+          letter-spacing: 0.17em;
+        }
+
+        .lp-card {
+          padding: 16px;
+        }
+
+        .lp-event-card {
+          min-height: 168px;
+        }
+      }
+
+      @media (max-width: 420px) {
+        #${OVERLAY_ID} {
+          padding-left: 8px;
+          padding-right: 8px;
+        }
+
+        .lp-topbar {
+          border-radius: 20px;
+        }
+
+        .lp-topbar h1 {
+          font-size: 20px;
+        }
+
+        .lp-subtitle {
+          font-size: 11px;
+        }
+
+        .lp-chest-grid {
+          gap: 8px;
+        }
+
+        .lp-chest {
+          min-height: 157px;
+          padding: 12px;
+          border-radius: 18px;
+        }
+
+        .lp-chest-icon {
+          width: 44px;
+          height: 44px;
+          margin-bottom: 14px;
+          border-radius: 14px;
+        }
+
+        .lp-chest-icon svg {
+          width: 28px;
+          height: 28px;
+        }
+
+        .lp-chest-name {
+          font-size: 14px;
+        }
+
+        .lp-chest-readiness {
+          font-size: 9px;
+        }
+
+        .lp-chest-stats {
+          display: block;
+        }
+
+        .lp-chest-stats strong,
+        .lp-chest-stats span {
+          display: block;
+        }
+
+        .lp-chest-stats span {
+          margin-top: 4px;
+        }
+      }
+
+      @media (max-width: 340px) {
+        .lp-chest-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .lp-chest {
+          min-height: 142px;
+        }
+      }
       
-            @media (max-width: 620px) {
+      @media (max-width: 620px) {
         #${OVERLAY_ID} {
           padding-left: 10px;
           padding-right: 10px;
         }
 
         .lp-topbar {
-          align-items: flex-start;
+          align-items: center;
         }
 
         .lp-card {
-          padding: 15px;
+          padding: 16px;
           border-radius: 19px;
         }
 
@@ -2054,8 +2786,13 @@
       }
 
       @media (max-width: 420px) {
+        #${OVERLAY_ID} {
+          padding-left: 8px;
+          padding-right: 8px;
+        }
+
         .lp-topbar h1 {
-          font-size: 22px;
+          font-size: 20px;
         }
 
         .lp-close {
@@ -2082,14 +2819,18 @@
       }
 
       @media (hover: none) {
-        .lp-chest:hover,
+        .lp-chest:hover {
+          border-color:
+            rgba(var(--lp-chest-rgb), 0.28);
+        }
+
         .lp-reward-option:hover {
           border-color: #303030;
         }
 
         .lp-chest.lp-active:hover {
           border-color:
-            rgba(217, 191, 118, 0.58);
+            rgba(var(--lp-chest-rgb), 0.66);
         }
 
         .lp-reward-option.lp-active:hover {
@@ -2132,20 +2873,28 @@
       <div class="lp-shell">
         <header class="lp-topbar">
           <div class="lp-topbar-main">
-            <p class="lp-eyebrow">
-              CHEST COMPANION
-            </p>
+            <div class="lp-brand-lockup">
+              <span class="lp-brand-crest" aria-hidden="true">
+                ${ONYX_CREST}
+              </span>
 
-            <h1>
-              Live Chest Predictor
-            </h1>
+              <div class="lp-brand-copy">
+                <p class="lp-eyebrow">
+                  ONYX COMMAND · CHEST INTELLIGENCE
+                </p>
 
-            <p
-              id="lpSubtitle"
-              class="lp-subtitle"
-            >
-              Waiting for event data
-            </p>
+                <h1>
+                  Live Chest Predictor
+                </h1>
+
+                <p
+                  id="lpSubtitle"
+                  class="lp-subtitle"
+                >
+                  Waiting for event intelligence
+                </p>
+              </div>
+            </div>
           </div>
 
           <button
@@ -2154,15 +2903,19 @@
             type="button"
             aria-label="Close live predictor"
           >
-            ×
+            ${CLOSE_ICON}
           </button>
         </header>
 
-        <section class="lp-card">
+        <section class="lp-card lp-event-card">
+          <span class="lp-event-sigil" aria-hidden="true">
+            ${CHEST_ICONS.gold}
+          </span>
+
           <div class="lp-event-header">
             <div class="lp-event-copy">
               <p class="lp-eyebrow">
-                LIVE EVENT
+                LIVE EVENT NETWORK
               </p>
 
               <div
@@ -2190,17 +2943,25 @@
 
         </section>
 
-        <section class="lp-card">
+        <section class="lp-card lp-chest-selector-card">
           <div class="lp-card-header">
             <div class="lp-card-heading">
+              <p class="lp-section-kicker">
+                CHEST NETWORK
+              </p>
+
               <h2>
-                Choose chest
+                Choose your chest
               </h2>
 
               <p class="lp-muted">
-                Select the live deck you want to track.
+                Select a live sequence to track and solve.
               </p>
             </div>
+
+            <span class="lp-section-index" aria-hidden="true">
+              01
+            </span>
           </div>
 
           <div
@@ -2209,17 +2970,25 @@
           ></div>
         </section>
 
-        <section class="lp-card">
+        <section class="lp-card lp-selected-card">
           <div class="lp-card-header">
             <div class="lp-card-heading">
+              <p class="lp-section-kicker">
+                ACTIVE SEQUENCE
+              </p>
+
               <h2 id="lpSelectedHeading">
                 Selected chest
               </h2>
 
               <p class="lp-muted">
-                Live deck information for the selected chest.
+                Live intelligence for the selected chest.
               </p>
             </div>
+
+            <span class="lp-section-index" aria-hidden="true">
+              02
+            </span>
           </div>
 
           <div
@@ -2561,7 +3330,7 @@
               </h2>
 
               <p class="lp-muted">
-                Chest Companion compares your history
+                Onyx Command compares your history
                 against the live event deck.
               </p>
             </div>
@@ -2721,7 +3490,7 @@
           const icon =
             CHEST_ICONS[
               chest.chestType
-            ] || "✦";
+            ] || CHEST_ICONS.gold;
 
           return `
             <button
@@ -2733,6 +3502,13 @@
                   : ""
               }"
               data-lp-chest="${
+                chest.chestType
+              }"
+              data-lp-chest-type="${escapeHTML(
+                chest.chestType
+              )}"
+              aria-pressed="${
+                status.activeChest ===
                 chest.chestType
               }"
             >
@@ -2750,11 +3526,12 @@
                   )}
                 </span>
 
-                <span class="${
+                <span class="lp-chest-readiness ${
                   chest.loaded
                     ? "lp-chest-loaded"
                     : "lp-chest-missing"
                 }">
+                  <i aria-hidden="true"></i>
                   ${
                     chest.loaded
                       ? "Ready"
@@ -2764,10 +3541,15 @@
               </div>
 
               <div class="lp-chest-stats">
-                ${formatNumber(
+                <strong>${formatNumber(
                   chest.length
-                )} rewards in the live deck
+                )}</strong>
+                <span>rewards available</span>
               </div>
+
+              <span class="lp-chest-chevron" aria-hidden="true">
+                ${CHEVRON_ICON}
+              </span>
             </button>
           `;
         })
@@ -2951,6 +3733,10 @@
       heading.textContent =
         "Selected chest";
 
+      document
+        .querySelector(".lp-selected-card")
+        ?.removeAttribute("data-lp-chest-type");
+
       grid.innerHTML = `
         <div class="lp-empty-state">
           No chest data is available.
@@ -2969,7 +3755,7 @@
     const icon =
       CHEST_ICONS[
         selected.chestType
-      ] || "✦";
+      ] || CHEST_ICONS.gold;
 
     const playerPosition =
       getPlayerPosition(selected);
@@ -2986,8 +3772,19 @@
     const confidence =
       getConfidence(selected);
 
-    heading.textContent =
-      `${icon} ${selected.label} Chest`;
+    heading.innerHTML = `
+      <span class="lp-inline-chest-icon" aria-hidden="true">
+        ${icon}
+      </span>
+      <span>${escapeHTML(selected.label)} Chest</span>
+    `;
+
+    document
+      .querySelector(".lp-selected-card")
+      ?.setAttribute(
+        "data-lp-chest-type",
+        selected.chestType
+      );
 
     grid.innerHTML = `
       <div class="lp-selected-stat">
@@ -3173,7 +3970,7 @@
         }
       } catch (error) {
         console.warn(
-          "[Chest Companion] Could not read the resolved reward catalogue.",
+          "[Onyx Command] Could not read the resolved reward catalogue.",
           error
         );
       }
@@ -3251,7 +4048,7 @@
         }
       } catch (error) {
         console.warn(
-          `[Chest Companion] Could not read ${methodName}.`,
+          `[Onyx Command] Could not read ${methodName}.`,
           error
         );
       }
@@ -5251,6 +6048,13 @@
         ? "lp-status lp-status-ready"
         : "lp-status lp-status-not-ready";
 
+    document
+      .querySelector(".lp-event-card")
+      ?.classList.toggle(
+        "lp-event-ready",
+        Boolean(status.ready)
+      );
+
          renderChestCards(
          status
       );
@@ -5576,7 +6380,7 @@
 
       if (lastError) {
         console.warn(
-          `[Chest Companion] ${methodName} could not record the reward.`,
+          `[Onyx Command] ${methodName} could not record the reward.`,
           lastError
         );
       }
@@ -5645,7 +6449,7 @@
 
       if (lastError) {
         console.warn(
-          `[Chest Companion] ${methodName} could not undo the last reward.`,
+          `[Onyx Command] ${methodName} could not undo the last reward.`,
           lastError
         );
       }
@@ -5715,7 +6519,7 @@
 
       if (lastError) {
         console.warn(
-          `[Chest Companion] ${methodName} could not reset the history.`,
+          `[Onyx Command] ${methodName} could not reset the history.`,
           lastError
         );
       }
@@ -5949,7 +6753,7 @@
 
     if (!result.success) {
       console.error(
-        "[Chest Companion] Reward recording failed.",
+        "[Onyx Command] Reward recording failed.",
         result.error
       );
 
@@ -5961,7 +6765,7 @@
     }
 
     console.info(
-      `[Chest Companion] Reward recorded using ${result.methodName}.`,
+      `[Onyx Command] Reward recorded using ${result.methodName}.`,
       payload
     );
 
@@ -5995,7 +6799,7 @@
 
     if (!result.success) {
       console.error(
-        "[Chest Companion] Undo failed.",
+        "[Onyx Command] Undo failed.",
         result.error
       );
 
@@ -6007,7 +6811,7 @@
     }
 
     console.info(
-      `[Chest Companion] Undo completed using ${result.methodName}.`
+      `[Onyx Command] Undo completed using ${result.methodName}.`
     );
 
     resetRecorderInputs();
@@ -6049,7 +6853,7 @@
 
     if (!result.success) {
       console.error(
-        "[Chest Companion] History reset failed.",
+        "[Onyx Command] History reset failed.",
         result.error
       );
 
@@ -6061,7 +6865,7 @@
     }
 
     console.info(
-      `[Chest Companion] History reset using ${result.methodName}.`
+      `[Onyx Command] History reset using ${result.methodName}.`
     );
 
     resetRecorderInputs();
@@ -6533,7 +7337,7 @@
     attachEvents();
 
     console.info(
-      "[Chest Companion] Live Predictor UI ready.",
+      "[Onyx Command] Live Predictor UI ready.",
       Engine.getStatus()
     );
   }
