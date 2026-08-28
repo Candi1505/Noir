@@ -149,15 +149,21 @@ const amountReward = LivePredictorEngine
   .getRewards("gold")
   .find(reward => reward.code === "gold-regular-1");
 
-LivePredictorEngine.recordReward("gold", {
-  reward: amountReward.raw,
-  amount: 777
-});
-
-const amountObservation = LivePredictorEngine.getObservations("gold")[0];
-assert.equal(amountObservation.amount, 777);
-assert.equal(amountObservation.matchValue.amount, 777);
-assert.match(amountObservation.displayValue, /777$/);
+assert.throws(
+  () => LivePredictorEngine.recordReward("gold", {
+    reward: amountReward.raw,
+    amount: 777
+  }),
+  error =>
+    error?.code === "NO_SEQUENCE_MATCH" &&
+    /not saved/i.test(error.message),
+  "A mistyped amount must be rejected before it poisons the sequence."
+);
+assert.equal(
+  LivePredictorEngine.getObservations("gold").length,
+  0,
+  "A rejected amount override must leave history unchanged."
+);
 
 vm.runInThisContext(
   fs.readFileSync("chest-drop-rates.js", "utf8"),

@@ -4133,6 +4133,18 @@
       code:
         String(code),
       amount,
+      regularEligible:
+        reward.regularEligible ===
+        undefined
+          ? undefined
+          : reward.regularEligible !==
+            false,
+      bonusEligible:
+        reward.bonusEligible ===
+        undefined
+          ? undefined
+          : reward.bonusEligible ===
+            true,
       raw: reward
     };
   }
@@ -4253,11 +4265,31 @@
         selectedChest
       );
 
-    if (!catalogue.length) {
+    const bonusMode =
+      Boolean(
+        document.getElementById(
+          "lpBonusChest"
+        )?.checked
+      );
+
+    const modeCatalogue =
+      catalogue.filter(
+        reward =>
+          bonusMode
+            ? reward.bonusEligible !==
+              false
+            : reward.regularEligible !==
+              false
+      );
+
+    if (!modeCatalogue.length) {
       container.innerHTML = `
         <div class="lp-empty-state">
-          The live deck is connected, but no
-          readable reward entries were found.
+          ${
+            bonusMode
+              ? "No bonus rewards are available for this chest."
+              : "The live deck is connected, but no readable regular rewards were found."
+          }
         </div>
       `;
 
@@ -4270,7 +4302,7 @@
         .toLowerCase();
 
     const filteredRewards =
-      catalogue.filter(
+      modeCatalogue.filter(
         reward => {
           if (!searchTerm) {
             return true;
@@ -4400,7 +4432,7 @@
         </div>
       `;
 
-      return catalogue;
+      return modeCatalogue;
     }
 
     const visibleRewards =
@@ -4485,7 +4517,7 @@
       );
     }
 
-    return catalogue;
+    return modeCatalogue;
   }
 
   function renderRecorder(status) {
@@ -6322,8 +6354,38 @@
     chestType,
     payload
   ) {
+    /*
+     * The current engine has one canonical recording signature. If it
+     * rejects an invalid sequence entry, surface that validation error
+     * immediately. Retrying the same payload through legacy signatures
+     * could otherwise turn one tap into a malformed or duplicate record.
+     */
+    if (
+      typeof Engine.recordReward ===
+      "function"
+    ) {
+      try {
+        return {
+          success: true,
+          methodName:
+            "recordReward",
+          result:
+            Engine.recordReward(
+              chestType,
+              payload
+            )
+        };
+      } catch (error) {
+        return {
+          success: false,
+          methodName:
+            "recordReward",
+          error
+        };
+      }
+    }
+
     const methodNames = [
-      "recordReward",
       "recordObservation",
       "addObservation",
       "addReward",
@@ -6683,6 +6745,11 @@
         "lpBonusChest"
       );
 
+    const isBonus =
+      Boolean(
+        bonusInput?.checked
+      );
+
     const amount =
       Number(
         amountInput?.value
@@ -6716,6 +6783,30 @@
       return;
     }
 
+    if (
+      isBonus &&
+      selectedReward.bonusEligible ===
+        false
+    ) {
+      showRecorderError(
+        "That reward is not in this chest’s bonus pool."
+      );
+
+      return;
+    }
+
+    if (
+      !isBonus &&
+      selectedReward.regularEligible ===
+        false
+    ) {
+      showRecorderError(
+        "That reward belongs to the bonus pool. Tick bonus chest before recording it."
+      );
+
+      return;
+    }
+
     const payload = {
       chestType:
         selectedChest.chestType,
@@ -6743,10 +6834,10 @@
       quantity,
 
       isBonus:
-        Boolean(bonusInput?.checked),
+        isBonus,
 
       bonus:
-        Boolean(bonusInput?.checked),
+        isBonus,
 
       chestCount:
         quantity,
@@ -6768,7 +6859,10 @@
       );
 
       showRecorderError(
-        "The recorder could not connect to the predictor engine."
+        result.error?.code ===
+          "NO_SEQUENCE_MATCH"
+          ? result.error.message
+          : "The recorder could not connect to the predictor engine."
       );
 
       return;
@@ -6982,6 +7076,11 @@
         "lpRewardQuantity"
       );
 
+    const bonusInput =
+      document.getElementById(
+        "lpBonusChest"
+      );
+
     const bonusProgressInput =
       document.getElementById(
         "lpBonusProgress"
@@ -7101,6 +7200,30 @@
         );
       }
     );
+
+    bonusInput
+      ?.addEventListener(
+        "change",
+        () => {
+          selectedRewardState = {
+            chestType: null,
+            key: null
+          };
+
+          if (searchInput) {
+            searchInput.value = "";
+          }
+
+          if (amountInput) {
+            amountInput.value = "";
+            amountInput.readOnly = false;
+          }
+
+          renderRecorder(
+            Engine.getStatus()
+          );
+        }
+      );
 
     bonusProgressInput
       ?.addEventListener(

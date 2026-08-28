@@ -46,12 +46,12 @@ assert.doesNotMatch(
 );
 assert.match(
   html,
-  /live-predictor-ui\.js\?v=20260828-audit-2/
+  /live-predictor-ui\.js\?v=20260828-first-run-1/
 );
 assert.match(html, /onyx-tower-inventory-bridge\.js\?v=20260828-audit-2/);
 assert.match(html, /database\.js\?v=20260828-audit-2/);
 assert.match(html, /har-event-adapter\.js\?v=20260828-audit-2/);
-assert.match(html, /live-predictor-engine\.js\?v=20260828-audit-2/);
+assert.match(html, /live-predictor-engine\.js\?v=20260828-first-run-1/);
 assert.match(html, /chest-drop-rates\.js\?v=20260828-audit-2/);
 assert.match(html, /chest-planner\.js\?v=20260828-audit-2/);
 assert.match(html, /noir-chest-tools\.js\?v=20260828-audit-2/);

@@ -121,6 +121,31 @@ assert.match(
   /if \(\s*!overlay\?\.classList\.contains\(\s*"lp-open"\s*\)\s*\) \{\s*return;/,
   "Closing an already closed Live Predictor must not unlock the page."
 );
+assert.match(
+  liveUiSource,
+  /regularEligible:\s*reward\.regularEligible/,
+  "The reward catalogue must preserve regular-pool eligibility from the engine."
+);
+assert.match(
+  liveUiSource,
+  /bonusEligible:\s*reward\.bonusEligible/,
+  "The reward catalogue must preserve bonus-pool eligibility from the engine."
+);
+assert.match(
+  liveUiSource,
+  /reward\.bonusEligible\s*!==\s*false/,
+  "Bonus mode must show only rewards available in the selected bonus pool."
+);
+assert.match(
+  liveUiSource,
+  /reward\.regularEligible\s*!==\s*false/,
+  "Regular mode must hide rewards that belong only to the bonus pool."
+);
+assert.match(
+  liveUiSource,
+  /bonusInput\s*\?\s*\.addEventListener\(\s*"change"/,
+  "Changing the bonus setting must immediately refresh and clear the reward selection."
+);
 
 assert.doesNotMatch(
   stylesSource,
