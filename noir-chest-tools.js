@@ -33,10 +33,9 @@
     },
     super_sigil: {
       label: "Super Sigil", icon: "S", bonusEvery: 30,
-      singleCost: 625, tenPackCost: 8000
+      singleCost: 625, tenPackCost: 5000
     }
   };
-  const EVENT_KEY = "noirChestToolsEvent";
   const VERIFICATION_KEY = "noirChestToolsVerification";
   const state = {
     view: "finder",
@@ -45,6 +44,24 @@
     currency: 12000,
     shareOpenings: 10
   };
+  let previousEventIdentity = null;
+
+  discardLegacyVerificationSummary();
+
+  function discardLegacyVerificationSummary() {
+    try {
+      /*
+       * Verification is derived from the signed-in player's scoped
+       * predictor history. The old browser-wide copy must never survive
+       * account changes on a shared device.
+       */
+      localStorage.removeItem(
+        VERIFICATION_KEY
+      );
+    } catch (error) {
+      // Derived verification remains available in memory for this page.
+    }
+  }
 
   function escapeHtml(value) {
     return String(value ?? "")
@@ -159,14 +176,38 @@
         ready: false,
         eventName: "No event loaded",
         issues: ["No live event deck is available yet."],
-        chests: {}
+        chests: {},
+        availabilityKnown: false,
+        activeChestTypes: [],
+        noActiveChests: false,
+        noEventLoaded: true
       };
     }
 
     const chests = {};
     const issues = [];
+    const activeChestTypes =
+      getCurrentChestOrder(
+        context.eventData
+      );
+    const availabilityKnown =
+      context.eventData
+        ?.availabilityKnown === true &&
+      Array.isArray(
+        context.eventData
+          ?.availableChestTypes
+      );
 
-    CHEST_ORDER.forEach(chestType => {
+    if (
+      availabilityKnown &&
+      activeChestTypes.length === 0
+    ) {
+      issues.push(
+        "No chest types are currently active."
+      );
+    }
+
+    activeChestTypes.forEach(chestType => {
       const meta = CHEST_META[chestType];
       const chest = context.rates?.[chestType];
       const regular = chest?.regular;
@@ -219,10 +260,17 @@
     });
 
     return {
-      ready: issues.length === 0,
+      ready:
+        activeChestTypes.length > 0 &&
+        issues.length === 0,
       eventName: getEventName(context.eventData),
       issues,
-      chests
+      chests,
+      availabilityKnown,
+      activeChestTypes,
+      noActiveChests:
+        availabilityKnown &&
+        activeChestTypes.length === 0
     };
   }
 
@@ -231,14 +279,11 @@
 
     const identity = getEventIdentity(context.eventData);
     const eventName = getEventName(context.eventData);
-    let previous = null;
-
-    try {
-      previous = JSON.parse(localStorage.getItem(EVENT_KEY) || "null");
-      localStorage.setItem(EVENT_KEY, JSON.stringify({ identity, eventName }));
-    } catch (error) {
-      return null;
-    }
+    const previous = previousEventIdentity;
+    previousEventIdentity = {
+      identity,
+      eventName
+    };
 
     if (previous?.identity && previous.identity !== identity) {
       return {
@@ -321,7 +366,18 @@
 
   function calculateChestBudget(currency, chestType) {
     const available = Math.max(0, Math.floor(Number(currency) || 0));
-    const meta = CHEST_META[chestType] || CHEST_META.gold;
+    const meta = CHEST_META[chestType];
+
+    if (!meta) {
+      return {
+        openings: 0,
+        tenPacks: 0,
+        singles: 0,
+        spent: 0,
+        remaining: available
+      };
+    }
+
     const maximumPacks = Math.floor(available / meta.tenPackCost);
     let best = {
       openings: 0,
@@ -361,8 +417,19 @@
   }
 
   function calculateBudgetBonuses(chestType, regularOpenings) {
-    const meta = CHEST_META[chestType] || CHEST_META.gold;
+    const meta = CHEST_META[chestType];
     const openings = Math.max(0, Math.floor(Number(regularOpenings) || 0));
+
+    if (!meta) {
+      return {
+        known: false,
+        minimum: 0,
+        maximum: 0,
+        totalMinimum: openings,
+        totalMaximum: openings
+      };
+    }
+
     const engine = window.LivePredictorEngine;
     const rawProgress = engine?.getBonusProgress?.(chestType);
     const progressKnown =
@@ -474,11 +541,7 @@
       };
     });
 
-    try {
-      localStorage.setItem(VERIFICATION_KEY, JSON.stringify(summary));
-    } catch (error) {
-      // This summary is optional and stays on the device.
-    }
+    discardLegacyVerificationSummary();
     return summary;
   }
 
@@ -490,17 +553,33 @@
     const change = recordEventChange();
     const readyCount = Object.values(report.chests)
       .filter(chest => chest.ready).length;
-    const chestCount = CHEST_ORDER.length;
+    const activeChestTypes =
+      report.activeChestTypes || [];
+    const chestCount =
+      activeChestTypes.length;
 
     banner.classList.toggle("nct-not-ready", !report.ready);
     banner.innerHTML = `
       <div>
         <p class="eyebrow">EVENT CHECK</p>
-        <strong>${report.ready ? "✓ Ready for players" : `${readyCount}/${chestCount} chests ready`}</strong>
-        <small>${escapeHtml(report.eventName)} · Regular and bonus rewards checked</small>
+        <strong>${
+          report.noEventLoaded
+            ? "No current event data"
+            : report.noActiveChests
+            ? "No active chest event"
+            : report.ready
+              ? "✓ Ready for players"
+              : `${readyCount}/${chestCount} chests ready`
+        }</strong>
+        <small>${escapeHtml(report.eventName)}${
+          report.noEventLoaded ||
+          report.noActiveChests
+            ? ""
+            : " · Regular and bonus rewards checked"
+        }</small>
       </div>
       <div class="nct-readiness-chests">
-        ${CHEST_ORDER.map(type => {
+        ${activeChestTypes.map(type => {
           const chest = report.chests[type] || {};
           const meta = CHEST_META[type];
           return `
@@ -529,6 +608,18 @@
   }
 
   function renderFinder(context) {
+    if (
+      getCurrentChestOrder(
+        context?.eventData
+      ).length === 0
+    ) {
+      return `
+        <section class="nct-section">
+          <p class="nct-empty nct-empty-large">No chest event is currently active.</p>
+        </section>
+      `;
+    }
+
     const rows = findRewards(state.query, context);
     return `
       <section class="nct-section">
@@ -563,14 +654,22 @@
         context?.eventData
       );
 
+    if (!currentChestOrder.length) {
+      state.chestType = null;
+      return `
+        <section class="nct-section">
+          <p class="nct-empty nct-empty-large">No chest event is currently active.</p>
+        </section>
+      `;
+    }
+
     if (
       !currentChestOrder.includes(
         state.chestType
       )
     ) {
       state.chestType =
-        currentChestOrder[0] ||
-        "gold";
+        currentChestOrder[0];
     }
 
     const budget = calculateChestBudget(state.currency, state.chestType);
@@ -696,17 +795,31 @@
 
   function renderReadiness() {
     const report = inspectEvent();
+    const activeChestTypes =
+      report.activeChestTypes || [];
     return `
       <section class="nct-section">
         <article class="nct-readiness-summary ${report.ready ? "ready" : "warning"}">
-          <strong>${report.ready ? "✓ Ready for players" : "Needs attention"}</strong>
+          <strong>${
+            report.noEventLoaded
+              ? "No current event data"
+              : report.noActiveChests
+              ? "No active chest event"
+              : report.ready
+                ? "✓ Ready for players"
+                : "Needs attention"
+          }</strong>
           <span>${escapeHtml(report.eventName)}</span>
           <p>${report.ready
-            ? `All ${CHEST_ORDER.length} regular decks, available bonus decks, reward names and chance totals passed.`
-            : "One or more event checks did not pass."}</p>
+            ? `All ${activeChestTypes.length} active regular decks, available bonus decks, reward names and chance totals passed.`
+            : report.noEventLoaded
+              ? "No live event deck is available yet."
+              : report.noActiveChests
+              ? "No chest decks are marked active."
+              : "One or more event checks did not pass."}</p>
         </article>
         <div class="nct-check-grid">
-          ${CHEST_ORDER.map(type => {
+          ${activeChestTypes.map(type => {
             const chest = report.chests[type] || {};
             const meta = CHEST_META[type];
             return `
@@ -821,11 +934,24 @@
 
   function renderShare(context) {
     const summary = getVerificationSummary();
-    const solved = Object.values(summary).filter(item => item.solved).length;
     const currentChestOrder =
       getCurrentChestOrder(
         context?.eventData
       );
+
+    if (!currentChestOrder.length) {
+      state.chestType = null;
+      return `
+        <section class="nct-section">
+          <p class="nct-empty nct-empty-large">No chest event is currently active.</p>
+        </section>
+      `;
+    }
+
+    const solved = currentChestOrder
+      .map(type => summary[type])
+      .filter(item => item?.solved)
+      .length;
 
     if (
       !currentChestOrder.includes(
@@ -833,8 +959,7 @@
       )
     ) {
       state.chestType =
-        currentChestOrder[0] ||
-        "gold";
+        currentChestOrder[0];
     }
 
     return `
@@ -857,9 +982,9 @@
         </button>
         <article class="nct-private-summary">
           <p class="eyebrow">PRIVATE TEST SUMMARY</p>
-          <strong>${solved} of ${CHEST_ORDER.length} chest predictors solved on this device</strong>
+          <strong>${solved} of ${currentChestOrder.length} active chest predictors solved on this device</strong>
           <p>No player names, reward histories or test results are uploaded.</p>
-          ${CHEST_ORDER.map(type => `
+          ${currentChestOrder.map(type => `
             <span>${CHEST_META[type].label}: ${summary[type].recorded} recorded${summary[type].solved ? " · solved" : ""}</span>
           `).join("")}
         </article>
@@ -1099,9 +1224,18 @@
   window.NoirChestTools = api;
 
   ["noir:event-imported", "chest-companion:event-published",
-   "chest-companion-predictors-ready"].forEach(eventName => {
+   "chest-companion-predictors-ready",
+   "chest-companion-live-predictor-updated"].forEach(eventName => {
     window.addEventListener(eventName, () => {
-      window.setTimeout(renderReadinessBanner, 0);
+      window.setTimeout(() => {
+        renderReadinessBanner();
+        const overlay = document.getElementById(
+          "noirChestToolsOverlay"
+        );
+        if (overlay?.classList.contains("open")) {
+          render();
+        }
+      }, 0);
     });
   });
 

@@ -11,6 +11,14 @@ const chestTypes = [
   "arcane",
   "super_sigil"
 ];
+const deckKeys = {
+  gold: "gold_chest",
+  platinum: "platinum_chest",
+  draconic: "dragfrag_chest_tier3",
+  freedom: "freedom_chest",
+  arcane: "arcane_chest",
+  super_sigil: "sigil_chest"
+};
 const eventData = {
   event: "Upgrade Buildings",
   ready: true,
@@ -27,8 +35,17 @@ const eventData = {
     chestTypes.map(chestType => [
       chestType,
       {
+        key: deckKeys[chestType],
+        label: chestType,
         found: true,
         deck: [0, 1, 2],
+        deckLength: 3,
+        available: [
+          "gold",
+          "platinum",
+          "draconic",
+          "arcane"
+        ].includes(chestType),
         index: 2,
         foundIndex: 2,
         sourceIndex: 2,
@@ -40,8 +57,8 @@ const eventData = {
       }
     ])
   ),
-  decks: {},
-  drops: {},
+  decks: { gold_chest: [0, 1, 2] },
+  drops: { gold_chest: [] },
   deckIndices: {},
   spinTypes: [],
   doubleArmory: {
@@ -87,6 +104,105 @@ function runMigrationCoverageTest() {
       );
     }
   });
+
+  const safeGrant = sql.match(
+    /grant select\s*\([\s\S]*?\)\s*on table public\.predictors to authenticated/i
+  )?.[0] || "";
+
+  for (const column of [
+    "id",
+    "chest_type",
+    "version",
+    "predictor_data",
+    "uploaded_at"
+  ]) {
+    if (!safeGrant.includes(column)) {
+      throw new Error(`The safe predictor grant is missing ${column}.`);
+    }
+  }
+
+  if (
+    /uploaded_by|\bactive\b/i.test(safeGrant) ||
+    !/revoke all privileges[\s\S]*?on table public\.predictors[\s\S]*?from anon, authenticated/i.test(sql) ||
+    !/revoke all privileges\s*\([\s\S]*?uploaded_by[\s\S]*?active[\s\S]*?\)[\s\S]*?from anon, authenticated/i.test(sql)
+  ) {
+    throw new Error(
+      "Predictor table privileges do not enforce the safe-column boundary."
+    );
+  }
+
+  if (
+    /returns setof public\.predictors/i.test(sql) ||
+    !/returns table\s*\([\s\S]*?published_version[\s\S]*?published_at[\s\S]*?\)/i.test(sql)
+  ) {
+    throw new Error("The atomic RPC still exposes full predictor rows.");
+  }
+
+  for (const requirement of [
+    /set search_path = ''/i,
+    /auth\.uid\(\) is null or public\.is_noir_admin\(\) is not true/i,
+    /pg_advisory_xact_lock\s*\(/i,
+    /create unique index if not exists predictors_one_active_per_chest_uidx[\s\S]*?where active is true/i,
+    /row_number\(\) over[\s\S]*?partition by chest_type/i,
+    /jsonb_array_length\(p_predictors\)[\s\S]*?array_length\(allowed_chest_types, 1\)/i,
+    /predictor_payload_is_safe/i,
+    /normalised_key like 'source%'/i,
+    /normalised_key like 'request%'/i,
+    /'deckindices'/i,
+    /'sessiontoken'/i,
+    /'playerid'/i,
+    /revoke all[\s\S]*?publish_noir_event\(bigint, jsonb\)[\s\S]*?from public, anon, authenticated/i,
+    /procedure\.proname = 'publish_noir_predictor'/i
+  ]) {
+    if (!requirement.test(sql)) {
+      throw new Error(`Missing atomic privacy rule: ${requirement}`);
+    }
+  }
+
+  const databaseSource = fs.readFileSync("database.js", "utf8");
+  const getPredictorBlock = databaseSource.match(
+    /async getPredictor\([\s\S]*?async savePredictor\(/
+  )?.[0] || "";
+  const getActiveBlock = databaseSource.match(
+    /async getActivePredictors\([\s\S]*?async publishLiveEvent\(/
+  )?.[0] || "";
+
+  if (
+    /select\(\s*["']\*["']\s*\)/.test(getPredictorBlock) ||
+    /uploaded_by/.test(getPredictorBlock + getActiveBlock) ||
+    /\.eq\(\s*["']active["']/.test(getPredictorBlock + getActiveBlock)
+  ) {
+    throw new Error(
+      "Predictor reads must use only granted columns and rely on active-row RLS."
+    );
+  }
+
+  if (
+    /publish_noir_predictor/.test(databaseSource) ||
+    /from\(["']predictors["']\)[\s\S]{0,400}\.(?:insert|update|delete)\(/.test(databaseSource)
+  ) {
+    throw new Error("A legacy direct predictor publishing path remains.");
+  }
+
+  if (/\.abortSignal\(/.test(databaseSource)) {
+    throw new Error(
+      "A dispatched SQL publish must not be presented as cancellable by aborting the browser fetch."
+    );
+  }
+
+  const publisherSource = fs.readFileSync(
+    "admin-event-publisher.js",
+    "utf8"
+  );
+  if (
+    !/publishInFlight \|\|[\s\S]*?importButton\.dataset\.importBusy/.test(
+      publisherSource
+    )
+  ) {
+    throw new Error(
+      "The import control must stay locked until a dispatched publish settles."
+    );
+  }
 }
 
 async function runSuccessfulPublishTest() {
@@ -112,7 +228,13 @@ async function runSuccessfulPublishTest() {
   });
 
   const result =
-    await ChestDatabase.publishLiveEvent(eventData);
+    await ChestDatabase.publishLiveEvent(
+      eventData,
+      {
+        name: "private-capture.har",
+        url: "https://private.invalid/capture"
+      }
+    );
 
   if (rpcCalls.length !== 1) {
     throw new Error("Publishing must use exactly one database call.");
@@ -122,6 +244,27 @@ async function runSuccessfulPublishTest() {
   }
   if (result.records.length !== 6) {
     throw new Error("Six published records were expected.");
+  }
+
+  if (
+    rpcCalls[0].params.p_predictors.length !== 6 ||
+    JSON.stringify(
+      rpcCalls[0].params.p_predictors
+        .map(record => record.chest_type)
+        .sort()
+    ) !== JSON.stringify([...chestTypes].sort())
+  ) {
+    throw new Error("The client did not publish the exact six-chest set.");
+  }
+
+  if (
+    /private-capture|private\.invalid/i.test(
+      JSON.stringify(
+        rpcCalls[0].params.p_predictors
+      )
+    )
+  ) {
+    throw new Error("Private source-file metadata reached the publishing RPC.");
   }
 
   const publishedEvent =
@@ -171,6 +314,7 @@ async function runSuccessfulPublishTest() {
   });
 
   if (
+    "deckIndices" in publishedEvent ||
     "deckIndices" in
       publishedEvent.doubleArmory.sides.assault
   ) {
@@ -186,6 +330,69 @@ async function runSuccessfulPublishTest() {
     throw new Error(
       "Shared Double Armory deck data was removed during sanitisation."
     );
+  }
+}
+
+async function runPrivatePayloadRejectionTest() {
+  let rpcCalls = 0;
+  global.chestSupabase = {
+    async rpc() {
+      rpcCalls += 1;
+      return { data: [], error: null };
+    }
+  };
+
+  const unsafeEvent = JSON.parse(
+    JSON.stringify(eventData)
+  );
+  unsafeEvent.drops = {
+    gold_chest: [
+      {
+        request: {
+          headers: {
+            authorization: "private-value"
+          }
+        }
+      }
+    ]
+  };
+
+  let message = "";
+  try {
+    await ChestDatabase.publishLiveEvent(
+      unsafeEvent
+    );
+  } catch (error) {
+    message = error.message;
+  }
+
+  if (rpcCalls !== 0) {
+    throw new Error("Private capture metadata reached the publishing RPC.");
+  }
+  if (
+    !message.includes("private capture or player data") ||
+    !message.includes("No cloud predictor records were changed")
+  ) {
+    throw new Error("Private payload publishing did not fail closed.");
+  }
+}
+
+async function runLegacyPublisherRetirementTest() {
+  let message = "";
+
+  try {
+    await ChestDatabase.savePredictor({
+      chestType: "gold"
+    });
+  } catch (error) {
+    message = error.message;
+  }
+
+  if (
+    !message.includes("Single-chest publishing is retired") ||
+    !message.includes("complete six-chest event")
+  ) {
+    throw new Error("The legacy client publisher is still available.");
   }
 }
 
@@ -269,6 +476,8 @@ vm.runInThisContext(
 Promise.resolve()
   .then(runMigrationCoverageTest)
   .then(runIncompleteEventTest)
+  .then(runPrivatePayloadRejectionTest)
+  .then(runLegacyPublisherRetirementTest)
   .then(runSuccessfulPublishTest)
   .then(runMissingFunctionTest)
   .then(() => {

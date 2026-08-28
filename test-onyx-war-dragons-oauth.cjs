@@ -8,7 +8,7 @@ const oauthSource = fs.readFileSync("supabase/functions/onyx-war-dragons-oauth/i
 const gatewaySource = fs.readFileSync("supabase/functions/onyx-war-dragons/index.ts", "utf8");
 const sql = fs.readFileSync("supabase/war_dragons_multi_player_oauth.sql", "utf8");
 
-assert.match(html, /onyx-war-dragons-auth\.js\?v=20260828-player-oauth-1/);
+assert.match(html, /onyx-war-dragons-auth\.js\?v=20260828-audit-2/);
 assert.ok(
   html.indexOf("onyx-war-dragons-api.js") < html.indexOf("onyx-war-dragons-auth.js")
   && html.indexOf("onyx-war-dragons-auth.js") < html.indexOf("onyx-atlas-command.js"),

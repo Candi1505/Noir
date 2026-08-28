@@ -17,6 +17,9 @@
 
   const USE_GACHA_PATTERN =
     /\/ext\/dragonsong\/event\/use_gacha(?:\?|$)/i;
+  const MAX_HAR_ENTRIES = 25000;
+  const MAX_OPENINGS = 5000;
+  const MAX_ERRORS = 100;
 
   /*
    * Spin-type mappings confirmed from the captured
@@ -213,7 +216,7 @@
       return JSON.parse(text);
     } catch (error) {
       throw new Error(
-        `${label} contained invalid JSON: ${error.message}`
+        `${label} contained invalid JSON.`
       );
     }
   }
@@ -258,8 +261,7 @@
       });
     } catch (error) {
       console.warn(
-        "[Chest Companion] Could not parse request form parameters.",
-        error
+        "[Chest Companion] Could not parse request form parameters."
       );
     }
 
@@ -760,8 +762,18 @@
     const openings = [];
     const errors = [];
 
-    har.log.entries.forEach(
-      (entry, entryIndex) => {
+    const entries = har.log.entries;
+    const scannedEntries = entries.slice(
+      0,
+      MAX_HAR_ENTRIES
+    );
+
+    for (
+      let entryIndex = 0;
+      entryIndex < scannedEntries.length;
+      entryIndex += 1
+    ) {
+        const entry = scannedEntries[entryIndex];
         const url =
           String(
             entry?.request?.url || ""
@@ -770,7 +782,11 @@
         if (
           !USE_GACHA_PATTERN.test(url)
         ) {
-          return;
+          continue;
+        }
+
+        if (openings.length >= MAX_OPENINGS) {
+          break;
         }
 
         try {
@@ -781,20 +797,21 @@
             )
           );
         } catch (error) {
-          errors.push({
-            sourceEntryIndex:
-              entryIndex,
+          if (errors.length < MAX_ERRORS) {
+            errors.push({
+              sourceEntryIndex:
+                entryIndex,
 
-            timestamp:
-              entry?.startedDateTime ||
-              null,
+              timestamp:
+                entry?.startedDateTime ||
+                null,
 
-            message:
-              error.message
-          });
+              message:
+                error.message
+            });
+          }
         }
-      }
-    );
+    }
 
     openings.sort((left, right) => {
       const leftTime =
@@ -867,6 +884,13 @@
 
       requestCount:
         openings.length,
+
+      scanTruncated:
+        entries.length > MAX_HAR_ENTRIES ||
+        openings.length >= MAX_OPENINGS,
+
+      scannedEntryCount:
+        scannedEntries.length,
 
       totalRegularChestsOpened,
 
@@ -947,88 +971,6 @@
       return isHarObject(value);
     }
   }
-
-  /*
-   * Browser-console testing helper.
-   */
-  window.testHarGachaParser =
-    function testHarGachaParser(rawData) {
-      try {
-        const result =
-          HarGachaParser.parse(rawData);
-
-        console.group(
-          "Onyx Command Private Update Parser"
-        );
-
-        console.log(
-          "Ready:",
-          result.ready
-        );
-
-        console.log(
-          "Gacha Requests:",
-          result.requestCount
-        );
-
-        console.log(
-          "Regular Chests Opened:",
-          result.totalRegularChestsOpened
-        );
-
-        console.log(
-          "Bonus Claims:",
-          result.bonusClaimCount
-        );
-
-        console.log(
-          "Freedom Progress:",
-          result.freedom
-        );
-
-        console.log(
-          "Chest Summary:",
-          result.chestSummary
-        );
-
-        console.log(
-          "Openings:",
-          result.openings
-        );
-
-        console.log(
-          "Aggregated Rewards:",
-          result.aggregatedRewards
-        );
-
-        if (
-          result.unknownSpinTypes.length
-        ) {
-          console.warn(
-            "Unknown Spin Types:",
-            result.unknownSpinTypes
-          );
-        }
-
-        if (result.errors.length) {
-          console.warn(
-            "Entries that could not be parsed:",
-            result.errors
-          );
-        }
-
-        console.groupEnd();
-
-        return result;
-      } catch (error) {
-        console.error(
-          "[Chest Companion]",
-          error
-        );
-
-        return null;
-      }
-    };
 
   window.HarGachaParser =
     HarGachaParser;

@@ -599,6 +599,143 @@
     return cloneSnapshot(memorySnapshot);
   }
 
+  /*
+   * Accept the already-sanitised result produced by the private import
+   * worker. Revalidate every field in the page before exposing it to the
+   * base tools; the raw capture never needs to leave the worker.
+   */
+  function importSnapshot(snapshot) {
+    if (!isObject(snapshot)) {
+      throw new Error(
+        "A sanitised tower inventory snapshot is required."
+      );
+    }
+
+    const towerIndex = buildTowerIndex();
+    const inputRecords = Array.isArray(
+      snapshot.records
+    )
+      ? snapshot.records
+      : [];
+
+    if (inputRecords.length > MAX_ENTRIES) {
+      throw new Error(
+        "The tower inventory snapshot is outside the safe import limits."
+      );
+    }
+
+    const records = inputRecords.map(record => {
+      if (!isObject(record)) {
+        throw new Error(
+          "The tower inventory snapshot is invalid."
+        );
+      }
+
+      const type = String(record.type || "");
+      const level = strictInteger(
+        record.level,
+        1,
+        999
+      );
+      const location =
+        record.location === "storage" ||
+        record.location === "base"
+          ? record.location
+          : "";
+      const quantity = strictInteger(
+        record.quantity,
+        1,
+        250_000_000
+      );
+      const knownLevel =
+        Array.isArray(towerIndex.levels[type]) &&
+        towerIndex.levels[type].some(row =>
+          Number(row?.level) === level
+        );
+
+      if (
+        !knownLevel ||
+        !location ||
+        !quantity
+      ) {
+        throw new Error(
+          "The tower inventory snapshot is invalid."
+        );
+      }
+
+      return {
+        type,
+        level,
+        location,
+        quantity,
+        evidence:
+          "catalogue-row-and-explicit-location"
+      };
+    });
+
+    const sourceDiagnostics =
+      isObject(snapshot.diagnostics)
+        ? snapshot.diagnostics
+        : {};
+    const sourceRejected =
+      isObject(sourceDiagnostics.rejected)
+        ? sourceDiagnostics.rejected
+        : {};
+    const safeCount = value => {
+      const number = Number(value);
+      return Number.isSafeInteger(number) &&
+        number >= 0
+        ? number
+        : 0;
+    };
+
+    memorySnapshot = {
+      schemaVersion: 1,
+      importedAt: new Date().toISOString(),
+      ready: records.length > 0,
+      records,
+      diagnostics: {
+        scannedEntries:
+          safeCount(
+            sourceDiagnostics.scannedEntries
+          ),
+        readableResponses:
+          safeCount(
+            sourceDiagnostics.readableResponses
+          ),
+        candidateSnapshots:
+          safeCount(
+            sourceDiagnostics.candidateSnapshots
+          ),
+        selectedGroups: records.length,
+        selectedQuantity: records.reduce(
+          (total, record) =>
+            total + record.quantity,
+          0
+        ),
+        rejected: {
+          type: safeCount(sourceRejected.type),
+          level: safeCount(sourceRejected.level),
+          "catalogue-level": safeCount(
+            sourceRejected["catalogue-level"]
+          ),
+          location: safeCount(
+            sourceRejected.location
+          ),
+          quantity: safeCount(
+            sourceRejected.quantity
+          )
+        },
+        scanLimitReached:
+          sourceDiagnostics.scanLimitReached ===
+          true
+      }
+    };
+
+    emit(IMPORT_EVENT, memorySnapshot);
+    return cloneSnapshot(memorySnapshot);
+  }
+
   function getSnapshot() {
     return cloneSnapshot(memorySnapshot);
   }
@@ -641,6 +778,7 @@
     clearEventName: CLEAR_EVENT,
     extract,
     importHar,
+    importSnapshot,
     getSnapshot,
     clear,
     subscribe

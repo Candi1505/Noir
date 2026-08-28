@@ -9,7 +9,8 @@
     "chest",
     "rider",
     "atlas",
-    "calculators"
+    "calculators",
+    "help"
   ]);
 
   const ICONS = Object.freeze({
@@ -84,6 +85,7 @@
   let riderMission = "flight";
   let riderDragonClass = "hunter";
   let riderPriority = "balanced";
+  let openCommand = null;
 
   function escapeHtml(value) {
     return String(value ?? "")
@@ -287,8 +289,8 @@
   }
 
   function storageKey() {
-    const userId = window.OnyxCommandCore?.getCurrentUserId?.() || "signed-out";
-    return `${LOCAL_STATE_PREFIX}:${userId}`;
+    const userId = window.OnyxCommandCore?.getCurrentUserId?.();
+    return userId ? `${LOCAL_STATE_PREFIX}:${userId}` : "";
   }
 
   function normaliseNullableInteger(value, minimum, maximum) {
@@ -316,7 +318,8 @@
 
   function readLocalState() {
     try {
-      const saved = JSON.parse(localStorage.getItem(storageKey()) || "null");
+      const key = storageKey();
+      const saved = JSON.parse((key && localStorage.getItem(key)) || "null");
       commandState = normaliseCommandState(saved);
     } catch (error) {
       commandState = defaultCommandState();
@@ -331,7 +334,8 @@
     try {
       const saved = await loader.call(window.ChestDatabase);
       commandState = normaliseCommandState(saved);
-      localStorage.setItem(storageKey(), JSON.stringify(commandState));
+      const key = storageKey();
+      if (key) localStorage.setItem(key, JSON.stringify(commandState));
       renderKeyProgress();
     } catch (error) {
       console.warn("[Onyx Command] Cloud preferences are not available yet.", error);
@@ -339,7 +343,9 @@
   }
 
   async function saveCommandState() {
-    localStorage.setItem(storageKey(), JSON.stringify(commandState));
+    const key = storageKey();
+    if (!key) return false;
+    localStorage.setItem(key, JSON.stringify(commandState));
     renderKeyProgress();
     const saver = window.ChestDatabase?.saveOnyxCommandState;
     if (typeof saver !== "function") return false;
@@ -914,12 +920,110 @@
     `);
   }
 
+  function helpSection(title, summary, body) {
+    return `<details class="onyx-help-section">
+      <summary><span>${escapeHtml(title)}</span><small>${escapeHtml(summary)}</small>${icon("chevron")}</summary>
+      <div class="onyx-help-copy">${body}</div>
+    </details>`;
+  }
+
+  function renderHelp() {
+    return shell("Help & Support", "PLAYER GUIDE", `
+      <section class="onyx-source-banner verified onyx-help-intro">
+        <strong>Onyx Command player guide</strong>
+        <p>Open only the section you need. The command screens stay compact for experienced players.</p>
+      </section>
+
+      <section class="onyx-help-list" aria-label="Onyx Command help topics">
+        ${helpSection("Getting started", "Account, navigation and saving", `
+          <ol>
+            <li>Create a player account with your email, password and optional player name, then sign in.</li>
+            <li>Use <strong>Home</strong> for command centres, <strong>Intel</strong> for verified live intelligence and <strong>Profile</strong> for your nickname, alliance and favourite active chest.</li>
+            <li>Use the menu at the top left for Chest History, Data Access, Settings and this guide.</li>
+            <li>Look for a Save button before leaving a planner. Each signed-in player's progress is kept separate.</li>
+          </ol>
+        `)}
+
+        ${helpSection("Season Command", "Keys, branches and route planning", `
+          <ul>
+            <li><strong>Road to 20:</strong> enter your overall keys and sigils, then use + and − on each branch to mark the key checkpoints you have actually claimed.</li>
+            <li><strong>Branch Explorer:</strong> review each verified branch, its completion cost and key stops.</li>
+            <li><strong>Season Intel:</strong> check the frozen release rules used by the planner.</li>
+            <li>Choose a mythic target if useful, then tap <strong>Save progress</strong>. The route recalculates from your marked checkpoints.</li>
+          </ul>
+        `)}
+
+        ${helpSection("Chest Command", "Predictor and opening tools", `
+          <ul>
+            <li><strong>Live Predictor:</strong> choose an available chest, record each reward exactly as it appears, use Undo for a mistake, and finish the session when you stop opening.</li>
+            <li><strong>Reward Finder:</strong> search the current regular and bonus reward pools.</li>
+            <li><strong>Drop Chances:</strong> inspect the published probabilities for the current event.</li>
+            <li><strong>Chest Budget:</strong> compare pack sizes, bonus intervals and estimated returns.</li>
+            <li><strong>Opening Planner:</strong> choose target rewards and compare chest options using current data.</li>
+            <li><strong>Double Armoury:</strong> plan the two armoury sequences when that event data is present.</li>
+            <li><strong>Data Readiness:</strong> see which current chest decks and checks are available.</li>
+            <li><strong>Chest History:</strong> open the top-left menu to review your own completed sessions.</li>
+          </ul>
+        `)}
+
+        ${helpSection("Base & Towers", "Catalogue, map and upgrade planning", `
+          <ul>
+            <li><strong>Tower Intelligence:</strong> select a tower and level to view verified stats, costs, build time and restrictions.</li>
+            <li><strong>Tactical Map:</strong> add only towers you own, place them on islands, and configure perches, riders and supported modifiers.</li>
+            <li><strong>Fort Planner:</strong> enter your available resources and priorities to compare upgrade choices.</li>
+            <li><strong>Tower Merge:</strong> compare merge requirements and outcomes using catalogue values.</li>
+            <li><strong>Base Advisor:</strong> review estimates and suggestions based only on the layout and inventory you entered.</li>
+          </ul>
+        `)}
+
+        ${helpSection("Rider Intelligence", "Rider matching and reference", `
+          <ul>
+            <li><strong>Match rider:</strong> choose Dragon flight, Base defence or Development, then choose the class or priority. Onyx ranks verified effects and shows its reasoning.</li>
+            <li><strong>Reference library:</strong> switch between Riders, Skills and Gear, then search by name or effect.</li>
+            <li>Matches compare possible effects; they do not assume you own the rider, skill path or gear.</li>
+          </ul>
+        `)}
+
+        ${helpSection("Atlas Command", "Castle Hunter and Atlas workspaces", `
+          <ul>
+            <li><strong>Live:</strong> connect the official War Dragons link when access is approved. Castle Hunter then uses authorised live data.</li>
+            <li><strong>Hunter:</strong> select any combination of T2–T5, then narrow by castle/team/coordinates, APR range, glory, shield state and gate status. Sort the matches and tap the coordinate control to copy it into War Dragons.</li>
+            <li><strong>Overview, Battles, Castles and Team:</strong> review the available Atlas snapshot without changing game data.</li>
+            <li><strong>Demo:</strong> explore the tools with fictional data. <strong>Manual:</strong> enter only the Atlas details you choose to track.</li>
+          </ul>
+        `)}
+
+        ${helpSection("Calculators", "Budgets, rates and comparisons", `
+          <ul>
+            <li>Open <strong>Calculators</strong> from Home for direct access to Ruby & Chest Budget, Drop Rate Calculator, Reward Planner and Double Armoury Planner.</li>
+            <li>Calculator results use the current published event data plus the values you enter. Treat estimates as planning aids, not guaranteed game outcomes.</li>
+          </ul>
+        `)}
+
+        ${helpSection("Your data & privacy", "What is shared and what stays private", `
+          <ul>
+            <li>Your profile, progress, base and history are tied to your signed-in account and are not assigned to another player.</li>
+            <li>Shared chest data contains the event decks only. It does not contain a player's opening position, history or sign-in details.</li>
+            <li>A private chest update file selected by an administrator is read in the browser, kept in memory only and cleared on sign-out or reload.</li>
+            <li><strong>Reset Local Data</strong> in Settings clears this account's data stored on the current device.</li>
+          </ul>
+        `)}
+      </section>
+
+      <section class="onyx-help-support">
+        <div>${icon("profile")}<span><small>ONYX SUPPORT</small><strong>Need a hand?</strong><p>Tell us which tool you were using, what happened and your device. Screenshots help. Never send a password, API credential or private chest update file.</p></span></div>
+        <a href="mailto:noirchestcompanion@gmail.com?subject=Onyx%20Command%20Support">Email noirchestcompanion@gmail.com</a>
+      </section>
+    `);
+  }
+
   function renderMenu() {
     return shell("Command Menu", "ONYX COMMAND", `
       <section class="onyx-command-section">
         <div class="onyx-menu-list">
           <button type="button" data-onyx-view="historyView" data-title="History">${icon("intel")}<span><strong>Chest History</strong><small>Your completed private sessions</small></span></button>
           <button type="button" data-onyx-view="predictorView" data-title="Predictors">${icon("chest")}<span><strong>Data Access</strong><small>Live event and administrator controls</small></span></button>
+          <button type="button" data-onyx-command="help">${icon("profile")}<span><strong>Help &amp; Support</strong><small>Player guide and contact</small></span></button>
           <button type="button" data-onyx-view="settingsView" data-title="Settings">${icon("calculators")}<span><strong>Settings</strong><small>Refresh and device controls</small></span></button>
         </div>
       </section>
@@ -931,6 +1035,7 @@
     if (command === "chest") return renderChest();
     if (command === "rider") return renderRiders();
     if (command === "calculators") return renderCalculators();
+    if (command === "help") return renderHelp();
     return renderMenu();
   }
 
@@ -947,14 +1052,17 @@
 
   function open(command = "menu") {
     if (command === "base") {
+      openCommand = null;
       window.OnyxBaseCommand?.open?.();
       return;
     }
     if (command === "atlas") {
+      openCommand = null;
       window.OnyxAtlasCommand?.open?.("hunter");
       return;
     }
     const requested = VALID_COMMANDS.has(command) ? command : "menu";
+    openCommand = requested;
     const overlay = ensureOverlay();
     overlay.innerHTML = renderCommand(requested);
     hydrateIcons(overlay);
@@ -969,6 +1077,23 @@
     overlay?.classList.remove("open");
     overlay?.setAttribute("aria-hidden", "true");
     document.body.classList.remove("onyx-modal-open");
+    openCommand = null;
+  }
+
+  function refreshOpenChestCommand() {
+    const overlay = document.getElementById(OVERLAY_ID);
+    if (
+      openCommand !== "chest" ||
+      !overlay?.classList.contains("open")
+    ) {
+      return;
+    }
+
+    const scrollTop = overlay.scrollTop;
+    overlay.innerHTML = renderChest();
+    hydrateIcons(overlay);
+    bindOverlay(overlay, "chest");
+    overlay.scrollTop = scrollTop;
   }
 
   function openTool(name) {
@@ -1082,6 +1207,9 @@
     });
     overlay.querySelectorAll("[data-onyx-tool]").forEach(button => {
       button.addEventListener("click", () => openTool(button.dataset.onyxTool));
+    });
+    overlay.querySelectorAll("[data-onyx-command]").forEach(button => {
+      button.addEventListener("click", () => open(button.dataset.onyxCommand));
     });
     overlay.querySelectorAll("[data-onyx-view]").forEach(button => {
       button.addEventListener("click", () => {
@@ -1197,6 +1325,17 @@
     readLocalState();
     renderKeyProgress();
     window.addEventListener("onyx:player-ready", loadCloudState);
+    [
+      "noir:event-imported",
+      "chest-companion:event-published",
+      "chest-companion-predictors-ready",
+      "chest-companion-live-predictor-updated"
+    ].forEach(eventName =>
+      window.addEventListener(
+        eventName,
+        refreshOpenChestCommand
+      )
+    );
     window.setTimeout(loadCloudState, 900);
   }
 

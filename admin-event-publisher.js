@@ -12,6 +12,9 @@
 
   const get = id =>
     document.getElementById(id);
+  const SIGN_OUT_TIMEOUT_MS = 5000;
+  const SUPABASE_AUTH_STORAGE_KEY =
+    "sb-prjixwuvyhiqzoekoadj-auth-token";
 
   let access = {
     user: null,
@@ -20,6 +23,38 @@
     isApproved: false
   };
   let passwordRecoveryActive = false;
+  let publishGeneration = 0;
+  let publishInFlight = false;
+  let accessRefreshGeneration = 0;
+  let signOutInProgress = false;
+
+  function invalidateAccessRefresh() {
+    accessRefreshGeneration += 1;
+  }
+
+  function invalidatePublishing() {
+    publishGeneration += 1;
+
+    const importButton = get(
+      "importEventDataButton"
+    );
+    if (importButton) {
+      if (!publishInFlight) {
+        delete importButton.dataset
+          .publisherGeneration;
+      }
+      if (
+        publishInFlight ||
+        importButton.dataset.importBusy ===
+          "true"
+      ) {
+        importButton.disabled = true;
+      } else {
+        importButton.disabled =
+          !access.isAdmin;
+      }
+    }
+  }
 
   function setStatus(message, failed = false) {
     const status = get("adminAccessStatus");
@@ -31,6 +66,130 @@
       "error-text",
       failed
     );
+  }
+
+  function showSigningOutBoundary() {
+    const message =
+      "Signing out securely. This page will refresh automatically.";
+
+    setStatus(message);
+    window.NoirAccessControl?.show?.({
+      message,
+      signedIn: true
+    });
+
+    [
+      "adminSignOutButton",
+      "playerSignOutButton",
+      "accessGateSignOut"
+    ].forEach(id => {
+      const button = get(id);
+
+      if (button) {
+        button.disabled = true;
+        button.textContent =
+          "Signing out...";
+      }
+    });
+  }
+
+  async function requestRemoteSignOut() {
+    const scheduleTimeout =
+      window.setTimeout ||
+      (typeof setTimeout === "function"
+        ? setTimeout
+        : null);
+    const cancelTimeout =
+      window.clearTimeout ||
+      (typeof clearTimeout === "function"
+        ? clearTimeout
+        : null);
+    let timeoutId = null;
+
+    const remoteRequest = Promise.resolve()
+      .then(() =>
+        window.ChestDatabase
+          .signOutAdmin()
+      )
+      .then(() => ({ timedOut: false }));
+
+    try {
+      if (!scheduleTimeout) {
+        await remoteRequest;
+        return true;
+      }
+
+      const result = await Promise.race([
+        remoteRequest,
+        new Promise(resolve => {
+          timeoutId = scheduleTimeout(
+            () => resolve({ timedOut: true }),
+            SIGN_OUT_TIMEOUT_MS
+          );
+        })
+      ]);
+
+      if (result?.timedOut) {
+        console.warn(
+          "[Noir] Remote sign-out timed out; completing local sign-out."
+        );
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.warn(
+        "[Noir] Remote sign-out failed; completing local sign-out."
+      );
+      return false;
+    } finally {
+      if (
+        timeoutId !== null &&
+        cancelTimeout
+      ) {
+        cancelTimeout(timeoutId);
+      }
+    }
+  }
+
+  function forceLocalSupabaseSessionClear() {
+    if (
+      window.NoirAccessControl
+        ?.forceLocalSessionClear
+    ) {
+      window.NoirAccessControl
+        .forceLocalSessionClear();
+      return;
+    }
+
+    try {
+      Promise.resolve(
+        window.chestSupabase?.auth
+          ?.signOut?.({ scope: "local" })
+      ).catch(() => {
+        /* Storage clearing below is the deterministic fallback. */
+      });
+    } catch (error) {
+      /* Storage clearing below is the deterministic fallback. */
+    }
+
+    [
+      "localStorage",
+      "sessionStorage"
+    ].forEach(storageName => {
+      try {
+        const storage =
+          window[storageName];
+        storage?.removeItem?.(
+          SUPABASE_AUTH_STORAGE_KEY
+        );
+        storage?.removeItem?.(
+          `${SUPABASE_AUTH_STORAGE_KEY}-code-verifier`
+        );
+      } catch (error) {
+        /* The locked page remains fail-closed until reload. */
+      }
+    });
   }
 
   function renderAccess() {
@@ -105,7 +264,7 @@
       if (eyebrow) eyebrow.textContent =
         "PRIVATE ACCESS";
       if (title) title.textContent =
-        "Invitation Required";
+        "Sign In Required";
       if (description) description.textContent =
         "Onyx Command requires a signed-in player account.";
       if (badge) badge.textContent = "Locked";
@@ -113,7 +272,13 @@
 
     if (importButton) {
       importButton.disabled =
-        !access.isAdmin;
+        !access.isAdmin ||
+        importButton.dataset.importBusy ===
+          "true" ||
+        Boolean(
+          importButton.dataset
+            .publisherGeneration
+        );
     }
 
     if (access.isAdmin) {
@@ -128,8 +293,12 @@
   }
 
   async function refreshAccess() {
+    const operationGeneration =
+      ++accessRefreshGeneration;
+    let refreshedAccess;
+
     try {
-      access =
+      refreshedAccess =
         await window.ChestDatabase
           .getCurrentAccess();
     } catch (error) {
@@ -138,13 +307,22 @@
         error
       );
 
-      access = {
+      refreshedAccess = {
         user: null,
         profile: null,
         isAdmin: false,
         isApproved: false
       };
     }
+
+    if (
+      operationGeneration !==
+        accessRefreshGeneration
+    ) {
+      return { ...access };
+    }
+
+    access = refreshedAccess;
 
     renderAccess();
 
@@ -175,11 +353,22 @@
 
     button.disabled = true;
     button.textContent = "Signing in...";
+    const operationGeneration =
+      ++accessRefreshGeneration;
 
     try {
-      access =
+      const signedInAccess =
         await window.ChestDatabase
           .signInMember(email, password);
+
+      if (
+        operationGeneration !==
+          accessRefreshGeneration
+      ) {
+        return;
+      }
+
+      access = signedInAccess;
 
       const passwordInput =
         get("adminPasswordInput");
@@ -202,14 +391,31 @@
   }
 
   async function signOut() {
+    if (signOutInProgress) {
+      return;
+    }
+
+    signOutInProgress = true;
+    invalidateAccessRefresh();
+    invalidatePublishing();
     try {
-      await window.ChestDatabase
-        .signOutAdmin();
+      window.NoirAccessControl
+        ?.clearPrivateClientState?.();
     } catch (error) {
-      console.warn(
-        "[Noir] Administrator sign-out failed.",
-        error
+      window.dispatchEvent?.(
+        new CustomEvent(
+          "noir:signout-started"
+        )
       );
+      try {
+        window.OnyxEventImportPrivacy
+          ?.clearPrivateImport?.({
+            resetInterface: true,
+            clearFileInput: true
+          });
+      } catch (cleanupError) {
+        /* Supabase sign-out and reload remain mandatory. */
+      }
     }
 
     access = {
@@ -219,8 +425,26 @@
       isApproved: false
     };
     passwordRecoveryActive = false;
-
     renderAccess();
+
+    try {
+      showSigningOutBoundary();
+    } catch (error) {
+      get("appShell")?.classList.add(
+        "hidden"
+      );
+    }
+
+    try {
+      const remoteSignOutCompleted =
+        await requestRemoteSignOut();
+
+      if (!remoteSignOutCompleted) {
+        forceLocalSupabaseSessionClear();
+      }
+    } finally {
+      window.location.reload();
+    }
   }
 
   async function sendPasswordReset() {
@@ -272,6 +496,9 @@
   }
 
   async function publishImportedEvent(event) {
+    const operationGeneration =
+      publishGeneration;
+
     if (
       event?.detail?.restored ||
       event?.detail?.cloud
@@ -334,45 +561,98 @@
       return;
     }
 
-    const currentAccess =
-      await refreshAccess();
-
-    if (!currentAccess.isAdmin) {
-      setStatus(
-        "The event data was prepared on this device but was not published because administrator access was not confirmed.",
-        true
-      );
-      return;
-    }
-
     const importButton =
       get("importEventDataButton");
     const status =
       get("eventImportStatus");
+    const operationToken =
+      String(operationGeneration);
 
     if (importButton) {
+      importButton.dataset
+        .publisherGeneration =
+          operationToken;
       importButton.disabled = true;
+    }
+
+    const currentAccess =
+      await refreshAccess();
+
+    if (
+      operationGeneration !==
+        publishGeneration ||
+      !currentAccess.isAdmin
+    ) {
+      if (
+        importButton?.dataset
+          .publisherGeneration ===
+            operationToken
+      ) {
+        delete importButton.dataset
+          .publisherGeneration;
+        if (
+          importButton.dataset.importBusy !==
+            "true"
+        ) {
+          importButton.disabled =
+            !access.isAdmin;
+        }
+      }
+      if (
+        operationGeneration ===
+          publishGeneration
+      ) {
+        setStatus(
+          "The event data was prepared on this device but was not published because administrator access was not confirmed.",
+          true
+        );
+      }
+      return;
     }
 
     if (status) {
       status.textContent =
-        "Event data ready. Publishing to players...";
+        "Event data ready. Publishing atomically to players. Once sent, the server update may finish even if this page closes.";
     }
 
     try {
+      publishInFlight = true;
+
       const published =
         await window.ChestDatabase
           .publishLiveEvent(
             eventData,
             event?.detail?.sourceFile ||
-              null
+              null,
+            {
+              isCancelled: () =>
+                operationGeneration !==
+                  publishGeneration
+            }
           );
+
+      if (
+        operationGeneration !==
+          publishGeneration
+      ) {
+        return;
+      }
 
       window.LivePredictorEngine
         ?.publishEventData?.(
           published.eventData,
           published.eventData.sourceFile
         );
+
+      await window.ChestPredictorCloud
+        ?.load?.();
+
+      if (
+        operationGeneration !==
+          publishGeneration
+      ) {
+        return;
+      }
 
       if (status) {
         status.textContent =
@@ -385,6 +665,14 @@
         ).toLocaleString()}.`
       );
     } catch (error) {
+      if (
+        operationGeneration !==
+          publishGeneration ||
+        error?.name === "AbortError"
+      ) {
+        return;
+      }
+
       console.error(
         "[Noir] Event publishing failed.",
         error
@@ -401,14 +689,39 @@
         true
       );
     } finally {
-      if (importButton) {
-        importButton.disabled =
-          !access.isAdmin;
+      publishInFlight = false;
+
+      if (
+        importButton?.dataset
+          .publisherGeneration ===
+            operationToken
+      ) {
+        delete importButton.dataset
+          .publisherGeneration;
+        if (
+          importButton.dataset.importBusy !==
+            "true"
+        ) {
+          importButton.disabled =
+            !access.isAdmin;
+        }
       }
     }
   }
 
   function initialise() {
+    window.addEventListener(
+      "noir:signout-started",
+      () => {
+        invalidateAccessRefresh();
+        invalidatePublishing();
+      }
+    );
+    window.addEventListener(
+      "noir:private-import-cleared",
+      invalidatePublishing
+    );
+
     get("adminSignInButton")
       ?.addEventListener(
         "click",

@@ -25,6 +25,7 @@
 
   const USE_GACHA_PATTERN =
     /\/ext\/dragonsong\/event\/use_gacha(?:\?|$)/i;
+  const MAX_HAR_ENTRIES = 25000;
 
   const EMBEDDED_EVENT_DATA_MARKER =
     "window.params_and_data";
@@ -99,7 +100,7 @@
       return JSON.parse(text);
     } catch (error) {
       throw new Error(
-        `${label} contained invalid JSON: ${error.message}`
+        `${label} contained invalid JSON.`
       );
     }
   }
@@ -285,8 +286,7 @@
           });
       } catch (error) {
         console.warn(
-          "[Chest Companion] Ignored unreadable current chest availability.",
-          error
+          "[Chest Companion] Ignored unreadable current chest availability."
         );
       }
     });
@@ -452,8 +452,7 @@
           });
       } catch (error) {
         console.warn(
-          "[Chest Companion] Ignored unreadable event reward data.",
-          error
+          "[Chest Companion] Ignored unreadable event reward data."
         );
       }
     });
@@ -506,7 +505,7 @@
           });
         });
       } catch (error) {
-        console.warn("[Chest Companion] Ignored unreadable Double Armory reward data.", error);
+        console.warn("[Chest Companion] Ignored unreadable Double Armory reward data.");
       }
     });
 
@@ -656,8 +655,7 @@
         });
       } catch (error) {
         console.warn(
-          "[Chest Companion] Ignored an unreadable about_v2 response.",
-          error
+          "[Chest Companion] Ignored an unreadable about_v2 response."
         );
       }
     });
@@ -783,14 +781,25 @@
     };
   }
 
-  function parseImportText(rawText) {
-    const text = String(rawText || "").trim();
+  function parseImportText(rawData) {
+    let parsed;
 
-    if (!text) {
-      throw new Error("The selected import file is empty.");
+    if (typeof rawData === "string") {
+      const text = rawData.trim();
+
+      if (!text) {
+        throw new Error("The selected import file is empty.");
+      }
+
+      parsed = parseJsonText(text, "The selected file");
+    } else if (
+      rawData &&
+      typeof rawData === "object"
+    ) {
+      parsed = rawData;
+    } else {
+      throw new Error("The selected import file is not supported.");
     }
-
-    const parsed = parseJsonText(text, "The selected file");
 
     if (!isHarObject(parsed)) {
       return {
@@ -798,6 +807,15 @@
         eventPayload: parsed,
         diagnostics: null
       };
+    }
+
+    if (
+      parsed.log.entries.length >
+        MAX_HAR_ENTRIES
+    ) {
+      throw new Error(
+        "This private update contains too many network entries to process safely."
+      );
     }
 
     /*
@@ -809,8 +827,7 @@
       window.OnyxTowerInventoryBridge?.importHar?.(parsed);
     } catch (error) {
       console.warn(
-        "[Onyx Command] No verified tower inventory could be prepared from this private import.",
-        error
+        "[Onyx Command] No verified tower inventory could be prepared from this private import."
       );
     }
 

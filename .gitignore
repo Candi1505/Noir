@@ -3,6 +3,8 @@
 *.HAR
 *.har.zip
 *.HAR.zip
+*.zip
+*.ZIP
 private_*capture/
 raw_*capture/
 extracted_*state/

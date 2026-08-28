@@ -59,9 +59,6 @@
     owned: 0
   };
 
-  let amountRenderTimer =
-    null;
-
   function escapeHtml(value) {
     return String(value ?? "")
       .replaceAll("&", "&amp;")
@@ -360,8 +357,8 @@
             <div class="cp-answer cp-answer-muted">
               <strong>Not in this event</strong>
               <p>
-                This reward is not currently available from these
-                four chests.
+                This reward is not currently available from the
+                active chests.
               </p>
             </div>
           `
@@ -659,6 +656,27 @@
 
     const rewardNames =
       getRewardNames(source.rates);
+    const currentChestOrder =
+      getCurrentChestOrder();
+
+    if (!currentChestOrder.length) {
+      overlay.innerHTML = `
+        <div class="cp-shell">
+          <header class="cp-header">
+            <div>
+              <p>ONYX COMMAND</p>
+              <h2>Chest Planner</h2>
+            </div>
+            <button type="button" class="cp-close" aria-label="Close chest planner">×</button>
+          </header>
+          <div class="cp-empty">
+            No chest decks are active for this event.
+          </div>
+        </div>
+      `;
+      attachEvents();
+      return;
+    }
 
     if (
       !state.reward ||
@@ -817,25 +835,12 @@
         "input",
         event => {
           saveValue(event);
-
-          window.clearTimeout(
-            amountRenderTimer
-          );
-
-          amountRenderTimer =
-            window.setTimeout(
-              render,
-              300
-            );
         }
       );
 
       input?.addEventListener(
         "change",
         event => {
-          window.clearTimeout(
-            amountRenderTimer
-          );
           saveValue(event);
           render();
         }
@@ -1161,6 +1166,22 @@
   });
 
   window.ChestPlanner = api;
+
+  [
+    "noir:event-imported",
+    "chest-companion:event-published",
+    "chest-companion-predictors-ready",
+    "chest-companion-live-predictor-updated"
+  ].forEach(eventName => {
+    window.addEventListener(eventName, () => {
+      const overlay = document.getElementById(
+        "chestPlannerOverlay"
+      );
+      if (overlay?.classList.contains("open")) {
+        render();
+      }
+    });
+  });
 
   if (
     document.readyState ===

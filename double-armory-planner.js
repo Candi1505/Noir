@@ -29,8 +29,9 @@
   const PREFERENCE_SCORES = { favourite: 80, wanted: 35, neutral: 0, avoid: -60, never: -1000 };
   let selectedChestType = "platinum";
   let restoreLivePredictorOnClose = false;
-  let playerId = "signed-out";
+  let playerId = null;
   let playerState = null;
+  let opening = false;
 
   const REWARD_NAMES = {
     breedingToken: "Egg Tokens",
@@ -98,6 +99,7 @@
     if (overlay?.classList.contains("lp-open")) {
       restoreLivePredictorOnClose = true;
       overlay.classList.remove("lp-open");
+      overlay.setAttribute("aria-hidden", "true");
     }
   }
 
@@ -105,6 +107,7 @@
     document.getElementById(OVERLAY_ID)?.remove();
     if (restoreLivePredictorOnClose) {
       livePredictorOverlay()?.classList.add("lp-open");
+      livePredictorOverlay()?.setAttribute("aria-hidden", "false");
       restoreLivePredictorOnClose = false;
       document.body.style.overflow = "hidden";
     } else {
@@ -128,22 +131,16 @@
 
   function eventFingerprint(data = getData()) {
     if (!data) return "none";
-    const compactSide = side => ({
-      indices: side?.deckIndices,
-      decks: Object.fromEntries(Object.entries(side?.decks || {}).map(([key, deck]) => [
-        key,
-        Array.isArray(deck) ? [deck.length, ...deck.slice(0, 8), ...deck.slice(-8)] : null
-      ])),
-      drops: Object.fromEntries(Object.entries(side?.drops || {}).map(([key, drops]) => [
-        key,
-        Array.isArray(drops)
-          ? drops.map(drop => [drop?.id, drop?.code, drop?.mu, drop?.drop_type])
-          : null
-      ]))
+    const completeSide = side => ({
+      decks: side?.decks || {},
+      drops: side?.drops || {},
+      chests: side?.chests || {}
     });
     return hashText(JSON.stringify({
-      assault: compactSide(data.sides?.assault),
-      breeding: compactSide(data.sides?.breeding),
+      eventName: data.eventName || data.event || "",
+      eventVersion: data.eventVersion || data.version || "",
+      assault: completeSide(data.sides?.assault),
+      breeding: completeSide(data.sides?.breeding),
       chestTypes: data.availableChestTypes
     }));
   }
@@ -151,10 +148,10 @@
   async function resolvePlayerId() {
     try {
       const result = await window.chestSupabase?.auth?.getSession?.();
-      return result?.data?.session?.user?.id || "signed-out";
+      return result?.data?.session?.user?.id || null;
     } catch (error) {
       console.warn("[Double Armory] Could not read the signed-in player.", error);
-      return "signed-out";
+      return null;
     }
   }
 
@@ -164,6 +161,7 @@
 
   function loadPlayerState(data = getData()) {
     const fingerprint = eventFingerprint(data);
+    if (!playerId) return { eventFingerprint: fingerprint, chests: {} };
     const key = `${STORAGE_PREFIX}:${playerId}`;
     try {
       const saved = JSON.parse(localStorage.getItem(key) || "{}");
@@ -178,7 +176,7 @@
   }
 
   function savePlayerState() {
-    if (!playerState) return;
+    if (!playerState || !playerId) return;
     try {
       localStorage.setItem(`${STORAGE_PREFIX}:${playerId}`, JSON.stringify(playerState));
     } catch (error) {
@@ -502,6 +500,8 @@
   }
 
   async function open() {
+    if (opening) return;
+    opening = true;
     try {
       const data = getData();
       if (!data?.ready) {
@@ -645,8 +645,16 @@
       });
       document.body.appendChild(overlay);
     } catch (error) {
+      if (restoreLivePredictorOnClose) {
+        livePredictorOverlay()?.classList.add("lp-open");
+        livePredictorOverlay()?.setAttribute("aria-hidden", "false");
+        restoreLivePredictorOnClose = false;
+        document.body.style.overflow = "hidden";
+      }
       console.error("[Double Armory] Planner could not open.", error);
       window.alert(`The Double Armory planner could not open: ${error?.message || "unknown error"}`);
+    } finally {
+      opening = false;
     }
   }
 

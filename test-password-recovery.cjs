@@ -75,7 +75,7 @@ const window = {
     }
   },
   location: {
-    href: "https://candi1505.github.io/Noir/?invite=1#access_token=test",
+    href: "https://candi1505.github.io/Noir/#access_token=test",
     reload: () => {
       reloaded = true;
     }
@@ -103,14 +103,14 @@ assert.equal(
 );
 
 authListener(
-  "SIGNED_IN",
-  { user: { id: "invited-player" } }
+  "PASSWORD_RECOVERY",
+  { user: { id: "recovering-player" } }
 );
 
 assert.equal(
   elements.accessGateRecovery.classList.contains("hidden"),
   false,
-  "Password setup must be visible after an invited user signs in."
+  "Password setup must be visible after a recovery link is opened."
 );
 assert.equal(
   elements.accessGateCredentials.classList.contains("hidden"),

@@ -7,7 +7,7 @@
 
 "use strict";
 
-importScripts("onyx-atlas-castle-hunter-core.js?v=20260828-production-1");
+importScripts("onyx-atlas-castle-hunter-core.js?v=20260828-audit-2");
 
 const Core = self.OnyxAtlasCore;
 const MAX_ARCHIVE_BYTES = 320 * 1024 * 1024;

@@ -84,6 +84,8 @@
     super_sigil: 30
   };
 
+  discardLegacyPlayerState();
+
   let state =
     loadPlayerState();
 
@@ -333,6 +335,36 @@
     return cleaned;
   }
 
+  function cleanSavedEventStates(
+    eventStates
+  ) {
+    if (!isObject(eventStates)) {
+      return {};
+    }
+
+    return Object.fromEntries(
+      Object.entries(eventStates)
+        .slice(0, 100)
+        .filter(([, snapshot]) =>
+          isObject(snapshot)
+        )
+        .map(([fingerprint, snapshot]) => [
+          fingerprint,
+          {
+            observations:
+              cleanSavedObservations(
+                snapshot.observations
+              ),
+            bonusProgress:
+              cloneValue(
+                snapshot.bonusProgress || {}
+              ),
+            importedGachaIds: []
+          }
+        ])
+    );
+  }
+
   function loadPlayerState() {
     const defaults =
       createDefaultPlayerState();
@@ -357,7 +389,7 @@
           saved.observations
         );
 
-      return {
+      const restored = {
   activeChest,
   observations,
 
@@ -385,12 +417,7 @@
       {}
     ),
 
-  importedGachaIds:
-    Array.isArray(
-      saved.importedGachaIds
-    )
-      ? saved.importedGachaIds
-      : [],
+  importedGachaIds: [],
 
   eventFingerprint:
     typeof saved.eventFingerprint ===
@@ -399,10 +426,19 @@
       : null,
 
   eventStates:
-    isObject(saved.eventStates)
-      ? saved.eventStates
-      : {}
+    cleanSavedEventStates(
+      saved.eventStates
+    )
 };
+
+      if (playerIdentity !== "guest") {
+        localStorage.setItem(
+          getPlayerStorageKey(),
+          JSON.stringify(restored)
+        );
+      }
+
+      return restored;
       
     } catch (error) {
       console.warn(
@@ -415,6 +451,17 @@
   }
 
   function savePlayerState() {
+    if (playerIdentity === "guest") {
+      try {
+        localStorage.removeItem(
+          getPlayerStorageKey()
+        );
+      } catch (error) {
+        // Guest state remains memory-only.
+      }
+      return;
+    }
+
     try {
       localStorage.setItem(
         getPlayerStorageKey(),
@@ -428,6 +475,26 @@
     }
   }
 
+  function discardLegacyPlayerState() {
+    try {
+      /*
+       * This pre-account key cannot be attributed safely on a shared
+       * browser. Never assign it to whichever player happens to sign in
+       * first; account-scoped history remains untouched.
+       */
+      localStorage.removeItem(
+        PLAYER_STORAGE_KEY_PREFIX
+      );
+      localStorage.removeItem(
+        `${PLAYER_STORAGE_KEY_PREFIX}:guest`
+      );
+    } catch (error) {
+      console.warn(
+        "[Chest Companion] Legacy unscoped predictor progress could not be cleared."
+      );
+    }
+  }
+
   function setPlayerIdentity(userId) {
     const nextIdentity =
       normaliseText(userId) || "guest";
@@ -436,42 +503,7 @@
       return false;
     }
 
-    /*
-     * Builds before account-scoped storage used one browser-wide key.
-     * Move that progress once for the currently signed-in player so the
-     * privacy fix does not silently discard their existing history.
-     */
-    try {
-      const scopedKey =
-        getPlayerStorageKey(
-          nextIdentity
-        );
-      const legacyValue =
-        localStorage.getItem(
-          PLAYER_STORAGE_KEY_PREFIX
-        );
-
-      if (
-        !localStorage.getItem(scopedKey) &&
-        legacyValue
-      ) {
-        localStorage.setItem(
-          scopedKey,
-          legacyValue
-        );
-      }
-
-      if (legacyValue) {
-        localStorage.removeItem(
-          PLAYER_STORAGE_KEY_PREFIX
-        );
-      }
-    } catch (error) {
-      console.warn(
-        "[Chest Companion] Could not migrate predictor progress.",
-        error
-      );
-    }
+    discardLegacyPlayerState();
 
     playerIdentity = nextIdentity;
     state = loadPlayerState();
@@ -487,20 +519,20 @@
 
   function loadCachedPublishedEvent() {
     try {
-      const saved =
-        JSON.parse(
-          localStorage.getItem(
-            EVENT_CACHE_KEY
-          ) || "null"
-        );
+      /*
+       * Published decks now come from the authenticated cloud load.
+       * The old browser-wide cache could contain a locally parsed HAR,
+       * its deck cursor and its source filename, so it is retired rather
+       * than restored or migrated to an account.
+       */
+      localStorage.removeItem(
+        EVENT_CACHE_KEY
+      );
 
-      return isObject(saved)
-        ? saved
-        : null;
+      return null;
     } catch (error) {
       console.warn(
-        "[Chest Companion] Could not restore cached event data.",
-        error
+        "[Chest Companion] Legacy cached event data could not be cleared."
       );
 
       return null;
@@ -508,15 +540,17 @@
   }
 
   function saveCachedPublishedEvent(
-    eventData,
-    sourceFile = null
+    eventData
   ) {
+    /*
+     * Keep the authenticated cloud deck available only for this page.
+     * Do not persist it browser-wide and do not retain capture filenames.
+     */
     cachedPublishedEvent = {
       data:
         cloneValue(eventData),
 
-      sourceFile:
-        cloneValue(sourceFile),
+      sourceFile: null,
 
       cachedAt:
         new Date()
@@ -524,16 +558,12 @@
     };
 
     try {
-      localStorage.setItem(
-        EVENT_CACHE_KEY,
-        JSON.stringify(
-          cachedPublishedEvent
-        )
+      localStorage.removeItem(
+        EVENT_CACHE_KEY
       );
     } catch (error) {
       console.warn(
-        "[Chest Companion] Could not cache the published event.",
-        error
+        "[Chest Companion] Legacy cached event data could not be cleared."
       );
     }
   }
@@ -958,10 +988,13 @@
       publishedAt
     };
 
-    saveCachedPublishedEvent(
-      publishedData,
-      sourceFile
-    );
+    if (sourceFile) {
+      clearCachedPublishedEvent();
+    } else {
+      saveCachedPublishedEvent(
+        publishedData
+      );
+    }
 
     window.dispatchEvent(
       new CustomEvent(
@@ -5505,307 +5538,9 @@ function importGachaHistory(
   gachaData,
   sourceFile = null
 ) {
-  const openings =
-    getGachaOpenings(
-      gachaData
-    );
-
-  if (!openings.length) {
-    return {
-      detected: 0,
-      imported: 0,
-      duplicates: 0,
-      bonuses: 0,
-      unsupported: 0,
-      unreadable: 0
-    };
-  }
-
-  if (
-    !Array.isArray(
-      state.importedGachaIds
-    )
-  ) {
-    state.importedGachaIds = [];
-  }
-
-  const importedIds =
-    new Set(
-      state.importedGachaIds
-    );
-
-  const orderedOpenings =
-    openings
-      .map(
-        (opening, index) => ({
-          opening,
-          index,
-          time:
-            getGachaOpeningTime(
-              opening
-            )
-        })
-      )
-      .sort(
-        (first, second) => {
-          if (
-            first.time !==
-            second.time
-          ) {
-            return (
-              first.time -
-              second.time
-            );
-          }
-
-          return (
-            first.index -
-            second.index
-          );
-        }
-      );
-
-  const summary = {
-    detected:
-      openings.length,
-
-    imported: 0,
-    duplicates: 0,
-    bonuses: 0,
-    unsupported: 0,
-    unreadable: 0
-  };
-
-  orderedOpenings.forEach(
-    ({
-      opening,
-      index
-    }) => {
-      const importId =
-        createGachaImportId(
-          opening,
-          index,
-          sourceFile
-        );
-
-      if (
-        importedIds.has(
-          importId
-        )
-      ) {
-        summary.duplicates += 1;
-        return;
-      }
-
-      if (
-        isBonusGachaOpening(
-          opening
-        )
-      ) {
-        /*
-         * Bonus rewards are real history, but they are
-         * not positions in the regular chest sequence.
-         */
-        importedIds.add(
-          importId
-        );
-
-        summary.bonuses += 1;
-        return;
-      }
-
-      const chestType =
-        normaliseGachaChestType(
-          opening
-        );
-
-      if (
-        !chestType ||
-        !isSupportedChest(
-          chestType
-        )
-      ) {
-        importedIds.add(
-          importId
-        );
-
-        summary.unsupported += 1;
-        return;
-      }
-
-      const reward =
-        createGachaRewardValue(
-          opening
-        );
-
-      if (!reward) {
-        importedIds.add(
-          importId
-        );
-
-        summary.unreadable += 1;
-        return;
-      }
-
-      const chestCount =
-        Math.max(
-          1,
-          Math.floor(
-            toFiniteNumber(
-              opening?.count,
-              1
-            ) || 1
-          )
-        );
-
-      /*
-       * A batched opening may return aggregated rewards,
-       * meaning its exact per-chest order cannot safely be
-       * reconstructed. Import single openings into the
-       * sequence solver and retain batches as diagnostics.
-       */
-      if (chestCount !== 1) {
-        importedIds.add(
-          importId
-        );
-
-        summary.unreadable += 1;
-
-        console.warn(
-          "[Chest Companion] A batched HAR opening was not added to the sequence because its individual chest order is unavailable.",
-          opening
-        );
-
-        return;
-      }
-
-      const normalisedReward =
-        normaliseDeckEntry(
-          reward,
-          0,
-          chestType
-        );
-
-      const observation = {
-        number:
-          (
-            state.observations[
-              chestType
-            ]?.length || 0
-          ) + 1,
-
-        chestType,
-
-        name:
-          normalisedReward.name,
-
-        label:
-          normalisedReward.name,
-
-        code:
-          normalisedReward.code,
-
-        amount:
-          normalisedReward.amount,
-
-        quantity: 1,
-        chestCount: 1,
-        chestsOpened: 1,
-
-        value:
-          cloneValue(
-            reward.matchValue
-          ),
-
-        matchValue:
-          cloneValue(
-            reward.matchValue
-          ),
-
-        reward:
-          cloneValue(
-            reward
-          ),
-
-        raw:
-          cloneValue(
-            reward
-          ),
-
-        source:
-          "har",
-
-        importedFromHar:
-          true,
-
-        gachaImportId:
-          importId,
-
-        gachaEntry:
-          opening?.entry ??
-          null,
-
-        spinType:
-          opening?.spinType ??
-          opening?.spin_type ??
-          null,
-
-        claimType:
-          opening?.claimType ??
-          opening?.claim_type ??
-          null,
-
-        eventId:
-          opening?.eventId ??
-          opening?.event_id ??
-          null,
-
-        displayValue:
-          normalisedReward.amount ===
-            null
-            ? normalisedReward.name
-            : (
-                `${normalisedReward.name} — ` +
-                `${normalisedReward.amount}`
-              ),
-
-        recordedAt:
-          firstDefined([
-            opening?.time,
-            opening?.timestamp,
-            opening?.startedDateTime,
-            new Date()
-              .toISOString()
-          ])
-      };
-
-      state.observations[
-        chestType
-      ].push(
-        observation
-      );
-
-      importedIds.add(
-        importId
-      );
-
-      summary.imported += 1;
-    }
-  );
-
-  state.importedGachaIds =
-    Array.from(
-      importedIds
-    );
-
-  savePlayerState();
-
-  console.info(
-    "[Chest Companion] HAR history import complete.",
-    summary
-  );
-
-  return summary;
+  /* Retained only as an internal compatibility shim. Private capture
+   * openings are diagnostics and can never mutate player history. */
+  return inspectGachaHistory(gachaData);
 }
 
 /*
@@ -5859,16 +5594,27 @@ function inspectGachaHistory(
       window.currentEventSourceFile ||
       null;
 
+    const loadedFromCloud =
+      event?.detail?.cloud === true;
+
     if (
       eventData &&
       typeof eventData === "object"
     ) {
       syncPlayerEvent(eventData);
 
-      saveCachedPublishedEvent(
-        eventData,
-        sourceFile
-      );
+      if (loadedFromCloud) {
+        saveCachedPublishedEvent(
+          eventData
+        );
+      } else {
+        /*
+         * A locally imported HAR belongs only to the administrator's
+         * current page. Never place its parsed data or filename in the
+         * browser-wide event cache.
+         */
+        clearCachedPublishedEvent();
+      }
     }
 
     const gachaSummary =
@@ -5895,6 +5641,17 @@ function inspectGachaHistory(
   window.addEventListener(
     "chest-companion:event-published",
     refresh
+  );
+
+  window.addEventListener(
+    "noir:private-import-cleared",
+    () => {
+      const restoredEvent = getEventData();
+      if (restoredEvent) {
+        syncPlayerEvent(restoredEvent);
+      }
+      refresh();
+    }
   );
    
   window.addEventListener(
@@ -5952,6 +5709,8 @@ function inspectGachaHistory(
       getEventFingerprint,
       syncPlayerEvent,
       setPlayerIdentity,
+      getPlayerIdentity:
+        () => playerIdentity,
 
       publishEventData,
       clearPublishedEventData,
@@ -5985,7 +5744,6 @@ function inspectGachaHistory(
       getObservations,
 
       getGachaOpenings,
-      importGachaHistory,
       inspectGachaHistory,
 
       recordReward,

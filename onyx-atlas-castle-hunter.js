@@ -15,6 +15,7 @@
   const PAGE_SIZE = 50;
   const LIVE_BATCH_SIZE = 100;
   const LIVE_BATCH_INTERVAL_MS = 1100;
+  const DROPPING_SOON_SECONDS = 2 * 60 * 60;
   const DEFAULT_REALM_NAME = "Celestial_Haven";
   const LEGACY_ATLAS_CONFIG = Object.freeze({
     realmName: DEFAULT_REALM_NAME,
@@ -179,6 +180,80 @@
         configObservedAt: Number(value.capturedAt) || null
       }
     };
+  }
+
+  function epochIso(value) {
+    const seconds = Number(value);
+    if (!Number.isFinite(seconds) || seconds <= 0) return null;
+    const date = new Date(seconds * 1000);
+    return Number.isNaN(date.getTime()) ? null : date.toISOString();
+  }
+
+  function commandShieldState(record, nowEpoch) {
+    const effective = Core.effectiveShieldState(record?.shield, nowEpoch);
+    if (effective === "down") return "vulnerable";
+    const endAt = Number(record?.shield?.endAt);
+    const timedStateExpired = Number.isFinite(endAt) && endAt <= nowEpoch;
+    if (effective === "cooldown") return timedStateExpired ? "unknown" : "cooldown";
+    if (effective === "active" || effective === "event") {
+      if (effective === "active" && timedStateExpired) return "unknown";
+      if (
+        Number.isFinite(endAt) &&
+        endAt > nowEpoch &&
+        endAt - nowEpoch <= DROPPING_SOON_SECONDS
+      ) {
+        return "dropping";
+      }
+      return "shielded";
+    }
+    return "unknown";
+  }
+
+  function toCommandSnapshot(value, nowEpoch = Date.now() / 1000) {
+    const records = Array.isArray(value?.records) ? value.records : [];
+    const officialCount = records.filter(
+      record => record?.source === "official"
+    ).length;
+    const snapshotSource = officialCount === records.length && records.length
+      ? "War Dragons API"
+      : officialCount > 0
+        ? "Mixed Atlas sources"
+        : "Atlas capture";
+    return {
+      source: snapshotSource,
+      fetchedAt: epochIso(value?.lastLiveAt || value?.capturedAt),
+      castles: records.slice(0, 50000).map((record, index) => {
+        const shieldState = commandShieldState(record, nowEpoch);
+        const shieldEnd = epochIso(record?.shield?.endAt);
+        const guards = record?.guards;
+        return {
+          id: String(record?.coordinate || `atlas-castle-${index + 1}`),
+          name: String(record?.name || record?.coordinate || `Castle ${index + 1}`),
+          owner: String(record?.ownerTeam || ""),
+          region: String(record?.regionName || record?.regionId || ""),
+          level: Number.isInteger(record?.tier) ? record.tier : null,
+          troops: guards === null || guards === undefined || guards === ""
+            ? null
+            : Number.isFinite(Number(guards))
+              ? Number(guards)
+              : null,
+          fleets: null,
+          shieldState,
+          shieldEndsAt: ["dropping", "shielded"].includes(shieldState) ? shieldEnd : null,
+          cooldownEndsAt: shieldState === "cooldown" ? shieldEnd : null,
+          /* A confirmed shield-down state is not, by itself, an
+           * authoritative attackability claim. */
+          attackable:
+            record?.source === "official" &&
+            record?.attackable === true,
+          source: record?.source === "official" ? "War Dragons API" : "Atlas capture"
+        };
+      })
+    };
+  }
+
+  function syncAtlasCommandSnapshot(value) {
+    window.OnyxAtlasCommand?.setLiveSnapshot?.(toCommandSnapshot(value));
   }
 
   function setImportStatus(message, failed = false) {
@@ -554,6 +629,7 @@
         console.warn("[Onyx Atlas] The derived snapshot could not be cached.", error);
       }
     }
+    syncAtlasCommandSnapshot(prepared);
     const latestLiveAt = Number(prepared.lastLiveAt || prepared.capturedAt || 0);
     const captureAge = Math.max(0, (Date.now() / 1000) - latestLiveAt);
     const freshness = captureAge > Core.LIVE_TTL_SECONDS
@@ -580,7 +656,7 @@
     const progressBar = get("atlasImportProgress");
     progressBar.value = 1;
     progressBar.textContent = "1%";
-    activeWorker = new Worker("onyx-atlas-har-worker.js?v=20260828-production-1");
+    activeWorker = new Worker("onyx-atlas-har-worker.js?v=20260828-audit-2");
 
     activeWorker.addEventListener("message", async event => {
       if (event.data?.type === "progress") {
@@ -660,6 +736,7 @@
       try {
         const macro = await WarDragons.atlasMacro(identity);
         snapshot = Core.mergeOfficialMacro(snapshot, macro);
+        syncAtlasCommandSnapshot(snapshot);
         applyFilters({ persist: false });
       } catch (error) {
         if (["authorisation_required", "scope_required", "pending_review"].includes(error?.code)) {
@@ -685,9 +762,10 @@
         snapshot = Core.mergeOfficialCritical(snapshot, live);
         processed += batch.length;
         setApiStatus(`Live ${formatNumber(processed)}/${formatNumber(candidates.length)}`, "working");
-        applyFilters({ persist: false });
 
         if (processed % 1000 === 0) {
+          syncAtlasCommandSnapshot(snapshot);
+          applyFilters({ persist: false });
           await cacheSnapshot(snapshot).catch(() => undefined);
         }
         if (offset + LIVE_BATCH_SIZE < candidates.length && !cancelLiveScan) {
@@ -697,6 +775,7 @@
       }
 
       await cacheSnapshot(snapshot).catch(() => undefined);
+      syncAtlasCommandSnapshot(snapshot);
       setImportStatus(
         cancelLiveScan
           ? `Live scan stopped · ${formatNumber(processed)} checked`
@@ -914,5 +993,9 @@
   }
 
   window.addEventListener?.("onyx-war-dragons-connection", handleConnectionState);
-  window.OnyxAtlasCastleHunter = Object.freeze({ mount, unmount });
+  window.OnyxAtlasCastleHunter = Object.freeze({
+    mount,
+    unmount,
+    toCommandSnapshot
+  });
 })(window, document);

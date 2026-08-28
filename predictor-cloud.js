@@ -19,6 +19,16 @@
     error: null,
     predictors: {}
   };
+  let loadGeneration = 0;
+
+  function invalidate() {
+    loadGeneration += 1;
+    state.loading = false;
+    state.loaded = false;
+    state.source = "device";
+    state.error = null;
+    state.predictors = {};
+  }
 
   function normaliseChestType(value) {
   const chest = String(value || "")
@@ -130,7 +140,54 @@
       );
     });
 
+    Object.values(
+      eventData.doubleArmory?.sides || {}
+    ).forEach(sideData => {
+      if (
+        sideData &&
+        typeof sideData === "object"
+      ) {
+        delete sideData.deckIndices;
+        delete sideData.deck_indices;
+      }
+    });
+
     return eventData;
+  }
+
+  function sanitisePredictorForPlayer(
+    publishedPredictor
+  ) {
+    const predictorData =
+      JSON.parse(
+        JSON.stringify(
+          publishedPredictor || {}
+        )
+      );
+
+    [
+      "sourceFile",
+      "fileName",
+      "filename"
+    ].forEach(field => {
+      delete predictorData[field];
+    });
+
+    delete predictorData.deckIndices;
+    delete predictorData.deck_indices;
+
+    if (
+      predictorData.eventData &&
+      typeof predictorData.eventData ===
+        "object"
+    ) {
+      predictorData.eventData =
+        sanitiseEventForPlayer(
+          predictorData.eventData
+        );
+    }
+
+    return predictorData;
   }
 
   function installPredictor(record) {
@@ -153,12 +210,17 @@
     window.CHEST_DATA =
       window.CHEST_DATA || {};
 
+    const predictorData =
+      sanitisePredictorForPlayer(
+        record.predictor_data
+      );
+
     /*
      * predictor_data should contain the complete
      * database object for this chest.
      */
     window.CHEST_DATA[chestType] =
-      record.predictor_data;
+      predictorData;
 
     state.predictors[chestType] = {
       id: record.id,
@@ -166,7 +228,7 @@
       uploadedAt:
         record.uploaded_at || "",
       database:
-        record.predictor_data
+        predictorData
     };
 
     return true;
@@ -218,18 +280,15 @@
         eventData.publishedAt || null
     };
 
+    // Shared deck data remains in page memory. Persisting it under the old
+    // global key made it impossible to prove that a prior private import had
+    // not been inherited on a shared browser.
     try {
-      window.localStorage.setItem(
-        "chestCompanionPublishedEvent",
-        JSON.stringify(
-          window.ChestCompanionPublishedEvent
-        )
+      window.localStorage.removeItem(
+        "chestCompanionPublishedEvent"
       );
     } catch (error) {
-      console.warn(
-        "[Chest Companion] Could not cache the cloud event.",
-        error
-      );
+      // Page-memory data is already authoritative.
     }
 
     window.dispatchEvent(
@@ -256,6 +315,8 @@
       return state;
     }
 
+    const operationGeneration =
+      ++loadGeneration;
     state.loading = true;
     state.error = null;
 
@@ -277,6 +338,13 @@
       const records =
         await databaseService
           .getActivePredictors();
+
+      if (
+        operationGeneration !==
+          loadGeneration
+      ) {
+        return state;
+      }
 
       let installedCount = 0;
 
@@ -307,6 +375,12 @@
         }
       );
     } catch (error) {
+      if (
+        operationGeneration !==
+          loadGeneration
+      ) {
+        return state;
+      }
       state.loaded = true;
       state.source = "device";
       state.error =
@@ -318,8 +392,13 @@
         error
       );
     } finally {
-      state.loading = false;
-      dispatchReadyEvent();
+      if (
+        operationGeneration ===
+          loadGeneration
+      ) {
+        state.loading = false;
+        dispatchReadyEvent();
+      }
     }
 
     return state;
@@ -344,7 +423,21 @@
   window.ChestPredictorCloud =
     Object.freeze({
       load,
+      invalidate,
       getStatus,
       eventName: CLOUD_EVENT
     });
+
+  window.addEventListener(
+    "noir:event-imported",
+    event => {
+      if (event?.detail?.privateImport === true) {
+        invalidate();
+      }
+    }
+  );
+  window.addEventListener(
+    "noir:signout-started",
+    invalidate
+  );
 })(window);

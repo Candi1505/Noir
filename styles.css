@@ -201,7 +201,13 @@ p{
     inset: 0;
     z-index: -3;
 
-    background-image: url("assets/eff-artwork.jpeg");
+    background:
+        radial-gradient(
+            circle at 50% -10%,
+            rgba(185,149,66,.08),
+            transparent 48%
+        ),
+        var(--background);
     background-position: center top;
     background-repeat: no-repeat;
     background-size: cover;
@@ -1503,8 +1509,7 @@ button:focus-visible{
 ========================================================= */
 
 .bottom-navigation,
-.app-navigation,
-nav {
+.app-navigation {
 
     position: sticky;
 

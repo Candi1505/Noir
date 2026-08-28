@@ -12,7 +12,12 @@
   const FUNCTION_NAME = "onyx-war-dragons-oauth";
   const HANDOFF_KEY = "wd-connect";
   const ERROR_KEY = "wd-connect-error";
+  const PLAYER_READY_EVENT = "onyx:player-ready";
+  const PLAYER_READY_TIMEOUT_MS = 30000;
   let installed = false;
+  let installPromise = null;
+  let returnCompletionPromise = null;
+  let playerReadyPromise = null;
   let statusSnapshot = Object.freeze({
     phase: "checking",
     connected: false,
@@ -159,7 +164,40 @@
     window.history.replaceState({}, "", current.toString());
   }
 
-  async function finishReturn() {
+  function currentUserId() {
+    return window.OnyxCommandCore?.getCurrentUserId?.() || null;
+  }
+
+  function waitForPlayerReady() {
+    if (currentUserId()) return Promise.resolve(true);
+    if (playerReadyPromise) return playerReadyPromise;
+
+    playerReadyPromise = new Promise(resolve => {
+      let settled = false;
+      let timer = 0;
+      const finish = ready => {
+        if (settled) return;
+        settled = true;
+        window.removeEventListener?.(PLAYER_READY_EVENT, handleReady);
+        if (timer) window.clearTimeout?.(timer);
+        playerReadyPromise = null;
+        resolve(ready);
+      };
+      const handleReady = () => {
+        if (currentUserId()) finish(true);
+      };
+
+      window.addEventListener?.(PLAYER_READY_EVENT, handleReady);
+      timer = window.setTimeout?.(
+        () => finish(Boolean(currentUserId())),
+        PLAYER_READY_TIMEOUT_MS
+      ) || 0;
+      handleReady();
+    });
+    return playerReadyPromise;
+  }
+
+  async function completeReturn() {
     const returned = returnParameters();
     if (!returned) return false;
     if (returned.error) {
@@ -170,6 +208,22 @@
         message: "War Dragons did not complete the authorisation. You can try again later."
       });
       return false;
+    }
+
+    if (!currentUserId()) {
+      setStatus({
+        phase: "checking",
+        message: "Waiting for your secure Onyx player session."
+      });
+      const ready = await waitForPlayerReady();
+      if (!ready) {
+        setStatus({
+          phase: "error",
+          connected: false,
+          message: "Sign in to Onyx Command to finish the War Dragons connection."
+        });
+        return false;
+      }
     }
 
     setStatus({ phase: "working", message: "Securing your player-authorised connection." });
@@ -196,6 +250,14 @@
     }
   }
 
+  function finishReturn() {
+    if (returnCompletionPromise) return returnCompletionPromise;
+    returnCompletionPromise = completeReturn().finally(() => {
+      returnCompletionPromise = null;
+    });
+    return returnCompletionPromise;
+  }
+
   async function disconnect() {
     setStatus({ phase: "working", message: "Removing the encrypted War Dragons connection." });
     try {
@@ -219,11 +281,16 @@
     }
   }
 
-  async function install() {
-    if (installed) return;
+  function install() {
+    if (installPromise) return installPromise;
+    if (installed) return Promise.resolve();
     installed = true;
-    const completed = await finishReturn();
-    if (!completed) await refreshStatus();
+    installPromise = (async () => {
+      const hadReturn = Boolean(returnParameters());
+      const completed = await finishReturn();
+      if (!completed && !hadReturn) await refreshStatus();
+    })();
+    return installPromise;
   }
 
   window.OnyxWarDragonsAuth = Object.freeze({

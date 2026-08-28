@@ -302,8 +302,9 @@ window.ChestDatabase = {
   /*
     Reads the player's profile.
 
-    If a profile does not exist yet,
-    Onyx Command creates one automatically.
+    Account creation provisions this row through the controlled registration
+    service. A browser must never create its own first profile because the
+    access and administrator fields are security-sensitive.
   */
 
   async getOrCreateProfile(user) {
@@ -346,52 +347,9 @@ window.ChestDatabase = {
     }
 
 
-    const newProfile = {
-
-      user_id: user.id,
-
-      nickname:
-        String(
-          user.user_metadata?.nickname ||
-          "Player"
-        )
-          .trim()
-          .slice(0, 30) || "Player",
-
-      alliance_name: null,
-
-      avatar_url: null,
-
-      preferred_theme:
-        "crystal_storm",
-
-      favourite_chest: null,
-
-      last_active_at:
-        new Date().toISOString()
-
-    };
-
-
-    const {
-      data: createdProfile,
-      error: createError
-    } =
-      await supabaseClient
-        .from("profiles")
-        .insert(newProfile)
-        .select()
-        .single();
-
-
-    if (createError) {
-
-      throw createError;
-
-    }
-
-
-    return createdProfile;
+    throw new Error(
+      "Your Onyx player profile is not ready. Sign out and create the account again, or contact Onyx Support."
+    );
 
   },
 
@@ -752,9 +710,16 @@ window.ChestDatabase = {
   } =
     await supabaseClient
       .from("predictors")
-      .select("*")
+      .select(
+        [
+          "id",
+          "chest_type",
+          "version",
+          "predictor_data",
+          "uploaded_at"
+        ].join(",")
+      )
       .eq("chest_type", chestType)
-      .eq("active", true)
       .maybeSingle();
 
   if (error) {
@@ -767,143 +732,11 @@ window.ChestDatabase = {
 
 },
 async savePredictor({
-  chestType,
-  version,
-  predictorData,
-  uploadedBy = null
+  chestType
 }) {
-  const supabaseClient = window.chestSupabase;
-
-  if (!supabaseClient) {
-    throw new Error(
-      "Supabase is not connected."
-    );
-  }
-
-  const normalisedChestType = String(
-    chestType || ""
-  )
-    .trim()
-    .toLowerCase();
-
-    if (
-  ![
-    "gold",
-    "platinum",
-    "draconic",
-    "freedom",
-    "arcane",
-    "super_sigil"
-  ].includes(
-    normalisedChestType
-  )
-) {
-    throw new Error(
-      "Unsupported chest type."
-    );
-  }
-
-  if (
-    !predictorData ||
-    typeof predictorData !== "object"
-  ) {
-    throw new Error(
-      "Predictor data is missing or invalid."
-    );
-  }
-
-  const safeVersion =
-    version ||
-    Math.floor(Date.now() / 1000);
-
-  const {
-    data,
-    error
-  } = await supabaseClient
-    .rpc(
-      "publish_noir_predictor",
-      {
-        p_chest_type:
-          normalisedChestType,
-        p_version:
-          safeVersion,
-        p_predictor_data:
-          predictorData
-      }
-    );
-
-  if (!error) {
-    return Array.isArray(data)
-      ? data[0]
-      : data;
-  }
-
-  /*
-   * Older Noir projects were deployed before the atomic
-   * publish_noir_predictor RPC was added. Keep cloud publishing
-   * functional by falling back to the same RLS-protected table
-   * operations. Supabase still verifies administrator access
-   * through the predictors policies.
-   */
-  const rpcUnavailable =
-    error.code === "PGRST202" ||
-    /publish_noir_predictor|schema cache|function/i
-      .test(String(error.message || ""));
-
-  if (!rpcUnavailable) {
-    throw error;
-  }
-
-  const access =
-    await this.getCurrentAccess();
-
-  if (!access.isAdmin || !access.user) {
-    throw new Error(
-      "Administrator access is required to publish predictor data."
-    );
-  }
-
-  const {
-    error: deactivateError
-  } = await supabaseClient
-    .from("predictors")
-    .update({ active: false })
-    .eq(
-      "chest_type",
-      normalisedChestType
-    )
-    .eq("active", true);
-
-  if (deactivateError) {
-    throw deactivateError;
-  }
-
-  const {
-    data: inserted,
-    error: insertError
-  } = await supabaseClient
-    .from("predictors")
-    .insert({
-      chest_type:
-        normalisedChestType,
-      version:
-        safeVersion,
-      predictor_data:
-        predictorData,
-      uploaded_by:
-        access.user.id,
-      uploaded_at:
-        new Date().toISOString(),
-      active: true
-    })
-    .select()
-    .single();
-
-  if (insertError) {
-    throw insertError;
-  }
-
-  return inserted;
+  throw new Error(
+    `Single-chest publishing is retired${chestType ? ` for ${chestType}` : ""}. Publish the complete six-chest event instead.`
+  );
 },
 
 async getActivePredictors() {
@@ -930,7 +763,6 @@ async getActivePredictors() {
         "uploaded_at"
       ].join(",")
     )
-    .eq("active", true)
     .order(
       "uploaded_at",
       {
@@ -947,7 +779,8 @@ async getActivePredictors() {
 
 async publishLiveEvent(
   eventData,
-  sourceFile = null
+  sourceFile = null,
+  options = {}
 ) {
   const supabaseClient =
     window.chestSupabase;
@@ -968,6 +801,16 @@ async publishLiveEvent(
   }
 
   if (
+    options.isCancelled?.()
+  ) {
+    const cancellation = new Error(
+      "Publishing was cancelled."
+    );
+    cancellation.name = "AbortError";
+    throw cancellation;
+  }
+
+  if (
     !eventData?.chests ||
     typeof eventData.chests !== "object"
   ) {
@@ -984,6 +827,34 @@ async publishLiveEvent(
     "arcane",
     "super_sigil"
   ];
+
+  const availableChestTypes =
+    Array.isArray(
+      eventData.availableChestTypes
+    )
+      ? eventData.availableChestTypes
+          .map(chestType =>
+            String(chestType || "")
+              .trim()
+              .toLowerCase()
+          )
+      : [];
+
+  if (
+    eventData.availabilityKnown !== true ||
+    availableChestTypes.some(
+      chestType =>
+        !requiredChestTypes.includes(
+          chestType
+        )
+    ) ||
+    new Set(availableChestTypes).size !==
+      availableChestTypes.length
+  ) {
+    throw new Error(
+      "Current chest availability is incomplete or invalid. No cloud predictor records were changed."
+    );
+  }
 
   const incompleteChestTypes =
     requiredChestTypes.filter(
@@ -1035,8 +906,10 @@ async publishLiveEvent(
 
   const sharedChests =
     Object.fromEntries(
-      Object.entries(eventData.chests)
-        .map(([chestType, chestData]) => {
+      requiredChestTypes
+        .map(chestType => {
+          const chestData =
+            eventData.chests[chestType];
           const sharedChest = {
             ...(chestData || {})
           };
@@ -1102,38 +975,168 @@ async publishLiveEvent(
     availabilityKnown:
       eventData.availabilityKnown === true,
     availableChestTypes:
-      Array.isArray(
-        eventData.availableChestTypes
-      )
-        ? requiredChestTypes.filter(
-            chestType =>
-              eventData.availableChestTypes
-                .includes(chestType)
+      requiredChestTypes.filter(
+        chestType =>
+          availableChestTypes.includes(
+            chestType
           )
-        : [],
+      ),
     availableChestCount:
-      Array.isArray(
-        eventData.availableChestTypes
-      )
-        ? requiredChestTypes.filter(
-            chestType =>
-              eventData.availableChestTypes
-                .includes(chestType)
-          ).length
-        : 0,
+      requiredChestTypes.filter(
+        chestType =>
+          availableChestTypes.includes(
+            chestType
+          )
+      ).length,
     chests: sharedChests,
     decks: eventData.decks || {},
     drops: eventData.drops || {},
-    /*
-     * Deck cursor positions identify the administrator's account and must
-     * never be published as shared player state.
-     */
-    deckIndices: {},
     spinTypes:
       eventData.spinTypes || [],
     doubleArmory:
       sharedDoubleArmory
   };
+
+  const blockedPrivateKeys = new Set([
+    "authorization",
+    "bearer",
+    "bearertoken",
+    "cookie",
+    "cookies",
+    "setcookie",
+    "header",
+    "headers",
+    "request",
+    "requestbody",
+    "requestheaders",
+    "response",
+    "responsebody",
+    "responseheaders",
+    "url",
+    "email",
+    "password",
+    "secret",
+    "clientsecret",
+    "private",
+    "privatekey",
+    "apikey",
+    "credential",
+    "credentials",
+    "confirmationtoken",
+    "authorisationcode",
+    "authorizationcode",
+    "session",
+    "sessionid",
+    "sessiontoken",
+    "accesstoken",
+    "refreshtoken",
+    "idtoken",
+    "token",
+    "pgid",
+    "user",
+    "userid",
+    "player",
+    "playerid",
+    "profile",
+    "index",
+    "foundindex",
+    "sourceindex",
+    "currentvalue",
+    "openedsincebonus",
+    "chestsuntilbonus",
+    "nextchestisbonus",
+    "warnings"
+  ]);
+
+  const normalisePayloadKey = key =>
+    String(key || "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, "");
+
+  const findPrivatePayloadPath = (
+    value,
+    path = []
+  ) => {
+    if (Array.isArray(value)) {
+      for (
+        let index = 0;
+        index < value.length;
+        index += 1
+      ) {
+        const foundPath =
+          findPrivatePayloadPath(
+            value[index],
+            [...path, String(index)]
+          );
+
+        if (foundPath) {
+          return foundPath;
+        }
+      }
+
+      return null;
+    }
+
+    if (
+      !value ||
+      typeof value !== "object"
+    ) {
+      return null;
+    }
+
+    for (const [key, child] of
+      Object.entries(value)) {
+      const normalisedKey =
+        normalisePayloadKey(key);
+      const childPath = [...path, key];
+      if (
+        normalisedKey === "deckindices" ||
+        blockedPrivateKeys.has(
+          normalisedKey
+        ) ||
+        normalisedKey.startsWith(
+          "source"
+        ) ||
+        normalisedKey.startsWith(
+          "credential"
+        ) ||
+        normalisedKey.startsWith(
+          "request"
+        ) ||
+        normalisedKey.startsWith(
+          "response"
+        ) ||
+        normalisedKey.startsWith(
+          "player"
+        )
+      ) {
+        return childPath.join(".");
+      }
+
+      const nestedPath =
+        findPrivatePayloadPath(
+          child,
+          childPath
+        );
+
+      if (nestedPath) {
+        return nestedPath;
+      }
+    }
+
+    return null;
+  };
+
+  const privatePayloadPath =
+    findPrivatePayloadPath(
+      sanitisedEvent
+    );
+
+  if (privatePayloadPath) {
+    throw new Error(
+      "The event contains private capture or player data. No cloud predictor records were changed."
+    );
+  }
 
   const chestTypes = [
     "gold",
@@ -1149,9 +1152,12 @@ async publishLiveEvent(
       ]?.found
   );
 
-  if (!chestTypes.length) {
+  if (
+    chestTypes.length !==
+      requiredChestTypes.length
+  ) {
     throw new Error(
-      "No supported chest decks were found to publish."
+      "All six supported chest decks are required to publish. No cloud predictor records were changed."
     );
   }
 
@@ -1170,16 +1176,24 @@ async publishLiveEvent(
     })
   );
 
-  const {
-    data: publishedRows,
-    error: publishError
-  } = await supabaseClient.rpc(
+  /*
+   * Once dispatched, this server transaction is intentionally allowed to
+   * finish. Aborting a browser fetch cannot prove that Postgres rolled back,
+   * so cancellation is checked above and never misrepresented mid-flight.
+   */
+  const publishRequest =
+    supabaseClient.rpc(
     "publish_noir_event",
     {
       p_version: version,
       p_predictors: predictors
     }
-  );
+    );
+
+  const {
+    data: publishedRows,
+    error: publishError
+  } = await publishRequest;
 
   if (publishError) {
     const atomicPublisherMissing =

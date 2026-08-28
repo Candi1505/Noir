@@ -210,7 +210,8 @@
   }
 
   function storageKey(prefix = STORAGE_PREFIX) {
-    return `${prefix}:${userId() || "signed-out"}`;
+    const id = userId();
+    return id ? `${prefix}:${id}` : "";
   }
 
   function towerTypes() {
@@ -292,9 +293,10 @@
   }
 
   function readMergeDraft() {
+    const key = storageKey(MERGE_STORAGE_PREFIX);
     try {
       mergeDraft = normaliseMergeDraft(
-        JSON.parse(localStorage.getItem(storageKey(MERGE_STORAGE_PREFIX)) || "null")
+        JSON.parse((key && localStorage.getItem(key)) || "null")
       );
     } catch (error) {
       mergeDraft = blankMergeDraft();
@@ -305,31 +307,23 @@
 
   function saveMergeDraft() {
     if (!mergeDraft) return;
-    localStorage.setItem(
-      storageKey(MERGE_STORAGE_PREFIX),
-      JSON.stringify(normaliseMergeDraft(mergeDraft))
-    );
+    const key = storageKey(MERGE_STORAGE_PREFIX);
+    if (key) localStorage.setItem(key, JSON.stringify(normaliseMergeDraft(mergeDraft)));
   }
 
   function readReferencePhotos() {
+    const key = storageKey(REFERENCE_STORAGE_PREFIX);
+    if (!key) {
+      referencePhotos = [];
+      referenceMessage = "";
+      return;
+    }
     try {
-      const storedText = localStorage.getItem(storageKey(REFERENCE_STORAGE_PREFIX));
-      let value = JSON.parse(storedText || "[]");
-      if (!storedText) {
-        const legacy = JSON.parse(localStorage.getItem("noirBasePlannerV1") || "null");
-        const legacyLayout = Array.isArray(legacy?.layouts)
-          ? legacy.layouts.find(item => item?.id === legacy.activeId) || legacy.layouts[0]
-          : null;
-        value = legacyLayout?.referencePhotos || [];
-      }
+      const storedText = localStorage.getItem(key);
+      const value = JSON.parse(storedText || "[]");
       referencePhotos = Array.isArray(value)
         ? value.filter(photo => typeof photo === "string" && photo.startsWith("data:image/")).slice(0, 4)
         : [];
-      if (!storedText && referencePhotos.length) {
-        saveReferencePhotos();
-        referenceMessage = "Your previous private reference board was brought into Onyx on this device.";
-        return;
-      }
     } catch (error) {
       referencePhotos = [];
     }
@@ -337,11 +331,13 @@
   }
 
   function saveReferencePhotos() {
+    const key = storageKey(REFERENCE_STORAGE_PREFIX);
+    if (!key) return false;
     try {
       if (referencePhotos.length) {
-        localStorage.setItem(storageKey(REFERENCE_STORAGE_PREFIX), JSON.stringify(referencePhotos));
+        localStorage.setItem(key, JSON.stringify(referencePhotos));
       } else {
-        localStorage.removeItem(storageKey(REFERENCE_STORAGE_PREFIX));
+        localStorage.removeItem(key);
       }
       return true;
     } catch (error) {
@@ -668,8 +664,10 @@
       ? clone(savedSnapshot)
       : null;
     try {
-      const current = localStorage.getItem(storageKey());
-      const legacy = localStorage.getItem(storageKey(LEGACY_STORAGE_PREFIX));
+      const currentKey = storageKey();
+      const legacyKey = storageKey(LEGACY_STORAGE_PREFIX);
+      const current = currentKey ? localStorage.getItem(currentKey) : null;
+      const legacy = legacyKey ? localStorage.getItem(legacyKey) : null;
       layout = normaliseLayout(JSON.parse(current || legacy || "null"));
     } catch (error) {
       layout = null;
@@ -680,14 +678,17 @@
   }
 
   function saveLocal() {
+    const currentKey = storageKey();
+    const legacyKey = storageKey(LEGACY_STORAGE_PREFIX);
+    if (!currentKey) return;
     if (!layout) {
-      localStorage.removeItem(storageKey());
-      localStorage.removeItem(storageKey(LEGACY_STORAGE_PREFIX));
+      localStorage.removeItem(currentKey);
+      if (legacyKey) localStorage.removeItem(legacyKey);
       return;
     }
     layout.updatedAt = new Date().toISOString();
-    localStorage.setItem(storageKey(), JSON.stringify(layout));
-    localStorage.removeItem(storageKey(LEGACY_STORAGE_PREFIX));
+    localStorage.setItem(currentKey, JSON.stringify(layout));
+    if (legacyKey) localStorage.removeItem(legacyKey);
   }
 
   function markDirty(message = "Draft stored on this device.") {
@@ -1914,6 +1915,9 @@
     overlay.id = OVERLAY_ID;
     overlay.className = "obc-overlay";
     overlay.setAttribute("aria-hidden", "true");
+    overlay.addEventListener("click", event => {
+      if (event.target === overlay) close();
+    });
     document.body.appendChild(overlay);
     return overlay;
   }
@@ -2129,9 +2133,6 @@
 
   function bindEvents(overlay) {
     overlay.querySelector("#obcClose")?.addEventListener("click", close);
-    overlay.addEventListener("click", event => {
-      if (event.target === overlay) close();
-    });
     overlay.querySelectorAll("[data-obc-tab]").forEach(button => {
       button.addEventListener("click", () => {
         activeTab = button.dataset.obcTab;
@@ -2175,7 +2176,8 @@
       mergeDraft = blankMergeDraft();
       mergeResult = null;
       mergeMessage = "Merge calculator reset.";
-      localStorage.removeItem(storageKey(MERGE_STORAGE_PREFIX));
+      const key = storageKey(MERGE_STORAGE_PREFIX);
+      if (key) localStorage.removeItem(key);
       render({ focusSelector: "#obcMergeDestinationType" });
     });
 

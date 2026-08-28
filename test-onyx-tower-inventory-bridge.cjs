@@ -222,6 +222,33 @@ assert.equal(dispatched.at(-1).detail.records.length, 3);
 imported.records[0].quantity = 999;
 assert.equal(bridge.getSnapshot().records[0].quantity, 1);
 
+const workerSnapshot = bridge.importSnapshot(
+  plainExtracted
+);
+assert.equal(workerSnapshot.records.length, 3);
+assert.equal(
+  workerSnapshot.diagnostics.selectedQuantity,
+  4
+);
+assert.equal(
+  JSON.stringify(workerSnapshot)
+    .includes("private"),
+  false
+);
+assert.throws(
+  () => bridge.importSnapshot({
+    records: [
+      {
+        type: "Unknown private tower",
+        level: 1,
+        location: "base",
+        quantity: 1
+      }
+    ]
+  }),
+  /snapshot is invalid/i
+);
+
 unsubscribe();
 bridge.clear();
 assert.equal(bridge.getSnapshot(), null);

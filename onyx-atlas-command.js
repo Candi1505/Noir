@@ -68,6 +68,7 @@
   let liveFilter = "vulnerable";
   let liveCastles = [];
   let liveFetchedAt = null;
+  let liveSource = "War Dragons API";
   let liveConnection = Object.freeze({
     phase: "checking",
     connected: false,
@@ -149,7 +150,7 @@
       version: 1,
       team: {
         name: "Live Atlas",
-        alliance: "Official player-authorised intelligence",
+        alliance: "Source-labelled Atlas intelligence",
         totalTroops: null,
         monthlyGold: null,
         monthlyMaterials: null,
@@ -182,7 +183,7 @@
       shieldEndsAt: cleanText(source.shieldEndsAt, 64) || null,
       cooldownEndsAt: cleanText(source.cooldownEndsAt, 64) || null,
       attackable: source.attackable === true,
-      source: source.source === "War Dragons API" ? "War Dragons API" : "Verified server contract"
+      source: source.source === "War Dragons API" ? "War Dragons API" : "Atlas capture"
     };
   }
 
@@ -190,10 +191,15 @@
     const source = value && typeof value === "object" ? value : {};
     return {
       castles: (Array.isArray(source.castles) ? source.castles : [])
-        .slice(0, 200)
+        .slice(0, 50000)
         .map(normaliseLiveCastle)
         .filter(Boolean),
-      fetchedAt: cleanText(source.fetchedAt, 64) || null
+      fetchedAt: cleanText(source.fetchedAt, 64) || null,
+      source: source.source === "War Dragons API"
+        ? "War Dragons API"
+        : source.source === "Mixed Atlas sources"
+          ? "Mixed Atlas sources"
+          : "Atlas capture"
     };
   }
 
@@ -268,19 +274,22 @@
   }
 
   function userId() {
-    return window.OnyxCommandCore?.getCurrentUserId?.() || "signed-out";
+    return window.OnyxCommandCore?.getCurrentUserId?.() || null;
   }
 
   function storageKey(prefix) {
-    return `${prefix}:${userId()}`;
+    const id = userId();
+    return id ? `${prefix}:${id}` : "";
   }
 
   function readLocal() {
     try {
-      const saved = localStorage.getItem(storageKey(STORAGE_PREFIX));
+      const stateKey = storageKey(STORAGE_PREFIX);
+      const modeKey = storageKey(MODE_PREFIX);
+      const saved = stateKey ? localStorage.getItem(stateKey) : null;
       manualSaved = saved ? normaliseManualState(JSON.parse(saved)) : null;
       manualDraft = clone(manualSaved || emptyManualState());
-      const mode = localStorage.getItem(storageKey(MODE_PREFIX));
+      const mode = modeKey ? localStorage.getItem(modeKey) : null;
       activeMode = VALID_MODES.has(mode) ? mode : "live";
     } catch (_error) {
       manualSaved = null;
@@ -292,7 +301,8 @@
 
   function writeMode() {
     try {
-      localStorage.setItem(storageKey(MODE_PREFIX), activeMode);
+      const key = storageKey(MODE_PREFIX);
+      if (key) localStorage.setItem(key, activeMode);
     } catch (_error) {
       // Mode preference is optional.
     }
@@ -301,7 +311,12 @@
   function saveManual() {
     const next = normaliseManualState(manualDraft);
     next.updatedAt = new Date().toISOString();
-    localStorage.setItem(storageKey(STORAGE_PREFIX), JSON.stringify(next));
+    const key = storageKey(STORAGE_PREFIX);
+    if (!key) {
+      notice = "Sign in again before saving this private Atlas snapshot.";
+      return;
+    }
+    localStorage.setItem(key, JSON.stringify(next));
     manualSaved = clone(next);
     manualDraft = clone(next);
     manualDirty = false;
@@ -411,10 +426,16 @@
   function sourceBanner() {
     if (activeMode === "live") {
       const connected = liveConnection.connected === true;
+      const captureOnly = liveCastles.length > 0 && liveSource === "Atlas capture";
+      const mixed = liveCastles.length > 0 && liveSource === "Mixed Atlas sources";
       return `<section class="oac-source-banner live ${connected ? "connected" : "pending"}">
-        <span>${connected ? "OFFICIAL PLAYER-AUTHORISED INTELLIGENCE" : "LIVE ATLAS FOUNDATION"}</span>
-        <p>${escapeHtml(connected
-          ? "This workspace accepts only sanitised, read-only fields returned through the secure Onyx gateway."
+        <span>${captureOnly ? "PRIVATE ATLAS CAPTURE" : mixed ? "MIXED ATLAS SOURCES" : connected ? "OFFICIAL PLAYER-AUTHORISED INTELLIGENCE" : "LIVE ATLAS FOUNDATION"}</span>
+        <p>${escapeHtml(captureOnly
+          ? "This board is based on the private capture loaded on this device."
+          : mixed
+            ? "Officially refreshed records and capture-only records are labelled separately."
+            : connected
+              ? "This workspace accepts only sanitised, read-only fields returned through the secure Onyx gateway."
           : liveConnection.message || "War Dragons multi-player API review is pending.")}</p>
       </section>`;
     }
@@ -432,7 +453,11 @@
 
   function renderModeRail() {
     const modeTitle = activeMode === "live"
-      ? "Official castle watch"
+      ? liveSource === "War Dragons API"
+        ? "Official castle watch"
+        : liveSource === "Mixed Atlas sources"
+          ? "Mixed-source castle watch"
+          : "Captured castle watch"
       : activeMode === "demo"
         ? "Command simulation"
         : "Manual command board";
@@ -486,22 +511,32 @@
   }
 
   function liveShieldDetail(castle) {
+    const official =
+      castle?.source === "War Dragons API";
     if (castle?.shieldState === "cooldown") {
       return castle.cooldownEndsAt
         ? `Cooldown ends ${formatLiveTime(castle.cooldownEndsAt)}`
-        : "Official cooldown state; end time was not supplied.";
+        : official
+          ? "Official cooldown state; end time was not supplied."
+          : "Captured cooldown state; end time was not supplied.";
     }
     if (["dropping", "shielded"].includes(castle?.shieldState)) {
       return castle.shieldEndsAt
         ? `Shield ends ${formatLiveTime(castle.shieldEndsAt)}`
-        : "Official shield state; end time was not supplied.";
+        : official
+          ? "Official shield state; end time was not supplied."
+          : "Captured shield state; end time was not supplied.";
     }
     if (castle?.shieldState === "vulnerable") {
-      return castle.attackable
+      return official && castle.attackable
         ? "Officially reported unshielded and attackable."
-        : "Officially reported unshielded; attackability was not confirmed.";
+        : official
+          ? "Officially reported unshielded; attackability was not confirmed."
+          : "Captured as unshielded; attackability was not confirmed.";
     }
-    return "Onyx will not infer a missing shield state.";
+    return official
+      ? "Onyx will not infer a missing official shield state."
+      : "No shield state was present in the capture.";
   }
 
   function liveCounts() {
@@ -528,7 +563,7 @@
       ["shielded", "Shielded", counts.shielded],
       ["all", "All castles", counts.all]
     ];
-    return `<div class="oac-live-filters" role="group" aria-label="Filter official castles by shield state">
+    return `<div class="oac-live-filters" role="group" aria-label="Filter Atlas castles by shield state">
       ${filters.map(([value, label, count]) => `<button type="button" data-oac-live-filter="${value}" class="${liveFilter === value ? "active" : ""}" aria-pressed="${liveFilter === value}"><span>${escapeHtml(label)}</span><b>${count}</b></button>`).join("")}
     </div>`;
   }
@@ -558,24 +593,29 @@
   }
 
   function renderLivePreview() {
-    if (!liveConnection.connected || !liveCastles.length) {
+    if (!liveCastles.length) {
       return renderLiveLockedState();
     }
     const castles = liveCastles.slice(0, 4);
     return `<section class="oac-live-preview">
       ${castles.map(castle => `<article class="${escapeHtml(castle.shieldState)}">
         ${icon(castle.shieldState === "cooldown" || castle.shieldState === "dropping" ? "clock" : "shield")}
-        <div><small>${escapeHtml(liveShieldLabel(castle))}</small><strong>${escapeHtml(castle.name)}</strong><span>${escapeHtml(castle.owner || "Owner not supplied")}</span></div>
+        <div><small>${escapeHtml(liveShieldLabel(castle))} · ${escapeHtml(castle.source)}</small><strong>${escapeHtml(castle.name)}</strong><span>${escapeHtml(castle.owner || "Owner not supplied")}</span></div>
       </article>`).join("")}
     </section>`;
   }
 
   function renderNetwork(state) {
     if (activeMode === "live") {
+      const signalLabel = liveSource === "War Dragons API"
+        ? "OFFICIAL CASTLE SIGNAL"
+        : liveSource === "Mixed Atlas sources"
+          ? "MIXED CASTLE SIGNAL"
+          : "CAPTURED CASTLE SIGNAL";
       return `<section class="oac-network-card oac-live-network-card">
         <div class="oac-section-heading">
-          <div><p>OFFICIAL CASTLE SIGNAL</p><h3>Live target board</h3></div>
-          <span>${liveCastles.length} verified</span>
+          <div><p>${signalLabel}</p><h3>Live target board</h3></div>
+          <span>${liveCastles.length} source-labelled</span>
         </div>
         ${renderLiveFilterRail()}
         ${renderLivePreview()}
@@ -661,22 +701,24 @@
 
   function renderLiveOverview() {
     const counts = liveCounts();
-    const condition = liveConnection.connected
-      ? { tone: "clear", label: "Official link active", detail: `${counts.all} verified castle${counts.all === 1 ? "" : "s"} on the board.` }
+    const condition = counts.all
+      ? { tone: "clear", label: liveSource === "War Dragons API" ? "Official data loaded" : liveSource === "Mixed Atlas sources" ? "Mixed sources loaded" : "Capture loaded", detail: `${counts.all} source-labelled castle${counts.all === 1 ? "" : "s"} on the board.` }
+      : liveConnection.connected
+        ? { tone: "clear", label: "Official link active", detail: "Awaiting verified castle data." }
       : { tone: "idle", label: liveConnection.reviewStatus === "ready" ? "Authorisation needed" : "Application review", detail: "No live castle state is shown until the secure official link is active." };
     return `<div class="oac-workspace" role="tabpanel">
       <section class="oac-hero ${condition.tone}">
         <div class="oac-hero-copy">
           <p>ATLAS OPERATIONS</p>
           <h2>Live castle watch</h2>
-          <span>Verified shield intelligence, separated from demo and manual records.</span>
+          <span>Source-labelled shield intelligence, separated from demo and manual records.</span>
         </div>
         <div class="oac-condition"><i></i><div><small>COMMAND CONDITION</small><strong>${escapeHtml(condition.label)}</strong><span>${escapeHtml(condition.detail)}</span></div></div>
       </section>
       <section class="oac-metric-grid">
-        ${metricCard("VULNERABLE NOW", formatNumber(counts.vulnerable), "Officially reported", "alert")}
+        ${metricCard("VULNERABLE NOW", formatNumber(counts.vulnerable), "Reported by named source", "alert")}
         ${metricCard("SHIELD COOLDOWN", formatNumber(counts.cooldown), "No guessed timers", "clock")}
-        ${metricCard("DROPPING SOON", formatNumber(counts.dropping), "Verified window", "clock")}
+        ${metricCard("DROPPING SOON", formatNumber(counts.dropping), "Source-reported window", "clock")}
         ${metricCard("SHIELDED", formatNumber(counts.shielded), "Currently protected", "shield")}
       </section>
       ${renderNetwork(emptyLiveState())}
@@ -739,32 +781,31 @@
 
   function renderLiveCastles() {
     const castles = filteredLiveCastles();
+    const visibleCastles = castles.slice(0, 200);
     const fetched = liveFetchedAt
-      ? `Last refreshed ${formatLiveTime(liveFetchedAt)}`
-      : "No official castle response received yet";
+      ? `${liveSource === "Atlas capture" ? "Captured" : "Last refreshed"} ${formatLiveTime(liveFetchedAt)}`
+      : "No verified castle response received yet";
     return `<div class="oac-workspace" role="tabpanel">
       <section class="oac-workspace-lead oac-live-castle-lead">
-        <div><p>LIVE FORTIFICATION WATCH</p><h2>Castle target board</h2><span>Official shield states grouped for fast, tap-first Atlas scanning.</span></div>
+        <div><p>LIVE FORTIFICATION WATCH</p><h2>Castle target board</h2><span>Source-labelled shield states grouped for fast, tap-first Atlas scanning.</span></div>
         <b>${liveCastles.length}</b>
       </section>
       <section class="oac-live-source-line">
-        <div>${icon("shield")}<span><strong>War Dragons API only</strong><small>${escapeHtml(fetched)}</small></span></div>
+        <div>${icon("shield")}<span><strong>${escapeHtml(liveSource)}</strong><small>${escapeHtml(fetched)}</small></span></div>
         <button type="button" data-oac-refresh-connection>${icon("refresh")} Refresh connection</button>
       </section>
       ${renderLiveFilterRail()}
-      ${!liveConnection.connected
-        ? renderLiveLockedState()
-        : !liveCastles.length
+      ${!liveCastles.length
           ? renderLiveLockedState()
           : castles.length
-            ? `<div class="oac-live-castle-grid">${castles.map((castle, index) => `<article class="oac-live-castle-card ${escapeHtml(castle.shieldState)}" id="oacLiveCastle${index}">
+            ? `<div class="oac-live-castle-grid">${visibleCastles.map((castle, index) => `<article class="oac-live-castle-card ${escapeHtml(castle.shieldState)}" id="oacLiveCastle${index}">
                 <header>
                   <span>${icon(castle.shieldState === "cooldown" || castle.shieldState === "dropping" ? "clock" : "shield")}</span>
                   <div><small>${escapeHtml(castle.region || castle.id)}</small><h3>${escapeHtml(castle.name)}</h3><p>${escapeHtml(castle.owner || "Owner not supplied")}</p></div>
-                  <b>${castle.level === null ? "FORT —" : `FORT ${formatNumber(castle.level)}`}</b>
+                  <b>${castle.level === null ? "TIER —" : `T${formatNumber(castle.level)}`}</b>
                 </header>
                 <section class="oac-live-shield-signal">
-                  <div><small>OFFICIAL SHIELD STATE</small><strong>${escapeHtml(liveShieldLabel(castle))}</strong><span>${escapeHtml(liveShieldDetail(castle))}</span></div>
+                  <div><small>${castle.source === "War Dragons API" ? "OFFICIAL" : "CAPTURED"} SHIELD STATE</small><strong>${escapeHtml(liveShieldLabel(castle))}</strong><span>${escapeHtml(liveShieldDetail(castle))}</span></div>
                   <i></i>
                 </section>
                 <dl>
@@ -773,8 +814,11 @@
                 </dl>
                 <footer><span>${escapeHtml(castle.source)}</span><b>${castle.attackable ? "Attackable confirmed" : "No attackability claim"}</b></footer>
               </article>`).join("")}</div>`
-            : `<section class="oac-live-filter-empty">${icon("shield")}<h3>No castles in this verified group</h3><p>Choose another shield-state filter. Onyx will not move a castle into this list without an official field.</p></section>`}
-      <p class="oac-evidence-note">Vulnerable and cooldown labels are shown only when supported by official response fields. Missing timing remains missing; Onyx does not manufacture a countdown.</p>
+            : `<section class="oac-live-filter-empty">${icon("shield")}<h3>No castles in this source group</h3><p>Choose another shield-state filter. Onyx keeps each castle in the group reported by its named source.</p></section>`}
+      ${castles.length > visibleCastles.length
+        ? `<p class="oac-evidence-note">Showing first ${formatNumber(visibleCastles.length)} of ${formatNumber(castles.length)}. Use the filters to narrow the board.</p>`
+        : ""}
+      <p class="oac-evidence-note">Shield labels reflect the named source. Missing timing and attackability remain missing; Onyx does not manufacture either.</p>
       ${renderConnectionCard()}
     </div>`;
   }
@@ -1051,7 +1095,8 @@
     overlay.querySelector("#oacClearManual")?.addEventListener("click", () => {
       const allowed = window.confirm?.("Clear this manual Atlas snapshot from this device?");
       if (!allowed) return;
-      localStorage.removeItem(storageKey(STORAGE_PREFIX));
+      const key = storageKey(STORAGE_PREFIX);
+      if (key) localStorage.removeItem(key);
       manualSaved = null;
       manualDraft = emptyManualState();
       manualDirty = false;
@@ -1090,7 +1135,7 @@
       button.addEventListener("click", () => {
         const index = button.dataset.oacCastleJump;
         activeTab = "castles";
-        render({ focusSelector: `#oacCastle${index}` });
+        render({ focusSelector: `${activeMode === "live" ? "#oacLiveCastle" : "#oacCastle"}${index}` });
       });
     });
     overlay.querySelectorAll("[data-oac-live-filter]").forEach(button => {
@@ -1202,9 +1247,18 @@
     const snapshot = normaliseLiveSnapshot(value);
     liveCastles = snapshot.castles;
     liveFetchedAt = snapshot.fetchedAt;
+    liveSource = snapshot.source;
     const overlay = document.getElementById(OVERLAY_ID);
-    if (overlay?.classList.contains("open") && activeMode === "live") render();
-    return clone(snapshot);
+    if (
+      overlay?.classList.contains("open") &&
+      activeMode === "live" &&
+      activeTab !== "hunter"
+    ) render();
+    return {
+      castleCount: liveCastles.length,
+      fetchedAt: liveFetchedAt,
+      source: liveSource
+    };
   }
 
   function open(tab = "overview") {
@@ -1242,7 +1296,7 @@
     close,
     getDemoState: () => clone(DEMO_STATE),
     getManualState: () => clone(manualDraft),
-    getLiveState: () => clone({ castles: liveCastles, fetchedAt: liveFetchedAt }),
+    getLiveState: () => clone({ castles: liveCastles, fetchedAt: liveFetchedAt, source: liveSource }),
     setLiveSnapshot,
     normaliseLiveSnapshot,
     normaliseManualState,

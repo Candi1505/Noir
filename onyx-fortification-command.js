@@ -45,7 +45,8 @@
   }
 
   function storageKey() {
-    return `${STORAGE_PREFIX}:${userId() || "signed-out"}`;
+    const id = userId();
+    return id ? `${STORAGE_PREFIX}:${id}` : "";
   }
 
   function catalogue() {
@@ -346,31 +347,9 @@
 
   function readLocal() {
     try {
-      const savedText = localStorage.getItem(storageKey());
+      const key = storageKey();
+      const savedText = key ? localStorage.getItem(key) : null;
       savedDraft = savedText ? normaliseDraft(JSON.parse(savedText)) : null;
-      if (!savedDraft) {
-        const legacy = JSON.parse(localStorage.getItem("noirBasePlannerV1") || "null");
-        const legacyLayout = Array.isArray(legacy?.layouts)
-          ? legacy.layouts.find(item => item?.id === legacy.activeId) || legacy.layouts[0]
-          : null;
-        const legacyFort = legacyLayout?.fortPlanner;
-        if (
-          legacyFort &&
-          typeof legacyFort === "object" &&
-          (Array.isArray(legacyFort.storedTowers) && legacyFort.storedTowers.length || Number(legacyFort.currentLevel) >= MINIMUM_PLAYER_LEVEL)
-        ) {
-          draft = normaliseDraft({
-            currentPlayerLevel: legacyFort.currentLevel,
-            targetPlayerLevel: legacyFort.targetLevel,
-            currentProgressXp: legacyFort.currentXp,
-            maximumTowerLevel: legacyFort.maximumTowerLevel,
-            inventory: legacyFort.storedTowers
-          });
-          result = planFortification(draft);
-          message = "Your previous Fort planner was brought forward as an unsaved Onyx draft.";
-          return;
-        }
-      }
     } catch (error) {
       savedDraft = null;
     }
@@ -384,7 +363,7 @@
   }
 
   function init() {
-    const currentUser = userId() || "signed-out";
+    const currentUser = userId();
     if (openedForUser !== currentUser || !draft) {
       openedForUser = currentUser;
       readLocal();
@@ -594,7 +573,13 @@
     overlay.querySelector("#ofcSave")?.addEventListener("click", () => {
       draft.updatedAt = new Date().toISOString();
       draft = normaliseDraft(draft);
-      localStorage.setItem(storageKey(), JSON.stringify(draft));
+      const key = storageKey();
+      if (!key) {
+        message = "Sign in again before saving this private route.";
+        rerender({ focusSelector: "#ofcSave" });
+        return;
+      }
+      localStorage.setItem(key, JSON.stringify(draft));
       savedDraft = clone(draft);
       message = `Saved on this device · ${new Date().toLocaleTimeString("en-AU", { hour: "numeric", minute: "2-digit" })}`;
       rerender({ focusSelector: "#ofcSave" });
@@ -609,7 +594,8 @@
 
     overlay.querySelector("#ofcClear")?.addEventListener("click", () => {
       if (!window.confirm("Clear the saved Fortification route from this device?")) return;
-      localStorage.removeItem(storageKey());
+      const key = storageKey();
+      if (key) localStorage.removeItem(key);
       savedDraft = null;
       draft = blankDraft();
       message = "Fortification Command cleared.";

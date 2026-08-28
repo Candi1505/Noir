@@ -174,24 +174,7 @@
       );
     }
 
-    try {
-      const cached =
-        JSON.parse(
-          localStorage.getItem(
-            "chestCompanionPublishedEvent"
-          ) ||
-          "null"
-        );
-
-      return (
-        cached?.data ||
-        cached?.eventData ||
-        cached ||
-        null
-      );
-    } catch (error) {
-      return null;
-    }
+    return null;
   }
 
   function getCurrentChestTypes(
@@ -1043,14 +1026,33 @@
         eventData
       );
 
+    if (!currentChestTypes.length) {
+      state.compare = false;
+      overlay.innerHTML = `
+        <div class="cdr-shell">
+          <header class="cdr-header">
+            <div>
+              <p class="cdr-eyebrow">ONYX COMMAND</p>
+              <h2>Chest Drop Rates</h2>
+            </div>
+            <button class="cdr-close" type="button" aria-label="Close chest drop rates">×</button>
+          </header>
+          <div class="cdr-empty cdr-empty-large">
+            No chest decks are active for this event.
+          </div>
+        </div>
+      `;
+      attachOverlayEvents();
+      return;
+    }
+
     if (
       !currentChestTypes.includes(
         state.chestType
       )
     ) {
       state.chestType =
-        currentChestTypes[0] ||
-        "gold";
+        currentChestTypes[0];
     }
 
     const currentRates =
@@ -1709,6 +1711,22 @@
 
   window.ChestDropRates =
     api;
+
+  [
+    "noir:event-imported",
+    "chest-companion:event-published",
+    "chest-companion-predictors-ready",
+    "chest-companion-live-predictor-updated"
+  ].forEach(eventName => {
+    window.addEventListener(eventName, () => {
+      const overlay = document.getElementById(
+        "chestDropRatesOverlay"
+      );
+      if (overlay?.classList.contains("open")) {
+        render();
+      }
+    });
+  });
 
   if (
     document.readyState ===

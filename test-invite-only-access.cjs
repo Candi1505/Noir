@@ -17,6 +17,9 @@ const sql = read(
 const openSignupSql = read(
   "supabase/open_email_signup.sql"
 );
+const profileInsertLockdown = read(
+  "supabase/profile_insert_lockdown.sql"
+);
 const registrationFunction = read(
   "supabase/functions/noir-register/index.ts"
 );
@@ -37,15 +40,10 @@ assert.match(
   /event === "PASSWORD_RECOVERY"/,
   "The private gate must handle Supabase password-recovery links."
 );
-assert.match(
+assert.doesNotMatch(
   access,
-  /searchParams\.get\("invite"\) === "1"/,
-  "The private gate must recognise an invited account setup link."
-);
-assert.match(
-  access,
-  /event === "SIGNED_IN"/,
-  "An invited user's authenticated link must open password setup."
+  /inviteSetupRequested|beginInvitedAccountSetup|[?&]invite=1/,
+  "Open registration must not retain an invitation-only setup path."
 );
 assert.match(
   access,
@@ -57,10 +55,10 @@ assert.match(
   /isPasswordRecoveryActive/,
   "Startup must not cover the active recovery form with the app shell."
 );
-assert.match(
+assert.doesNotMatch(
   app,
-  /isInviteSetupRequested[\s\S]*?event === "SIGNED_IN"[\s\S]*?passwordSetupActive[\s\S]*?return;/,
-  "Invite sign-in must not reload before the player saves a password."
+  /isInviteSetupRequested/,
+  "Application startup must not depend on invitation links."
 );
 assert.match(
   html,
@@ -132,6 +130,32 @@ assert.match(
   /protect_noir_access_fields/,
   "Approval fields must be protected from self-promotion."
 );
+assert.doesNotMatch(
+  database,
+  /from\(["']profiles["']\)[\s\S]{0,300}\.insert\(/,
+  "A browser must never create its own security-sensitive first profile row."
+);
+assert.match(
+  profileInsertLockdown,
+  /revoke insert on table public\.profiles[\s\S]*?from public, anon, authenticated/i,
+  "Browser roles must not have table-level profile INSERT access."
+);
+assert.match(
+  profileInsertLockdown,
+  /before insert on public\.profiles[\s\S]*?protect_noir_profile_insert/i,
+  "A defensive first-profile trigger must guard any future INSERT grant."
+);
+for (const forcedValue of [
+  /new\.role := 'player'/i,
+  /new\.is_admin := false/i,
+  /new\.access_approved := false/i
+]) {
+  assert.match(
+    profileInsertLockdown,
+    forcedValue,
+    `Missing malicious initial-profile protection: ${forcedValue}`
+  );
+}
 assert.doesNotMatch(
   openSignupSql,
   /update public\.profiles\s+set access_approved = true\s+where access_approved is false/i,

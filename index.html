@@ -16,10 +16,10 @@
 
   <title>Onyx Command — War Dragons Companion</title>
 
-<link rel="stylesheet" href="styles.css?v=20260730-arcane">
-  <link rel="stylesheet" href="onyx-command.css?v=20260828-war-dragons-profile-3">
-<link rel="stylesheet" href="onyx-atlas-command.css?v=20260828-atlas-live-1">
-<link rel="stylesheet" href="onyx-atlas-castle-hunter.css?v=20260828-production-1">
+<link rel="stylesheet" href="styles.css?v=20260828-audit-2">
+  <link rel="stylesheet" href="onyx-command.css?v=20260828-audit-2">
+<link rel="stylesheet" href="onyx-atlas-command.css?v=20260828-audit-2">
+<link rel="stylesheet" href="onyx-atlas-castle-hunter.css?v=20260828-audit-2">
 
   <style>
     .home-platform-statement {
@@ -40,7 +40,7 @@
   </style>
 
   <!-- Supabase browser library -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.4"></script>
 </head>
 
 <body>
@@ -821,28 +821,28 @@
               No preference
             </option>
 
-            <option value="gold">
+            <option value="gold" data-event-dependent-chest data-active-label="Gold" data-inactive-label="Gold (currently unavailable)">
               Gold
             </option>
 
-            <option value="platinum">
+            <option value="platinum" data-event-dependent-chest data-active-label="Platinum" data-inactive-label="Platinum (currently unavailable)">
               Platinum
             </option>
             
-                        <option value="draconic">
+            <option value="draconic" data-event-dependent-chest data-active-label="Draconic" data-inactive-label="Draconic (currently unavailable)">
               Draconic
             </option>
 
-            <option value="freedom">
-              Freedom
-            </option>
-
-            <option value="arcane">
+            <option value="arcane" data-event-dependent-chest data-active-label="Arcane" data-inactive-label="Arcane (currently unavailable)">
               Arcane
             </option>
 
-            <option value="super_sigil">
-              Super Sigil
+            <option value="freedom" disabled data-event-dependent-chest data-active-label="Freedom" data-inactive-label="Freedom (currently unavailable)">
+              Freedom (currently unavailable)
+            </option>
+
+            <option value="super_sigil" disabled data-event-dependent-chest data-active-label="Super Sigil" data-inactive-label="Super Sigil (currently unavailable)">
+              Super Sigil (currently unavailable)
             </option>
 
           </select>
@@ -1065,6 +1065,7 @@
   <input
     id="eventDataFile"
     type="file"
+    accept=".har,.har.zip,.zip,application/zip"
   >
 
   <button
@@ -1406,6 +1407,37 @@
         <section class="glass-panel content-panel">
 
           <p class="eyebrow">
+            HELP &amp; SUPPORT
+          </p>
+
+          <h2>
+            Onyx Player Guide
+          </h2>
+
+          <p class="muted-text">
+            Learn how to use every command centre, calculator and private data control.
+          </p>
+
+          <button
+            type="button"
+            class="button primary-button full-width-button"
+            data-command="help"
+          >
+            Open Help &amp; Support
+          </button>
+
+          <a
+            class="button secondary-button full-width-button"
+            href="mailto:noirchestcompanion@gmail.com?subject=Onyx%20Command%20Support"
+          >
+            Email noirchestcompanion@gmail.com
+          </a>
+
+        </section>
+
+        <section class="glass-panel content-panel">
+
+          <p class="eyebrow">
             ABOUT
           </p>
 
@@ -1417,7 +1449,7 @@
           <hr>
 
           <p class="muted-text">
-                        Created for Gold, Platinum, Draconic, Freedom and Arcane
+                        Created for Gold, Platinum, Draconic, Freedom, Arcane and Super Sigil
             chest tracking and sequence prediction.
           </p>
 
@@ -1534,41 +1566,41 @@
        JAVASCRIPT FILES
   =========================================== -->
 
-<script src="supabase.js"></script>
-<script src="database.js?v=20260828-chest-availability-2"></script>
-<script src="access-control.js?v=20260813-open-signup"></script>
+<script src="supabase.js?v=20260828-audit-2"></script>
+<script src="database.js?v=20260828-audit-2"></script>
+<script src="access-control.js?v=20260828-audit-2"></script>
 
-<script src="predictor-cloud.js?v=20260813-six-chest"></script>
-  <script src="event-parser.js?v=20260827-privacy-1"></script>
-<script src="har-event-adapter.js?v=20260828-chest-availability-2"></script>
-<script src="js/har-gacha-parser.js?v=20260828-chest-correctness-1"></script>
-<script src="event-import.js?v=20260827-privacy-1"></script>
-<script src="admin-event-publisher.js?v=20260828-chest-correctness-1"></script>
-<script src="live-predictor-engine.js?v=20260828-chest-availability-2"></script>
-<script src="live-predictor-ui.js?v=20260828-chest-correctness-1"></script>
-  <script src="chest-drop-rates.js?v=20260828-chest-availability-3"></script>
-  <script src="chest-planner.js?v=20260828-chest-availability-2"></script>
-  <script src="noir-chest-tools.js?v=20260828-chest-availability-3"></script>
-  <script src="double-armory-planner.js?v=20260828-chest-correctness-1"></script>
+<script src="predictor-cloud.js?v=20260828-audit-2"></script>
+  <script src="event-parser.js?v=20260828-audit-2"></script>
+<script src="har-event-adapter.js?v=20260828-audit-2"></script>
+<script src="js/har-gacha-parser.js?v=20260828-audit-2"></script>
+<script src="event-import.js?v=20260828-audit-2"></script>
+<script src="admin-event-publisher.js?v=20260828-audit-2"></script>
+<script src="live-predictor-engine.js?v=20260828-audit-2"></script>
+<script src="live-predictor-ui.js?v=20260828-audit-2"></script>
+  <script src="chest-drop-rates.js?v=20260828-audit-2"></script>
+  <script src="chest-planner.js?v=20260828-audit-2"></script>
+  <script src="noir-chest-tools.js?v=20260828-audit-2"></script>
+  <script src="double-armory-planner.js?v=20260828-audit-2"></script>
 
-<script src="predictor-engine.js?v=20260730-arcane-fix1"></script>
+<script src="predictor-engine.js?v=20260828-audit-2"></script>
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="base-adviser-catalog-towers.js?v=20260727-3"></script>
-<script src="base-adviser-catalog-monuments.js?v=20260727-2"></script>
-<script src="base-adviser-catalog-people.js?v=20260727-2"></script>
-  <script src="onyx-rider-intelligence-data.js?v=20260828-rider-command-1"></script>
-  <script src="onyx-tower-inventory-bridge.js?v=20260827-base-command-1"></script>
-  <script src="app.js?v=20260828-onyx-parity-1"></script>
-  <script src="onyx-war-dragons-api.js?v=20260828-castle-hunter-1"></script>
-  <script src="onyx-war-dragons-auth.js?v=20260828-player-oauth-1"></script>
-  <script src="onyx-atlas-castle-hunter-core.js?v=20260828-production-1"></script>
-  <script src="onyx-atlas-castle-hunter.js?v=20260828-production-1"></script>
-  <script src="onyx-fortification-command.js?v=20260828-fortification-command-1"></script>
-  <script src="onyx-base-command.js?v=20260828-fortification-command-1"></script>
-  <script src="onyx-atlas-command.js?v=20260828-castle-hunter-1"></script>
-  <script src="onyx-season-data.js?v=20260827-season-branch-1"></script>
-  <script src="onyx-command.js?v=20260828-chest-availability-2"></script>
+<script src="base-adviser-catalog-towers.js?v=20260828-audit-2"></script>
+<script src="base-adviser-catalog-monuments.js?v=20260828-audit-2"></script>
+<script src="base-adviser-catalog-people.js?v=20260828-audit-2"></script>
+  <script src="onyx-rider-intelligence-data.js?v=20260828-audit-2"></script>
+  <script src="onyx-tower-inventory-bridge.js?v=20260828-audit-2"></script>
+  <script src="app.js?v=20260828-audit-2"></script>
+  <script src="onyx-war-dragons-api.js?v=20260828-audit-2"></script>
+  <script src="onyx-war-dragons-auth.js?v=20260828-audit-2"></script>
+  <script src="onyx-atlas-castle-hunter-core.js?v=20260828-audit-2"></script>
+  <script src="onyx-atlas-castle-hunter.js?v=20260828-audit-2"></script>
+  <script src="onyx-fortification-command.js?v=20260828-audit-2"></script>
+  <script src="onyx-base-command.js?v=20260828-audit-2"></script>
+  <script src="onyx-atlas-command.js?v=20260828-audit-2"></script>
+  <script src="onyx-season-data.js?v=20260828-audit-2"></script>
+  <script src="onyx-command.js?v=20260828-audit-2"></script>
 
 </body>
 </html>

@@ -11,12 +11,12 @@ const hunterCss = fs.readFileSync("onyx-atlas-castle-hunter.css", "utf8");
 const hunterCore = fs.readFileSync("onyx-atlas-castle-hunter-core.js", "utf8");
 const hunterWorker = fs.readFileSync("onyx-atlas-har-worker.js", "utf8");
 
-assert.match(html, /onyx-atlas-command\.css\?v=20260828-atlas-live-1/);
-assert.match(html, /onyx-atlas-command\.js\?v=20260828-castle-hunter-1/);
-assert.match(html, /onyx-war-dragons-auth\.js\?v=20260828-player-oauth-1/);
-assert.match(html, /onyx-atlas-castle-hunter\.css\?v=20260828-production-1/);
-assert.match(html, /onyx-atlas-castle-hunter-core\.js\?v=20260828-production-1/);
-assert.match(html, /onyx-atlas-castle-hunter\.js\?v=20260828-production-1/);
+assert.match(html, /onyx-atlas-command\.css\?v=20260828-audit-2/);
+assert.match(html, /onyx-atlas-command\.js\?v=20260828-audit-2/);
+assert.match(html, /onyx-war-dragons-auth\.js\?v=20260828-audit-2/);
+assert.match(html, /onyx-atlas-castle-hunter\.css\?v=20260828-audit-2/);
+assert.match(html, /onyx-atlas-castle-hunter-core\.js\?v=20260828-audit-2/);
+assert.match(html, /onyx-atlas-castle-hunter\.js\?v=20260828-audit-2/);
 assert.ok(
   html.indexOf("onyx-atlas-command.js") < html.indexOf("onyx-command.js"),
   "Atlas Command must load before the dashboard routes to it."
@@ -41,7 +41,7 @@ assert.match(hunterSource, /data-atlas-tier checked/);
 assert.match(hunterSource, /Copy coordinates/);
 assert.match(hunterSource, /LIVE_BATCH_SIZE = 100/);
 assert.match(hunterWorker, /Only an allowlisted/);
-assert.match(hunterWorker, /onyx-atlas-castle-hunter-core\.js\?v=20260828-production-1/);
+assert.match(hunterWorker, /onyx-atlas-castle-hunter-core\.js\?v=20260828-audit-2/);
 assert.doesNotMatch(hunterSource, /WAR_DRAGONS_(?:API_KEY|CLIENT_SECRET)|client_secret/i);
 assert.match(source, /FICTIONAL DEMO INTELLIGENCE/);
 assert.match(source, /No player or team data is shown/);
@@ -56,8 +56,8 @@ assert.match(source, /Approval pending/);
 assert.match(source, /Vulnerable now/);
 assert.match(source, /Shield cooldown/);
 assert.match(source, /Shield dropping soon/);
-assert.match(source, /Onyx will not infer a missing shield state/);
-assert.match(source, /Missing timing remains missing/);
+assert.match(source, /will not infer a missing official shield state/);
+assert.match(source, /Missing timing and attackability remain missing/);
 assert.match(source, /atlas\.read/);
 assert.match(source, /player\.public\.read/);
 assert.match(source, /Save snapshot/);
@@ -106,7 +106,11 @@ const sandbox = {
 };
 sandbox.window = sandbox;
 vm.createContext(sandbox);
-vm.runInContext(source, sandbox);
+const testableSource = source.replace(
+  "window.OnyxAtlasCommand = Object.freeze({",
+  "window.OnyxAtlasCommand = Object.freeze({ renderLiveCastles,"
+);
+vm.runInContext(testableSource, sandbox);
 
 const command = sandbox.OnyxAtlasCommand;
 assert.ok(command);
@@ -182,7 +186,7 @@ const alertCondition = JSON.parse(JSON.stringify(command.commandCondition({
 })));
 assert.equal(alertCondition.label, "Action watch");
 
-const live = JSON.parse(JSON.stringify(command.setLiveSnapshot({
+command.setLiveSnapshot({
   fetchedAt: "2026-08-28T10:15:00.000Z",
   castles: [
     {
@@ -203,7 +207,8 @@ const live = JSON.parse(JSON.stringify(command.setLiveSnapshot({
     { name: "" }
   ],
   privateResponse: "drop"
-})));
+});
+const live = JSON.parse(JSON.stringify(command.getLiveState()));
 assert.equal(live.castles.length, 2);
 assert.equal(live.castles[0].id, "ATLAS-one");
 assert.equal(live.castles[0].name, "Night Gate");
@@ -213,5 +218,23 @@ assert.equal(live.castles[0].source, "War Dragons API");
 assert.equal(live.castles[1].shieldState, "unknown");
 assert.equal("rawApiKey" in live.castles[0], false);
 assert.equal("privateResponse" in live, false);
+
+const largeSummary = command.setLiveSnapshot({
+  fetchedAt: "2026-08-28T10:30:00.000Z",
+  castles: Array.from({ length: 50005 }, (_, index) => ({
+    id: `ATLAS-${String(index).padStart(5, "0")}`,
+    name: `Castle ${String(index).padStart(5, "0")}`,
+    shieldState: "vulnerable",
+    attackable: true,
+    source: "War Dragons API"
+  }))
+});
+assert.equal(largeSummary.castleCount, 50000);
+assert.equal(command.getLiveState().castles.length, 50000);
+
+const renderedLargeSnapshot = command.renderLiveCastles();
+assert.equal((renderedLargeSnapshot.match(/id="oacLiveCastle\d+"/g) || []).length, 200);
+assert.match(renderedLargeSnapshot, /Showing first 200 of 50,000\. Use the filters to narrow the board\./);
+assert.doesNotMatch(renderedLargeSnapshot, /Castle 00200/);
 
 console.log("Onyx Atlas Command regression checks passed.");

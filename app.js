@@ -58,6 +58,9 @@
       {},
 
     arcane:
+      {},
+
+    super_sigil:
       {}
 
   }
@@ -444,6 +447,15 @@
       sequence:
         []
 
+    },
+
+    super_sigil: {
+
+      rewards: [],
+
+      sequence:
+        []
+
     }
 
   };
@@ -463,11 +475,16 @@
 
   let currentChest =
     appState.activeSession?.chest ||
+    window.LivePredictorEngine
+      ?.getActiveChest?.() ||
     "gold";
 
 
   let eventsBound =
     false;
+
+  let applicationLifecycleGeneration =
+    0;
 
 
   /* =======================================================
@@ -769,6 +786,12 @@
     savedState
       .priorities
       ?.arcane ||
+    {},
+
+  super_sigil:
+    savedState
+      .priorities
+      ?.super_sigil ||
     {}
 
 },
@@ -866,6 +889,66 @@
       "No event selected"
     );
 
+  }
+
+
+  function applyDefaultChestPreference() {
+    const status =
+      window.LivePredictorEngine
+        ?.getStatus?.();
+    const availableChestTypes =
+      Array.isArray(
+        status?.availableChestTypes
+      )
+        ? status.availableChestTypes
+        : [];
+
+    getAllElements(
+      "#favouriteChestInput option[data-event-dependent-chest]"
+    ).forEach(option => {
+      option.disabled =
+        status?.availabilityKnown === true
+          ? !availableChestTypes.includes(
+              option.value
+            )
+          : true;
+      option.textContent = option.disabled
+        ? option.dataset.inactiveLabel
+        : option.dataset.activeLabel;
+    });
+    const requestedChest =
+      appState.activeSession?.chest ||
+      appState.profile
+        ?.favourite_chest ||
+      status?.activeChest ||
+      window.LivePredictorEngine
+        ?.getActiveChest?.() ||
+      "";
+    const nextChest =
+      status?.availabilityKnown ===
+        true
+        ? availableChestTypes.includes(
+            requestedChest
+          )
+          ? requestedChest
+          : availableChestTypes[0] ||
+            null
+        : requestedChest ||
+          availableChestTypes[0] ||
+          null;
+
+    if (!nextChest) {
+      return null;
+    }
+
+    currentChest =
+      nextChest;
+    window.LivePredictorEngine
+      ?.setActiveChest?.(
+        nextChest
+      );
+
+    return nextChest;
   }
 
 
@@ -1122,9 +1205,11 @@
     }
 
 
-    return FALLBACK_DATA[
-      chestType
-    ].rewards.map(
+    return (
+      FALLBACK_DATA[
+        chestType
+      ]?.rewards || []
+    ).map(
       (
         reward,
         index
@@ -1284,7 +1369,9 @@
 
 
   function resolveSequenceReward(
-    sequenceEntry
+    sequenceEntry,
+    chestType =
+      currentChest
   ) {
 
     if (
@@ -1297,7 +1384,9 @@
 
 
     return (
-      getRewards()
+      getRewards(
+        chestType
+      )
         .find(
           reward =>
             rewardsMatch(
@@ -1309,7 +1398,7 @@
       normaliseReward(
         sequenceEntry,
         sequenceEntry.position || 0,
-        currentChest,
+        chestType,
         sequenceEntry.rarity
       )
     );
@@ -1370,12 +1459,41 @@
 
 
   async function startApplication() {
+    const startGeneration =
+      ++applicationLifecycleGeneration;
+    const startIsCurrent = () =>
+      startGeneration ===
+        applicationLifecycleGeneration;
     let accessGranted = false;
 
-    /* Remove the shared storage used by older releases. */
+    /* Remove browser-wide private storage used by older releases. */
     try {
-      localStorage.removeItem(
-        STORAGE_KEY_PREFIX
+      [
+        STORAGE_KEY_PREFIX,
+        "noirBasePlannerV1",
+        "onyxBaseLayoutV1",
+        "onyxBaseLayoutV2",
+        "onyxTowerMergeV1",
+        "onyxBaseReferenceV1",
+        "onyxFortificationCommandV1",
+        "onyxAtlasManualV1",
+        "onyxAtlasModeV1",
+        "onyxAtlasFiltersV1",
+        "noirChestToolsEvent",
+        "chestCompanionBetaPredictor",
+        "chestCompanionLivePredictor:guest",
+        "onyxCommandStateV1:signed-out",
+        "onyxBaseLayoutV2:signed-out",
+        "onyxBaseLayoutV1:signed-out",
+        "onyxTowerMergeV1:signed-out",
+        "onyxBaseReferenceV1:signed-out",
+        "onyxFortificationCommandV1:signed-out",
+        "chestCompanionDoubleArmory:signed-out",
+        "onyxAtlasManualV1:signed-out",
+        "onyxAtlasModeV1:signed-out",
+        "onyxAtlasFiltersV1:signed-out"
+      ].forEach(key =>
+        localStorage.removeItem(key)
       );
     } catch (error) {
       console.warn(
@@ -1395,13 +1513,11 @@
             currentUser?.id || null;
           const passwordSetupActive =
             window.NoirAccessControl
-              ?.isInviteSetupRequested?.() ||
-            window.NoirAccessControl
               ?.isPasswordRecoveryActive?.();
 
           /*
-            Supabase emits SIGNED_IN while consuming an invite
-            or recovery link. Reloading at that point can interrupt
+            Supabase emits SIGNED_IN while consuming a recovery
+            link. Reloading at that point can interrupt
             browser session persistence and replace the password form
             with the ordinary sign-in gate.
           */
@@ -1470,6 +1586,10 @@
 
         );
 
+      if (!startIsCurrent()) {
+        return;
+      }
+
       if (!player?.user) {
         window.NoirAccessControl?.show?.({
           message:
@@ -1500,10 +1620,58 @@
         window.ChestPredictorCloud
           ?.load
       ) {
-        await withTimeout(
-          window.ChestPredictorCloud
-            .load(),
+        /*
+          Access is already verified. Predictor data is a separate,
+          recoverable sync, so a slow cloud response must not strand an
+          authenticated player at the sign-in gate.
+        */
+        withTimeout(
+          Promise.resolve().then(
+            () =>
+              window.ChestPredictorCloud
+                .load()
+          ),
           15000
+        ).then(
+          cloudState => {
+            if (!startIsCurrent()) {
+              return;
+            }
+            applyDefaultChestPreference();
+            if (
+              cloudState?.error ||
+              cloudState?.source !== "cloud"
+            ) {
+              updateCloudBadge(
+                "Cloud sync unavailable",
+                false
+              );
+            } else {
+              updateCloudBadge(
+                "Cloud connected",
+                true
+              );
+            }
+            renderHomeScreen();
+          },
+          error => {
+            if (!startIsCurrent()) {
+              return;
+            }
+            console.warn(
+              "Onyx predictor sync is temporarily unavailable:",
+              error
+            );
+            updateCloudBadge(
+              "Cloud sync unavailable",
+              false
+            );
+          }
+        );
+      } else {
+        updateCloudBadge(
+          "Cloud sync unavailable",
+          false
         );
       }
 
@@ -1515,6 +1683,8 @@
 
       currentChest =
         appState.activeSession?.chest ||
+        window.LivePredictorEngine
+          ?.getActiveChest?.() ||
         "gold";
 
 
@@ -1567,11 +1737,7 @@
 
       }
 
-
-      updateCloudBadge(
-        "Cloud connected",
-        true
-      );
+      applyDefaultChestPreference();
 
 
       setText(
@@ -1593,6 +1759,10 @@
       );
 
     } catch (error) {
+
+      if (!startIsCurrent()) {
+        return;
+      }
 
       console.error(
         "Onyx secure access failed:",
@@ -1625,6 +1795,10 @@
 
     } finally {
 
+      if (!startIsCurrent()) {
+        return;
+      }
+
       loadProfileIntoScreen();
 
       renderHomeScreen();
@@ -1639,6 +1813,7 @@
         window.setTimeout(
           () => {
             if (
+              startIsCurrent() &&
               !window.NoirAccessControl
                 ?.isPasswordRecoveryActive?.()
             ) {
@@ -1819,6 +1994,30 @@
 
         "";
 
+      const status =
+        window.LivePredictorEngine
+          ?.getStatus?.();
+      const available = Array.isArray(
+        status?.availableChestTypes
+      )
+        ? status.availableChestTypes
+        : [];
+      favouriteChestInput
+        .querySelectorAll(
+          "option[data-event-dependent-chest]"
+        )
+        .forEach(option => {
+          option.disabled =
+            status?.availabilityKnown === true
+              ? !available.includes(
+                  option.value
+                )
+              : true;
+          option.textContent = option.disabled
+            ? option.dataset.inactiveLabel
+            : option.dataset.activeLabel;
+        });
+
     }
 
   }
@@ -1896,6 +2095,8 @@
 
 
     saveLocalState();
+
+    applyDefaultChestPreference();
 
     loadProfileIntoScreen();
 
@@ -3546,43 +3747,63 @@
 
   function toggleFullTable() {
 
+    const tableWrapper =
+      getElement("fullTableWrapper");
+
     const tableContainer =
       getElement("fullSequenceTable");
 
     const toggleButton =
       getElement("toggleFullTableButton");
 
-    if (!tableContainer) {
+    if (
+      !tableWrapper ||
+      !tableContainer
+    ) {
 
       return;
 
     }
 
     const isHidden =
-      tableContainer.hidden ||
-      tableContainer.style.display === "none";
+      tableWrapper.hidden ||
+      tableWrapper.classList.contains(
+        "hidden"
+      );
 
     if (isHidden) {
 
-      tableContainer.hidden = false;
-      tableContainer.style.display = "block";
+      tableWrapper.hidden = false;
+      tableWrapper.classList.remove(
+        "hidden"
+      );
 
       renderFullSequenceTable();
 
       if (toggleButton) {
 
         toggleButton.textContent = "Hide";
+        toggleButton.setAttribute(
+          "aria-expanded",
+          "true"
+        );
 
       }
 
     } else {
 
-      tableContainer.hidden = true;
-      tableContainer.style.display = "none";
+      tableWrapper.hidden = true;
+      tableWrapper.classList.add(
+        "hidden"
+      );
 
       if (toggleButton) {
 
         toggleButton.textContent = "Show";
+        toggleButton.setAttribute(
+          "aria-expanded",
+          "false"
+        );
 
       }
 
@@ -3597,7 +3818,9 @@
     if (!tableContainer) return;
 
     const sequence =
-  window.ChestPredictorEngine?.getRewardSequence?.() || [];
+      getSequence(
+        currentChest
+      );
 
     if (!sequence.length) {
 
@@ -3615,7 +3838,10 @@
       .map((reward, index) => {
 
         const item =
-          resolveSequenceReward(reward);
+          resolveSequenceReward(
+            reward,
+            currentChest
+          );
 
         return `
           <div class="sequence-row">
@@ -3755,7 +3981,181 @@ function getArmoryPage(position, positionsPerPage = 20) {
      RESET
   ======================================================= */
 
-  function resetApplication() {
+  const PLAYER_LOCAL_STORAGE_PREFIXES =
+    Object.freeze([
+      STORAGE_KEY_PREFIX,
+      "chestCompanionLivePredictor",
+      "onyxCommandStateV1",
+      "onyxBaseLayoutV2",
+      "onyxBaseLayoutV1",
+      "onyxTowerMergeV1",
+      "onyxBaseReferenceV1",
+      "onyxFortificationCommandV1",
+      "chestCompanionDoubleArmory",
+      "onyxAtlasManualV1",
+      "onyxAtlasModeV1",
+      "onyxAtlasFiltersV1",
+      "noirChestToolsEvent"
+    ]);
+
+  const UNSCOPED_LEGACY_PRIVATE_KEYS =
+    Object.freeze([
+      "chest_companion_v2",
+      "chestCompanionLivePredictor",
+      "chestCompanionBetaPredictor",
+      "noirBasePlannerV1",
+      "chestCompanionLiveEventData",
+      "chestCompanionLiveGachaData",
+      "noirChestToolsVerification",
+      "noirChestToolsEvent"
+    ]);
+
+  function clearPlayerLocalStorage(
+    userId
+  ) {
+    const cleanUserId =
+      String(userId || "").trim();
+
+    if (!cleanUserId) {
+      return;
+    }
+
+    PLAYER_LOCAL_STORAGE_PREFIXES
+      .map(
+        prefix =>
+          `${prefix}:${cleanUserId}`
+      )
+      .forEach(
+        key =>
+          localStorage.removeItem(
+            key
+          )
+      );
+
+    UNSCOPED_LEGACY_PRIVATE_KEYS
+      .forEach(
+        key =>
+          localStorage.removeItem(
+            key
+          )
+      );
+  }
+
+  function clearPlayerAtlasCache(
+    userId
+  ) {
+    const cleanUserId =
+      String(userId || "").trim();
+
+    if (
+      !cleanUserId ||
+      !window.indexedDB
+    ) {
+      return Promise.resolve();
+    }
+
+    return new Promise(
+      resolve => {
+        let settled =
+          false;
+        const finish =
+          () => {
+            if (settled) {
+              return;
+            }
+            settled = true;
+            window.clearTimeout(
+              timeoutId
+            );
+            resolve();
+          };
+        const timeoutId =
+          window.setTimeout(
+            finish,
+            2000
+          );
+        let request;
+
+        try {
+          request =
+            window.indexedDB.open(
+              "onyx-atlas-cache-v1"
+            );
+        } catch (error) {
+          finish();
+          return;
+        }
+
+        request.addEventListener(
+          "upgradeneeded",
+          () => {
+            if (
+              !request.result
+                .objectStoreNames
+                .contains("snapshots")
+            ) {
+              request.result
+                .createObjectStore(
+                  "snapshots"
+                );
+            }
+          }
+        );
+
+        request.addEventListener(
+          "error",
+          finish
+        );
+        request.addEventListener(
+          "blocked",
+          finish
+        );
+
+        request.addEventListener(
+          "success",
+          () => {
+            const database =
+              request.result;
+
+            try {
+              const deletion =
+                database
+                  .transaction(
+                    "snapshots",
+                    "readwrite"
+                  )
+                  .objectStore(
+                    "snapshots"
+                  )
+                  .delete(
+                    cleanUserId
+                  );
+
+              deletion.addEventListener(
+                "success",
+                () => {
+                  database.close();
+                  finish();
+                }
+              );
+              deletion.addEventListener(
+                "error",
+                () => {
+                  database.close();
+                  finish();
+                }
+              );
+            } catch (error) {
+              database.close();
+              finish();
+            }
+          }
+        );
+      }
+    );
+  }
+
+  async function resetApplication() {
 
     if (
       !confirm(
@@ -3767,16 +4167,28 @@ function getArmoryPage(position, positionsPerPage = 20) {
 
     }
 
-    const storageKey =
-      getPlayerStorageKey(
-        currentUser?.id
-      );
+    const userId =
+      currentUser?.id;
 
-    if (storageKey) {
-      localStorage.removeItem(
-        storageKey
+    if (userId) {
+      clearPlayerLocalStorage(
+        userId
+      );
+      await clearPlayerAtlasCache(
+        userId
       );
     }
+
+    window.OnyxEventImportPrivacy
+      ?.clearPrivateImport?.({
+        resetInterface: false,
+        clearFileInput: true
+      });
+
+    window.LivePredictorEngine
+      ?.setPlayerIdentity?.(
+        userId || "guest"
+      );
 
     location.reload();
 
@@ -3860,8 +4272,45 @@ function getArmoryPage(position, positionsPerPage = 20) {
     eventsBound = true;
 
     window.addEventListener(
+      "noir:signout-started",
+      () => {
+        applicationLifecycleGeneration += 1;
+        currentUser = null;
+      }
+    );
+
+    window.addEventListener(
       "chest-companion-live-predictor-updated",
-      renderHomeScreen
+      () => {
+        applyDefaultChestPreference();
+        renderHomeScreen();
+      }
+    );
+
+    window.addEventListener(
+      "chest-companion-predictors-ready",
+      event => {
+        if (!currentUser) {
+          return;
+        }
+
+        const cloudState =
+          event?.detail ||
+          window.ChestPredictorCloud
+            ?.getStatus?.() ||
+          {};
+
+        updateCloudBadge(
+          cloudState.error ||
+          cloudState.source !== "cloud"
+            ? "Cloud sync unavailable"
+            : "Cloud connected",
+          !cloudState.error &&
+            cloudState.source === "cloud"
+        );
+        applyDefaultChestPreference();
+        renderHomeScreen();
+      }
     );
 
     window.addEventListener(
@@ -4079,25 +4528,3 @@ function getArmoryPage(position, positionsPerPage = 20) {
   }
 
 })();
-/* =========================================================
-   FULL SEQUENCE TABLE TOGGLE
-========================================================= */
-
-document.addEventListener("DOMContentLoaded", () => {
-  const toggleButton = document.getElementById("toggleFullTableButton");
-  const tableWrapper = document.getElementById("fullTableWrapper");
-
-  if (!toggleButton || !tableWrapper) {
-    console.warn("Full table controls could not be found.");
-    return;
-  }
-
-  toggleButton.addEventListener("click", () => {
-    const isHidden = tableWrapper.classList.contains("hidden");
-
-    tableWrapper.classList.toggle("hidden");
-
-    toggleButton.textContent = isHidden ? "Hide" : "Show";
-    toggleButton.setAttribute("aria-expanded", String(isHidden));
-  });
-});

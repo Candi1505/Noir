@@ -136,7 +136,7 @@ async function parseSyntheticCapture() {
   context.globalThis = context;
   context.self = context;
   context.importScripts = name => {
-    assert.equal(name, "onyx-atlas-castle-hunter-core.js?v=20260828-production-1");
+    assert.equal(name, "onyx-atlas-castle-hunter-core.js?v=20260828-audit-2");
     vm.runInContext(coreSource, context, { filename: name });
   };
   context.addEventListener = (type, handler) => {

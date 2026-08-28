@@ -15,6 +15,7 @@ global.dispatchEvent = event => {
   dispatched.push(event);
   return true;
 };
+global.addEventListener = () => {};
 global.localStorage = {
   getItem: key => stored.get(key) ?? null,
   setItem: (key, value) => stored.set(key, String(value))
@@ -90,6 +91,47 @@ ChestPredictorCloud.load()
         throw new Error(`Captured chest field reached the player: ${field}`);
       }
     });
+
+    const installedEvent =
+      global.CHEST_DATA?.gold?.eventData;
+    const statusEvent =
+      ChestPredictorCloud.getStatus()
+        ?.predictors?.gold?.database
+        ?.eventData;
+
+    [installedEvent, statusEvent]
+      .forEach((sharedEvent, index) => {
+        if (!sharedEvent) {
+          throw new Error(
+            `Sanitised predictor view ${index + 1} did not load.`
+          );
+        }
+
+        if (
+          Object.keys(
+            sharedEvent.deckIndices || {}
+          ).length !== 0 ||
+          sharedEvent.sourceFile ||
+          sharedEvent.fileName ||
+          sharedEvent.filename
+        ) {
+          throw new Error(
+            `Private metadata reached predictor view ${index + 1}.`
+          );
+        }
+
+        Object.keys(privateFields)
+          .forEach(field => {
+            if (
+              field in
+              sharedEvent.chests.gold
+            ) {
+              throw new Error(
+                `Captured chest field reached predictor view ${index + 1}: ${field}`
+              );
+            }
+          });
+      });
 
     const imported = dispatched.find(
       event => event.type === "noir:event-imported"

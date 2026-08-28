@@ -25,6 +25,9 @@
   const OVERLAY_ID =
     "ccLivePredictorOverlay";
 
+  let previousBodyOverflow =
+    null;
+
   const STYLE_ID =
     "ccLivePredictorStyles";
 
@@ -2868,6 +2871,10 @@
       document.createElement("div");
 
     overlay.id = OVERLAY_ID;
+    overlay.setAttribute(
+      "aria-hidden",
+      "true"
+    );
 
     overlay.innerHTML = `
       <div class="lp-shell">
@@ -6076,29 +6083,58 @@
 
     render();
 
-    document
-      .getElementById(
+    const overlay =
+      document.getElementById(
         OVERLAY_ID
-      )
-      .classList.add(
-        "lp-open"
       );
+
+    if (
+      !overlay?.classList.contains(
+        "lp-open"
+      )
+    ) {
+      previousBodyOverflow =
+        document.body.style.overflow;
+    }
+
+    overlay?.classList.add(
+      "lp-open"
+    );
+    overlay?.setAttribute(
+      "aria-hidden",
+      "false"
+    );
 
     document.body.style.overflow =
       "hidden";
   }
 
   function close() {
-    document
-      .getElementById(
+    const overlay =
+      document.getElementById(
         OVERLAY_ID
-      )
-      .classList.remove(
-        "lp-open"
       );
 
+    if (
+      !overlay?.classList.contains(
+        "lp-open"
+      )
+    ) {
+      return;
+    }
+
+    overlay.classList.remove(
+      "lp-open"
+    );
+    overlay.setAttribute(
+      "aria-hidden",
+      "true"
+    );
+
     document.body.style.overflow =
-      "";
+      previousBodyOverflow || "";
+    previousBodyOverflow =
+      null;
   }
 
   function detectChestType(
@@ -7268,7 +7304,10 @@
       "keydown",
       event => {
         if (
-          event.key === "Escape"
+          event.key === "Escape" &&
+          overlay?.classList.contains(
+            "lp-open"
+          )
         ) {
           close();
         }

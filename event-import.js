@@ -2,10 +2,10 @@
 
 /*
  * Noir Chest Companion
- * Live event and HAR chest-history importer
+ * Private HAR chest-event importer
  *
  * Responsibilities:
- * - Read an uploaded .json, .txt or .har file
+ * - Read an uploaded .har or .har.zip file
  * - Parse the WD about_v2 response
  * - Detect Gold, Platinum, Draconic, Freedom and Arcane decks
  * - Parse use_gacha requests when the file is a HAR capture
@@ -18,6 +18,435 @@ const LIVE_EVENT_STORAGE_KEY =
 
 const LIVE_GACHA_STORAGE_KEY =
   "chestCompanionLiveGachaData";
+
+const CHEST_IMPORT_WORKER_URL =
+  "chest-har-import-worker.js?v=20260828-audit-2";
+
+const MAX_DIRECT_IMPORT_BYTES =
+  128 * 1024 * 1024;
+
+const MAX_MAIN_THREAD_FALLBACK_BYTES =
+  32 * 1024 * 1024;
+
+let importGeneration = 0;
+let activeCaptureRequest = null;
+
+function cancelledImportError() {
+  const error = new Error(
+    "The private capture import was cancelled."
+  );
+  error.code = "IMPORT_CANCELLED";
+  return error;
+}
+
+function cancelActiveCapture() {
+  activeCaptureRequest?.cancel?.();
+  activeCaptureRequest = null;
+}
+
+function clearLegacyImportStorage() {
+  try {
+    localStorage.removeItem(
+      LIVE_EVENT_STORAGE_KEY
+    );
+    localStorage.removeItem(
+      LIVE_GACHA_STORAGE_KEY
+    );
+  } catch (error) {
+    console.warn(
+      "[Chest Companion] Legacy private import data could not be cleared."
+    );
+  }
+}
+
+function clearImportData({
+  resetInterface = true,
+  clearFileInput = true
+} = {}) {
+  importGeneration += 1;
+  cancelActiveCapture();
+
+  window.currentEventData = null;
+  window.currentGachaData = null;
+  window.currentEventSourceFile = null;
+  window.OnyxTowerInventoryBridge
+    ?.clear?.();
+
+  try {
+    delete window.ChestCompanionLastImport;
+  } catch (error) {
+    window.ChestCompanionLastImport = null;
+  }
+
+  clearLegacyImportStorage();
+
+  window.dispatchEvent?.(
+    new CustomEvent(
+      "noir:private-import-cleared"
+    )
+  );
+
+  if (clearFileInput) {
+    const fileInput =
+      document.getElementById("eventDataFile");
+
+    if (fileInput) {
+      fileInput.value = "";
+    }
+  }
+
+  [
+    "goldPredictorBadge",
+    "platinumPredictorBadge",
+    "draconicPredictorBadge",
+    "freedomPredictorBadge",
+    "arcanePredictorBadge"
+  ].forEach(id => {
+    const predictorBadge =
+      document.getElementById(id);
+    if (predictorBadge) {
+      predictorBadge.textContent =
+        "Not detected";
+    }
+  });
+
+  if (!resetInterface) {
+    return;
+  }
+
+  const results =
+    document.getElementById("eventImportResults");
+  const statusText =
+    document.getElementById("eventImportStatus");
+  const badge =
+    document.getElementById("eventImportBadge");
+
+  if (results) {
+    results.textContent = "";
+    results.classList.add("hidden");
+  }
+
+  if (statusText) {
+    statusText.textContent =
+      "No private event capture is loaded.";
+  }
+
+  if (badge) {
+    badge.textContent = "Not imported";
+    badge.classList.remove(
+      "ready",
+      "failed",
+      "loading"
+    );
+  }
+
+}
+
+window.OnyxEventImportPrivacy = {
+  ...(window.OnyxEventImportPrivacy || {}),
+  clearImportData,
+  clearPrivateImport: clearImportData
+};
+
+/* Sign-out can clear private memory without opening this panel. */
+window.clearOnyxChestImportData =
+  clearImportData;
+
+clearLegacyImportStorage();
+
+function sanitiseLastImportDiagnostics() {
+  const lastImport =
+    window.ChestCompanionLastImport;
+  const diagnostics =
+    lastImport?.diagnostics || {};
+
+  if (!lastImport) {
+    return;
+  }
+
+  window.ChestCompanionLastImport = {
+    kind:
+      lastImport.kind === "har"
+        ? "har"
+        : "json",
+    importedAt:
+      lastImport.importedAt ||
+      new Date().toISOString(),
+    diagnostics: {
+      eventName:
+        diagnostics.eventName || null,
+      eventKey:
+        diagnostics.eventKey || null,
+      rewardPoolCount:
+        Number(diagnostics.rewardPoolCount) || 0,
+      availableChestTypes:
+        Array.isArray(
+          diagnostics.availableChestTypes
+        )
+          ? diagnostics.availableChestTypes
+              .map(value => String(value))
+              .slice(0, 6)
+          : [],
+      arcaneBonusVerified:
+        diagnostics.arcaneBonusVerified === true,
+      doubleArmoryDetected:
+        diagnostics.doubleArmoryDetected === true
+    }
+  };
+}
+
+function readCaptureWithWorker(
+  file,
+  isCancelled = () => false
+) {
+  return new Promise((resolve, reject) => {
+    let worker;
+    let settled = false;
+
+    if (isCancelled()) {
+      reject(cancelledImportError());
+      return;
+    }
+
+    try {
+      worker = new Worker(
+        CHEST_IMPORT_WORKER_URL
+      );
+    } catch (error) {
+      reject(
+        new Error(
+          "The private capture reader could not start."
+        )
+      );
+      return;
+    }
+
+    const request = {
+      worker,
+      cancel: null
+    };
+
+    const finish = callback => value => {
+      if (settled) return;
+      settled = true;
+      worker.terminate();
+      if (activeCaptureRequest === request) {
+        activeCaptureRequest = null;
+      }
+      callback(value);
+    };
+
+    const succeed = finish(resolve);
+    const fail = finish(reject);
+    request.cancel = () =>
+      fail(cancelledImportError());
+
+    activeCaptureRequest?.cancel?.();
+    activeCaptureRequest = request;
+
+    worker.addEventListener("message", event => {
+      const message = event?.data || {};
+
+      if (message.type === "progress") {
+        return;
+      }
+
+      if (
+        message.type === "success" &&
+        message.eventData &&
+        typeof message.eventData === "object"
+      ) {
+        succeed({
+          eventData: message.eventData,
+          gachaData:
+            message.gachaData || null,
+          towerInventory:
+            message.towerInventory || null,
+          importDiagnostics:
+            message.importDiagnostics || null,
+          zipped: message.zipped === true
+        });
+        return;
+      }
+
+      fail(
+        new Error(
+          message.message ||
+          "The private capture could not be read."
+        )
+      );
+    });
+
+    worker.addEventListener("error", () => {
+      fail(
+        new Error(
+          "The private capture reader stopped unexpectedly."
+        )
+      );
+    });
+
+    try {
+      worker.postMessage({
+        type: "import",
+        file
+      });
+    } catch (error) {
+      fail(
+        new Error(
+          "The private capture reader could not receive this file."
+        )
+      );
+    }
+  });
+}
+
+async function readPrivateCapture(
+  file,
+  isCancelled = () => false
+) {
+  if (!(file instanceof Blob)) {
+    throw new Error(
+      "Choose a supported private event capture."
+    );
+  }
+
+  if (
+    file.size < 2 ||
+    file.size > MAX_DIRECT_IMPORT_BYTES
+  ) {
+    throw new Error(
+      "This event capture is outside the safe import limits."
+    );
+  }
+
+  if (isCancelled()) {
+    throw cancelledImportError();
+  }
+
+  const signature =
+    new Uint8Array(
+      await file.slice(0, 4).arrayBuffer()
+    );
+
+  if (isCancelled()) {
+    throw cancelledImportError();
+  }
+  const zipped =
+    signature[0] === 0x50 &&
+    signature[1] === 0x4b;
+
+  let result;
+
+  if (typeof Worker === "function") {
+    try {
+      result = await readCaptureWithWorker(
+        file,
+        isCancelled
+      );
+    } catch (error) {
+      if (
+        error?.code === "IMPORT_CANCELLED"
+      ) {
+        throw error;
+      }
+
+      if (zipped) {
+        throw new Error(
+          "This zipped capture could not be parsed privately in this browser. Try again or extract a small HAR file first."
+        );
+      }
+
+      if (
+        file.size >
+          MAX_MAIN_THREAD_FALLBACK_BYTES
+      ) {
+        throw new Error(
+          "This capture is too large to parse safely without the private background reader. Try again in an up-to-date browser."
+        );
+      }
+    }
+  } else {
+    if (zipped) {
+      throw new Error(
+        "This browser cannot privately open zipped captures. Extract the .har file first."
+      );
+    }
+
+    if (
+      file.size >
+        MAX_MAIN_THREAD_FALLBACK_BYTES
+    ) {
+      throw new Error(
+        "This capture is too large to parse safely in this browser. Use an up-to-date browser with the private background reader."
+      );
+    }
+  }
+
+  if (result) {
+    if (isCancelled()) {
+      throw cancelledImportError();
+    }
+    return {
+      ...result,
+      workerParsed: true
+    };
+  }
+
+  let buffer = await file.arrayBuffer();
+
+  if (isCancelled()) {
+    buffer = null;
+    throw cancelledImportError();
+  }
+  let text;
+
+  try {
+    text = new TextDecoder(
+      "utf-8",
+      { fatal: true }
+    ).decode(buffer);
+  } catch (error) {
+    throw new Error(
+      "The selected event capture is not valid UTF-8 text."
+    );
+  } finally {
+    buffer = null;
+  }
+
+  if (!text.trim()) {
+    throw new Error(
+      "The selected event file is empty."
+    );
+  }
+
+  let importedData;
+
+  if (isCancelled()) {
+    text = "";
+    throw cancelledImportError();
+  }
+
+  try {
+    importedData = JSON.parse(text);
+  } catch (error) {
+    throw new Error(
+      "The selected event capture is not valid JSON."
+    );
+  } finally {
+    text = "";
+  }
+
+  if (isCancelled()) {
+    importedData = null;
+    throw cancelledImportError();
+  }
+
+  return {
+    importedData,
+    zipped: false,
+    workerParsed: false
+  };
+}
 
 document.addEventListener("DOMContentLoaded", () => {
   const importButton =
@@ -498,7 +927,7 @@ document.addEventListener("DOMContentLoaded", () => {
     );
   }
 
-  function parseHarGachaData(rawText) {
+  function parseHarGachaData(possibleHar) {
     if (
       !window.HarGachaParser ||
       typeof window.HarGachaParser.parse !==
@@ -508,14 +937,6 @@ document.addEventListener("DOMContentLoaded", () => {
         "[Chest Companion] HarGachaParser is unavailable. Confirm har-gacha-parser.js loads before event-import.js."
       );
 
-      return null;
-    }
-
-    let possibleHar;
-
-    try {
-      possibleHar = JSON.parse(rawText);
-    } catch (error) {
       return null;
     }
 
@@ -545,45 +966,18 @@ document.addEventListener("DOMContentLoaded", () => {
       return window.HarGachaParser.parse(
         possibleHar
       );
-    } catch (objectError) {
-      /*
-       * Some parser versions may expect the original
-       * JSON text instead of the already-parsed object.
-       */
-      try {
-        return window.HarGachaParser.parse(
-          rawText
-        );
-      } catch (textError) {
-        console.warn(
-          "[Chest Companion] HAR gacha requests were found, but they could not be parsed.",
-          textError
-        );
+    } catch (error) {
+      console.warn(
+        "[Chest Companion] HAR gacha requests were found, but they could not be parsed."
+      );
 
-        return null;
-      }
+      return null;
     }
   }
 
-  function saveImportedData(
-    parsed,
-    gachaData,
-    sourceFile
-  ) {
+  function keepImportedDataMemoryOnly() {
     /* Raw administrator imports are never persisted. */
-    try {
-      localStorage.removeItem(
-        LIVE_EVENT_STORAGE_KEY
-      );
-      localStorage.removeItem(
-        LIVE_GACHA_STORAGE_KEY
-      );
-    } catch (error) {
-      console.warn(
-        "[Chest Companion] Could not clear legacy import data.",
-        error
-      );
-    }
+    clearLegacyImportStorage();
   }
 
   function dispatchImportedEvent({
@@ -594,6 +988,10 @@ document.addEventListener("DOMContentLoaded", () => {
   }) {
     const detail = {
       restored,
+      privateImport: !restored,
+      persistence: restored
+        ? "shared-cloud"
+        : "memory-only",
       parsed,
       eventData: parsed,
       gachaData,
@@ -626,6 +1024,10 @@ document.addEventListener("DOMContentLoaded", () => {
           {
             detail: {
               restored,
+              privateImport: !restored,
+              persistence: restored
+                ? "shared-cloud"
+                : "memory-only",
               gachaData,
               eventData: parsed,
               sourceFile
@@ -674,7 +1076,18 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     importButton.disabled = true;
+    importButton.dataset.importBusy =
+      "true";
     fileInput.disabled = true;
+
+    /* Never leave a previous private capture available when a
+     * replacement fails part-way through import. */
+    clearImportData({
+      resetInterface: false,
+      clearFileInput: false
+    });
+    const activeImportGeneration =
+      importGeneration;
 
     setBadge(
       "Reading...",
@@ -682,35 +1095,72 @@ document.addEventListener("DOMContentLoaded", () => {
     );
 
     statusText.textContent =
-      `Reading ${file.name}...`;
+      "Reading the private capture on this device...";
 
     results.classList.add("hidden");
 
     try {
-      const rawText =
-        await file.text();
-
-      if (!rawText.trim()) {
-        throw new Error(
-          "The selected event file is empty."
+      const capture =
+        await readPrivateCapture(
+          file,
+          () =>
+            activeImportGeneration !==
+              importGeneration
         );
+
+      if (
+        activeImportGeneration !==
+          importGeneration
+      ) {
+        throw cancelledImportError();
       }
 
-      /*
-       * har-event-adapter.js allows EventParser to accept
-       * either a direct about_v2 response or a complete HAR.
-       */
-      const parsed =
-        window.EventParser.parse(rawText);
+      let parsed;
+      let gachaData;
 
-      const gachaData =
-        parseHarGachaData(rawText);
+      if (capture.workerParsed) {
+        parsed = capture.eventData;
+        gachaData = capture.gachaData;
+
+        window.ChestCompanionLastImport =
+          capture.importDiagnostics;
+        sanitiseLastImportDiagnostics();
+
+        if (capture.towerInventory) {
+          window.OnyxTowerInventoryBridge
+            ?.importSnapshot?.(
+              capture.towerInventory
+            );
+        } else {
+          window.OnyxTowerInventoryBridge
+            ?.clear?.();
+        }
+      } else {
+        let importedData =
+          capture.importedData;
+
+        parsed =
+          window.EventParser.parse(importedData);
+        sanitiseLastImportDiagnostics();
+        gachaData =
+          parseHarGachaData(importedData);
+
+        capture.importedData = null;
+        importedData = null;
+      }
+
+      if (
+        activeImportGeneration !==
+          importGeneration
+      ) {
+        throw cancelledImportError();
+      }
 
       const sourceFile = {
-        name: file.name,
-        size: file.size,
-        type:
-          file.type || "unknown",
+        format: capture.zipped
+          ? "har.zip"
+          : "har",
+        sizeBytes: file.size,
         importedAt:
           new Date().toISOString()
       };
@@ -724,11 +1174,7 @@ document.addEventListener("DOMContentLoaded", () => {
       window.currentEventSourceFile =
         sourceFile;
 
-      saveImportedData(
-        parsed,
-        gachaData,
-        sourceFile
-      );
+      keepImportedDataMemoryOnly();
 
       setBadge(
         parsed.ready
@@ -752,7 +1198,7 @@ document.addEventListener("DOMContentLoaded", () => {
           : " No chest-opening history was detected.";
 
       statusText.textContent =
-        `${parsed.readyChestCount || 0} chest deck(s) detected from ${file.name}.${gachaStatus}`;
+        `${parsed.readyChestCount || 0} chest deck(s) detected from the private capture.${gachaStatus}`;
 
       renderResults(
         parsed,
@@ -770,37 +1216,26 @@ document.addEventListener("DOMContentLoaded", () => {
         restored: false
       });
 
-      console.group(
-        "Onyx Command Live Event Import"
+      console.info(
+        "[Chest Companion] Private capture imported in memory."
       );
-
-      console.log(
-        "Source file:",
-        sourceFile
-      );
-
-      console.log(
-        "Parsed event:",
-        parsed
-      );
-
-      console.log(
-        "Parsed gacha history:",
-        gachaData
-      );
-
-      console.groupEnd();
     } catch (error) {
+      if (
+        activeImportGeneration !==
+          importGeneration ||
+        error?.code === "IMPORT_CANCELLED"
+      ) {
+        return;
+      }
+
       console.error(
-        "[Chest Companion] Live event import failed:",
-        error
+        "[Chest Companion] Private capture import failed."
       );
 
-      window.currentEventData =
-        null;
-
-      window.currentGachaData =
-        null;
+      clearImportData({
+        resetInterface: false,
+        clearFileInput: false
+      });
 
       setBadge(
         "Failed",
@@ -834,8 +1269,17 @@ document.addEventListener("DOMContentLoaded", () => {
         "hidden"
       );
     } finally {
-      importButton.disabled =
-        false;
+      /* Release the browser's reference to the raw File object. */
+      fileInput.value = "";
+
+      delete importButton.dataset
+        .importBusy;
+      if (
+        !importButton.dataset
+          .publisherGeneration
+      ) {
+        importButton.disabled = false;
+      }
 
       fileInput.disabled =
         false;
@@ -844,19 +1288,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function restoreSavedLiveEvent() {
     /* Restore only sanitised data from Supabase. */
-    try {
-      localStorage.removeItem(
-        LIVE_EVENT_STORAGE_KEY
-      );
-      localStorage.removeItem(
-        LIVE_GACHA_STORAGE_KEY
-      );
-    } catch (error) {
-      console.warn(
-        "[Chest Companion] Could not clear legacy import data.",
-        error
-      );
-    }
+    clearLegacyImportStorage();
 
     return false;
   }
@@ -914,7 +1346,7 @@ document.addEventListener("DOMContentLoaded", () => {
       );
 
       statusText.textContent =
-        `${file.name} is ready to import.`;
+        "The private capture is ready to import.";
     }
   );
 });

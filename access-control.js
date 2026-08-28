@@ -11,16 +11,12 @@
 
   const get = id =>
     document.getElementById(id);
+  const SIGN_OUT_TIMEOUT_MS = 5000;
+  const SUPABASE_AUTH_STORAGE_KEY =
+    "sb-prjixwuvyhiqzoekoadj-auth-token";
   let passwordRecoveryActive = false;
   let showingSignUp = false;
-  const inviteSetupRequested = (() => {
-    try {
-      return new URL(window.location.href)
-        .searchParams.get("invite") === "1";
-    } catch (error) {
-      return false;
-    }
-  })();
+  let signOutInProgress = false;
 
   function setMessage(message, failed = false) {
     const element = get("accessGateMessage");
@@ -92,6 +88,114 @@
 
   function hide() {
     get("accessGate")?.classList.add("hidden");
+  }
+
+  function showSigningOutBoundary() {
+    passwordRecoveryActive = false;
+    showingSignUp = false;
+    show({
+      message:
+        "Signing out securely. This page will refresh automatically.",
+      signedIn: true
+    });
+
+    const button =
+      get("accessGateSignOut");
+
+    if (button) {
+      button.disabled = true;
+      button.textContent = "Signing out...";
+    }
+  }
+
+  async function requestRemoteSignOut() {
+    const scheduleTimeout =
+      window.setTimeout ||
+      (typeof setTimeout === "function"
+        ? setTimeout
+        : null);
+    const cancelTimeout =
+      window.clearTimeout ||
+      (typeof clearTimeout === "function"
+        ? clearTimeout
+        : null);
+    let timeoutId = null;
+
+    const remoteRequest = Promise.resolve()
+      .then(() =>
+        window.ChestDatabase
+          .signOutAdmin()
+      )
+      .then(() => ({ timedOut: false }));
+
+    try {
+      if (!scheduleTimeout) {
+        await remoteRequest;
+        return true;
+      }
+
+      const result = await Promise.race([
+        remoteRequest,
+        new Promise(resolve => {
+          timeoutId = scheduleTimeout(
+            () => resolve({ timedOut: true }),
+            SIGN_OUT_TIMEOUT_MS
+          );
+        })
+      ]);
+
+      if (result?.timedOut) {
+        console.warn(
+          "[Noir] Remote sign-out timed out; completing local sign-out."
+        );
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.warn(
+        "[Noir] Remote sign-out failed; completing local sign-out."
+      );
+      return false;
+    } finally {
+      if (
+        timeoutId !== null &&
+        cancelTimeout
+      ) {
+        cancelTimeout(timeoutId);
+      }
+    }
+  }
+
+  function forceLocalSupabaseSessionClear() {
+    try {
+      Promise.resolve(
+        window.chestSupabase?.auth
+          ?.signOut?.({ scope: "local" })
+      ).catch(() => {
+        /* Storage clearing below is the deterministic fallback. */
+      });
+    } catch (error) {
+      /* Storage clearing below is the deterministic fallback. */
+    }
+
+    [
+      "localStorage",
+      "sessionStorage"
+    ].forEach(storageName => {
+      try {
+        const storage =
+          window[storageName];
+        storage?.removeItem?.(
+          SUPABASE_AUTH_STORAGE_KEY
+        );
+        storage?.removeItem?.(
+          `${SUPABASE_AUTH_STORAGE_KEY}-code-verifier`
+        );
+      } catch (error) {
+        /* The locked page remains fail-closed until reload. */
+      }
+    });
   }
 
   async function verify() {
@@ -295,10 +399,163 @@
     await submitSignUp();
   }
 
-  async function signOut() {
+  function clearPrivateClientStateBeforeSignOut() {
+    window.dispatchEvent?.(
+      new CustomEvent(
+        "noir:signout-started"
+      )
+    );
+
+    const closableTools = [
+      window.LivePredictorUI,
+      window.ChestPredictorUI,
+      window.NoirChestTools,
+      window.ChestPlanner,
+      window.ChestDropRates,
+      window.NoirBasePlanner,
+      window.OnyxBaseCommand,
+      window.OnyxAtlasCommand,
+      window.OnyxCommand
+    ];
+
+    closableTools.forEach(tool => {
+      try {
+        tool?.close?.();
+      } catch (error) {
+        // Sign-out must continue even if an optional tool was not mounted.
+      }
+    });
+
+    document
+      .getElementById(
+        "noirDoubleArmoryOverlay"
+      )
+      ?.remove();
+
     try {
-      await window.ChestDatabase
-        .signOutAdmin();
+      window.OnyxEventImportPrivacy
+        ?.clearPrivateImport?.({
+          resetInterface: true,
+          clearFileInput: true
+        });
+    } catch (error) {
+      /* Manual clearing below remains the privacy fallback. */
+    }
+
+    try {
+      window.OnyxTowerInventoryBridge
+        ?.clear?.();
+    } catch (error) {
+      /* The page reload remains the final isolation boundary. */
+    }
+
+    window.currentEventData = null;
+    window.currentGachaData = null;
+    window.currentEventSourceFile = null;
+    window.ChestCompanionPublishedEvent = null;
+
+    try {
+      delete window.ChestCompanionLastImport;
+    } catch (error) {
+      window.ChestCompanionLastImport = null;
+    }
+
+    try {
+      [
+        "chestCompanionPublishedEvent",
+        "chestCompanionLiveEventData",
+        "chestCompanionLiveGachaData",
+        "noirChestToolsVerification",
+        "noirChestToolsEvent",
+        "noirBasePlannerV1",
+        "onyxBaseLayoutV1",
+        "onyxBaseLayoutV2",
+        "onyxTowerMergeV1",
+        "onyxBaseReferenceV1",
+        "onyxFortificationCommandV1",
+        "onyxAtlasManualV1",
+        "onyxAtlasModeV1",
+        "onyxAtlasFiltersV1",
+        "chestCompanionBetaPredictor",
+        "chestCompanionLivePredictor:guest",
+        "onyxCommandStateV1:signed-out",
+        "onyxBaseLayoutV2:signed-out",
+        "onyxBaseLayoutV1:signed-out",
+        "onyxTowerMergeV1:signed-out",
+        "onyxBaseReferenceV1:signed-out",
+        "onyxFortificationCommandV1:signed-out",
+        "chestCompanionDoubleArmory:signed-out",
+        "onyxAtlasManualV1:signed-out",
+        "onyxAtlasModeV1:signed-out",
+        "onyxAtlasFiltersV1:signed-out"
+      ].forEach(key =>
+        window.localStorage
+          ?.removeItem?.(key)
+      );
+    } catch (error) {
+      /* In-memory state is already cleared above. */
+    }
+
+    try {
+      window.LivePredictorEngine
+        ?.clearPublishedEventData?.();
+    } catch (error) {
+      /* The direct global cleanup above remains authoritative. */
+    }
+
+    try {
+      window.LivePredictorEngine
+        ?.setPlayerIdentity?.("guest");
+    } catch (error) {
+      /* The page reload remains the final isolation boundary. */
+    }
+
+    const passwordInput =
+      get("accessGatePassword");
+
+    if (passwordInput) {
+      passwordInput.value = "";
+    }
+
+    document.body.style.overflow = "";
+    document.body.classList.remove(
+      "onyx-modal-open"
+    );
+    get("appShell")?.classList.add(
+      "hidden"
+    );
+  }
+
+  async function signOut() {
+    if (signOutInProgress) {
+      return;
+    }
+
+    signOutInProgress = true;
+
+    try {
+      clearPrivateClientStateBeforeSignOut();
+    } catch (error) {
+      console.warn(
+        "[Noir] Local sign-out cleanup was incomplete; reloading securely."
+      );
+    }
+
+    try {
+      showSigningOutBoundary();
+    } catch (error) {
+      get("appShell")?.classList.add(
+        "hidden"
+      );
+    }
+
+    try {
+      const remoteSignOutCompleted =
+        await requestRemoteSignOut();
+
+      if (!remoteSignOutCompleted) {
+        forceLocalSupabaseSessionClear();
+      }
     } finally {
       window.location.reload();
     }
@@ -330,18 +587,6 @@
     passwordRecoveryActive = true;
     show({ message });
     get("accessGateNewPassword")?.focus();
-  }
-
-  function beginInvitedAccountSetup(session) {
-    if (
-      inviteSetupRequested &&
-      session?.user
-    ) {
-      beginPasswordRecovery({
-        message:
-          "Your Onyx invitation is confirmed. Create and confirm your password to finish setting up your account."
-      });
-    }
   }
 
   async function saveRecoveredPassword() {
@@ -460,43 +705,24 @@
 
   window.chestSupabase?.auth
     ?.onAuthStateChange?.(
-      (event, session) => {
+      event => {
         if (event === "PASSWORD_RECOVERY") {
           beginPasswordRecovery();
-          return;
-        }
-
-        if (
-          event === "INITIAL_SESSION" ||
-          event === "SIGNED_IN"
-        ) {
-          beginInvitedAccountSetup(session);
         }
       }
     );
-
-  if (inviteSetupRequested) {
-    window.chestSupabase?.auth
-      ?.getSession?.()
-      .then(({ data }) => {
-        beginInvitedAccountSetup(
-          data?.session
-        );
-      })
-      .catch(() => {
-        /* The Auth state listener remains the fallback. */
-      });
-  }
 
   window.NoirAccessControl =
     Object.freeze({
       verify,
       show,
       hide,
+      clearPrivateClientState:
+        clearPrivateClientStateBeforeSignOut,
+      forceLocalSessionClear:
+        forceLocalSupabaseSessionClear,
       beginPasswordRecovery,
       isPasswordRecoveryActive: () =>
-        passwordRecoveryActive,
-      isInviteSetupRequested: () =>
-        inviteSetupRequested
+        passwordRecoveryActive
     });
 })(window);

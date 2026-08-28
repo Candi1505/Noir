@@ -170,9 +170,9 @@ vm.runInThisContext(
 
 const superSigilBudget = NoirChestTools.calculateChestBudget(8000, "super_sigil");
 assert.deepEqual(superSigilBudget, {
-  openings: 12,
-  tenPacks: 0,
-  singles: 12,
+  openings: 14,
+  tenPacks: 1,
+  singles: 4,
   spent: 7500,
   remaining: 500
 });
@@ -194,6 +194,11 @@ assert.equal(
   Object.values(verification).filter(item => item.solved).length,
   6,
   "The private verification summary must use all six live solver statuses."
+);
+assert.equal(
+  storage.has("noirChestToolsVerification"),
+  false,
+  "Derived player verification must not be stored in a browser-wide key."
 );
 
 const currentAvailabilityEvent =
@@ -281,6 +286,54 @@ assert.equal(
     .getChestStatus("freedom")
     .available,
   false
+);
+
+const noActiveChestEvent =
+  structuredClone(event);
+noActiveChestEvent.availabilityKnown = true;
+noActiveChestEvent.availableChestTypes = [];
+noActiveChestEvent.availableChestCount = 0;
+
+assert.deepEqual(
+  NoirChestTools.getCurrentChestOrder(
+    noActiveChestEvent
+  ),
+  [],
+  "A known empty chest menu must stay empty instead of falling back to Gold."
+);
+assert.deepEqual(
+  NoirChestTools.calculateChestBudget(
+    8000,
+    null
+  ),
+  {
+    openings: 0,
+    tenPacks: 0,
+    singles: 0,
+    spent: 0,
+    remaining: 8000
+  },
+  "No active chest must not silently use Gold pricing."
+);
+
+const noActiveReport =
+  NoirChestTools.inspectEvent({
+    eventData: noActiveChestEvent,
+    rates:
+      ChestDropRates.calculateAllRates(
+        noActiveChestEvent
+      )
+  });
+
+assert.equal(noActiveReport.ready, false);
+assert.equal(
+  noActiveReport.noActiveChests,
+  true
+);
+assert.deepEqual(
+  Object.keys(noActiveReport.chests),
+  [],
+  "Dormant decks must not appear as failed readiness checks when no chest is active."
 );
 
 const uiSource = fs.readFileSync("live-predictor-ui.js", "utf8");

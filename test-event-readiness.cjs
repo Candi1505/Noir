@@ -54,8 +54,29 @@ if (!report.ready) {
   );
 }
 
-if (Object.keys(report.chests).length !== 6) {
-  throw new Error("Expected six chest readiness results.");
+const supportedChestTypes = [
+  "gold",
+  "platinum",
+  "draconic",
+  "freedom",
+  "arcane",
+  "super_sigil"
+];
+const expectedActiveChestTypes =
+  currentEventData.availabilityKnown === true &&
+  Array.isArray(currentEventData.availableChestTypes)
+    ? supportedChestTypes.filter(type =>
+        currentEventData.availableChestTypes.includes(type)
+      )
+    : supportedChestTypes;
+
+if (
+  JSON.stringify(Object.keys(report.chests)) !==
+  JSON.stringify(expectedActiveChestTypes)
+) {
+  throw new Error(
+    `Expected readiness only for active chests: ${expectedActiveChestTypes.join(", ")}.`
+  );
 }
 
 if (!report.chests.gold.ready) {
@@ -80,17 +101,19 @@ if (seasonSigilRows.length !== 3) {
   );
 }
 
-if (!report.chests.super_sigil.ready) {
-  throw new Error("The Super Sigil regular and bonus decks should be ready.");
-}
+if (expectedActiveChestTypes.includes("super_sigil")) {
+  if (!report.chests.super_sigil.ready) {
+    throw new Error("The active Super Sigil regular and bonus decks should be ready.");
+  }
 
-if (
-  report.chests.super_sigil.regularRewards !== 8 ||
-  report.chests.super_sigil.bonusRewards !== 4
-) {
-  throw new Error(
-    `Expected Super Sigil to contain 8 regular and 4 bonus rewards, found ${report.chests.super_sigil.regularRewards} and ${report.chests.super_sigil.bonusRewards}.`
-  );
+  if (
+    report.chests.super_sigil.regularRewards !== 8 ||
+    report.chests.super_sigil.bonusRewards !== 4
+  ) {
+    throw new Error(
+      `Expected Super Sigil to contain 8 regular and 4 bonus rewards, found ${report.chests.super_sigil.regularRewards} and ${report.chests.super_sigil.bonusRewards}.`
+    );
+  }
 }
 
 if (!report.chests.arcane.ready) {
@@ -130,10 +153,13 @@ console.log(
         bonus: report.chests.gold.bonusRewards,
         seasonSigilName: seasonSigilRows[0].name
       },
-      superSigilRewards: {
-        regular: report.chests.super_sigil.regularRewards,
-        bonus: report.chests.super_sigil.bonusRewards
-      },
+      superSigilRewards:
+        report.chests.super_sigil
+          ? {
+              regular: report.chests.super_sigil.regularRewards,
+              bonus: report.chests.super_sigil.bonusRewards
+            }
+          : "not active",
       arcaneWarnings:
         report.chests.arcane.warnings
     },
