@@ -5,7 +5,7 @@
   const STORAGE_PREFIX = "onyxAtlasManualV1";
   const MODE_PREFIX = "onyxAtlasModeV1";
   const VALID_MODES = new Set(["live", "demo", "manual"]);
-  const VALID_TABS = new Set(["overview", "battles", "castles", "team", "entry"]);
+  const VALID_TABS = new Set(["overview", "hunter", "battles", "castles", "team", "entry"]);
   const VALID_LIVE_FILTERS = new Set(["vulnerable", "cooldown", "dropping", "shielded", "all"]);
   const LIVE_SHIELD_STATES = new Set(["vulnerable", "cooldown", "dropping", "shielded", "unknown"]);
   const MEMBER_STATUSES = new Set(["ready", "watch", "support"]);
@@ -456,6 +456,7 @@
       ["castles", "castle", "Castles"],
       ["team", "team", "Team"]
     ];
+    if (activeMode === "live") tabs.splice(1, 0, ["hunter", "castle", "Hunter"]);
     if (activeMode === "manual") tabs.push(["entry", "edit", "Enter intel"]);
     return `<nav class="oac-tabs" role="tablist" aria-label="Atlas Command workspaces">
       ${tabs.map(([tab, iconName, label]) => `<button type="button" role="tab" data-oac-tab="${tab}" aria-selected="${activeTab === tab}" class="${activeTab === tab ? "active" : ""}">${icon(iconName)}<span>${label}</span></button>`).join("")}
@@ -798,6 +799,12 @@
     </div>`;
   }
 
+  function renderHunter() {
+    return `<section class="oac-hunter-workspace" aria-label="Atlas Castle Hunter">
+      <div id="onyxAtlasCastleHunterMount"></div>
+    </section>`;
+  }
+
   function renderTeam(state) {
     if (activeMode === "live") {
       return renderLiveReservedWorkspace(
@@ -945,8 +952,10 @@
   function shell() {
     const state = currentState();
     if (activeMode !== "manual" && activeTab === "entry") activeTab = "overview";
+    if (activeMode !== "live" && activeTab === "hunter") activeTab = "overview";
     const workspace = {
       overview: renderOverview,
+      hunter: renderHunter,
       battles: renderBattles,
       castles: renderCastles,
       team: renderTeam,
@@ -1132,8 +1141,14 @@
 
   function render(options = {}) {
     const overlay = ensureOverlay();
+    window.OnyxAtlasCastleHunter?.unmount?.();
     overlay.innerHTML = shell();
     bindOverlay(overlay);
+    if (activeMode === "live" && activeTab === "hunter") {
+      window.OnyxAtlasCastleHunter?.mount?.(
+        overlay.querySelector("#onyxAtlasCastleHunterMount")
+      );
+    }
     if (options.focusSelector) {
       window.requestAnimationFrame?.(() => overlay.querySelector(options.focusSelector)?.focus?.());
     }
@@ -1214,6 +1229,7 @@
 
   function close() {
     const overlay = document.getElementById(OVERLAY_ID);
+    window.OnyxAtlasCastleHunter?.unmount?.();
     overlay?.classList.remove("open");
     overlay?.setAttribute("aria-hidden", "true");
     document.body.classList.remove("onyx-modal-open");

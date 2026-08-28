@@ -12,7 +12,7 @@ assert.match(html, /id="onyxWdApiTest"/);
 assert.match(html, /id="onyxWdShapeOutput"/);
 assert.match(html, /id="onyxWdProfilePanel"/);
 assert.match(html, /id="onyxWdApplyProfile"/);
-assert.match(html, /onyx-war-dragons-api\.js\?v=20260828-war-dragons-profile-3/);
+assert.match(html, /onyx-war-dragons-api\.js\?v=20260828-castle-hunter-1/);
 assert.match(html, /onyx-war-dragons-auth\.js\?v=20260828-player-oauth-1/);
 assert.match(html, /onyx-command\.css\?v=20260828-war-dragons-profile-3/);
 assert.match(css, /\.onyx-api-link/);
@@ -22,6 +22,9 @@ assert.match(source, /FUNCTION_NAME = "onyx-war-dragons"/);
 assert.match(source, /PROFILE_RESOURCE = "profile"/);
 assert.match(source, /client\.functions\.invoke/);
 assert.match(source, /body: \{ resource: PROFILE_RESOURCE \}/);
+assert.match(source, /function atlasMacro/);
+assert.match(source, /function atlasCritical/);
+assert.match(source, /function atlasInfo/);
 assert.doesNotMatch(source, /localStorage|sessionStorage|console\.(?:log|warn|error)/);
 assert.doesNotMatch(source, /\.innerHTML\s*=/);
 assert.doesNotMatch(source, /WAR_DRAGONS_(?:API_KEY|CLIENT_SECRET)/);
@@ -79,6 +82,16 @@ sandbox.chestSupabase = {
   functions: {
     async invoke(name, options) {
       invocation = { name, options };
+      if (options.body.resource === "atlasCritical") {
+        return {
+          data: {
+            ok: true,
+            resource: "atlasCritical",
+            data: { observedAt: 1787875200, records: [] }
+          },
+          error: null
+        };
+      }
       return {
         data: {
           ok: true,
@@ -128,6 +141,10 @@ sandbox.dispatchEvent = () => true;
     JSON.parse(JSON.stringify(appliedIdentity)),
     { nickname: "Verified Commander", alliance_name: "Onyx Guild" }
   );
+  const critical = await sandbox.OnyxWarDragonsAPI.atlasCritical(["42-A1-1"]);
+  assert.equal(invocation.options.body.resource, "atlasCritical");
+  assert.deepEqual(invocation.options.body.castleIds, ["42-A1-1"]);
+  assert.equal(critical.observedAt, 1787875200);
   console.log("Onyx official API link privacy and response-shape checks passed.");
 })().catch(error => {
   console.error(error);

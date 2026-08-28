@@ -6,10 +6,17 @@ const html = fs.readFileSync("index.html", "utf8");
 const source = fs.readFileSync("onyx-atlas-command.js", "utf8");
 const css = fs.readFileSync("onyx-atlas-command.css", "utf8");
 const commandSource = fs.readFileSync("onyx-command.js", "utf8");
+const hunterSource = fs.readFileSync("onyx-atlas-castle-hunter.js", "utf8");
+const hunterCss = fs.readFileSync("onyx-atlas-castle-hunter.css", "utf8");
+const hunterCore = fs.readFileSync("onyx-atlas-castle-hunter-core.js", "utf8");
+const hunterWorker = fs.readFileSync("onyx-atlas-har-worker.js", "utf8");
 
 assert.match(html, /onyx-atlas-command\.css\?v=20260828-atlas-live-1/);
-assert.match(html, /onyx-atlas-command\.js\?v=20260828-atlas-live-1/);
+assert.match(html, /onyx-atlas-command\.js\?v=20260828-castle-hunter-1/);
 assert.match(html, /onyx-war-dragons-auth\.js\?v=20260828-player-oauth-1/);
+assert.match(html, /onyx-atlas-castle-hunter\.css\?v=20260828-production-1/);
+assert.match(html, /onyx-atlas-castle-hunter-core\.js\?v=20260828-production-1/);
+assert.match(html, /onyx-atlas-castle-hunter\.js\?v=20260828-production-1/);
 assert.ok(
   html.indexOf("onyx-atlas-command.js") < html.indexOf("onyx-command.js"),
   "Atlas Command must load before the dashboard routes to it."
@@ -19,10 +26,23 @@ assert.ok(
   "The secure player-authorisation client must load before Atlas Command."
 );
 assert.match(commandSource, /if \(command === "atlas"\)[\s\S]*?OnyxAtlasCommand/);
+assert.match(commandSource, /OnyxAtlasCommand\?\.open\?\.\("hunter"\)/);
+assert.match(source, /\["hunter", "castle", "Hunter"\]/);
+assert.match(source, /OnyxAtlasCastleHunter\?\.mount/);
 assert.doesNotMatch(source, /\bfetch\s*\(|XMLHttpRequest|WebSocket|EventSource/);
 assert.doesNotMatch(source, /client[_-]?secret|api[_-]?key|authorization\s*:/i);
 assert.doesNotMatch(source, /sessionToken|cookie|pocket_id|support_id|password/i);
 assert.doesNotMatch(source + css, /\p{Extended_Pictographic}/u);
+assert.doesNotMatch(hunterSource + hunterCss + hunterCore + hunterWorker, /\p{Extended_Pictographic}/u);
+assert.match(hunterSource, /ATLAS CASTLE HUNTER/);
+assert.match(hunterSource, /APR minimum/);
+assert.match(hunterSource, /Critical gates/);
+assert.match(hunterSource, /data-atlas-tier checked/);
+assert.match(hunterSource, /Copy coordinates/);
+assert.match(hunterSource, /LIVE_BATCH_SIZE = 100/);
+assert.match(hunterWorker, /Only an allowlisted/);
+assert.match(hunterWorker, /onyx-atlas-castle-hunter-core\.js\?v=20260828-production-1/);
+assert.doesNotMatch(hunterSource, /WAR_DRAGONS_(?:API_KEY|CLIENT_SECRET)|client_secret/i);
 assert.match(source, /FICTIONAL DEMO INTELLIGENCE/);
 assert.match(source, /No player or team data is shown/);
 assert.match(source, /PRIVATE MANUAL SNAPSHOT/);

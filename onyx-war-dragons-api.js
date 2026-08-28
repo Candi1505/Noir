@@ -300,6 +300,53 @@
     return "The secure gateway could not verify the official profile.";
   }
 
+  async function invokeAtlasResource(resource, parameters = {}) {
+    const client = window.chestSupabase;
+    const userId = window.OnyxCommandCore?.getCurrentUserId?.();
+    if (!client?.functions?.invoke || !userId) {
+      const failure = new Error("Sign in to Onyx Command first.");
+      failure.code = "authorisation_required";
+      throw failure;
+    }
+
+    const { data, error } = await client.functions.invoke(FUNCTION_NAME, {
+      body: { resource, ...parameters }
+    });
+    if (error) {
+      let payload = null;
+      try {
+        if (error.context?.clone) payload = await error.context.clone().json();
+      } catch {
+        payload = null;
+      }
+      const failure = new Error(
+        payload?.message || error.message || "Onyx could not reach the secure Atlas bridge."
+      );
+      failure.code = payload?.code || "function_error";
+      failure.retryAfterMs = Number(payload?.retryAfterMs) || 0;
+      throw failure;
+    }
+    if (!data?.ok || data.resource !== resource) {
+      const failure = new Error(data?.message || "The official Atlas API did not return data.");
+      failure.code = data?.code || "api_error";
+      failure.retryAfterMs = Number(data?.retryAfterMs) || 0;
+      throw failure;
+    }
+    return clone(data.data);
+  }
+
+  function atlasMacro({ kingdomId, realmName }) {
+    return invokeAtlasResource("atlasMacro", { kingdomId, realmName });
+  }
+
+  function atlasCritical(castleIds) {
+    return invokeAtlasResource("atlasCritical", { castleIds });
+  }
+
+  function atlasInfo(castleIds) {
+    return invokeAtlasResource("atlasInfo", { castleIds });
+  }
+
   async function verifyProfile() {
     const button = getElement("onyxWdApiTest");
     const shapePanel = getElement("onyxWdShapePanel");
@@ -463,6 +510,9 @@
 
   window.OnyxWarDragonsAPI = Object.freeze({
     install,
+    atlasMacro,
+    atlasCritical,
+    atlasInfo,
     verifyProfile,
     applyVerifiedIdentity,
     describeShape,

@@ -928,7 +928,7 @@
       return;
     }
     if (command === "atlas") {
-      window.OnyxAtlasCommand?.open?.();
+      window.OnyxAtlasCommand?.open?.("hunter");
       return;
     }
     const requested = VALID_COMMANDS.has(command) ? command : "menu";
