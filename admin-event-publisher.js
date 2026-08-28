@@ -286,6 +286,54 @@
       return;
     }
 
+    const requiredChestTypes = [
+      "gold",
+      "platinum",
+      "draconic",
+      "freedom",
+      "arcane",
+      "super_sigil"
+    ];
+
+    const incompleteChestTypes =
+      requiredChestTypes.filter(
+        chestType => {
+          const chest =
+            eventData.chests[
+              chestType
+            ];
+
+          return !(
+            chest?.found === true &&
+            Array.isArray(chest.deck) &&
+            chest.deck.length > 0 &&
+            !(
+              Array.isArray(chest.warnings) &&
+              chest.warnings.length > 0
+            )
+          );
+        }
+      );
+
+    if (
+      eventData.ready !== true ||
+      Number(eventData.readyChestCount) !==
+        requiredChestTypes.length ||
+      incompleteChestTypes.length
+    ) {
+      const message =
+        `Event import is incomplete (${incompleteChestTypes.join(", ") || "readiness check"}). Existing player data was left unchanged.`;
+      const status =
+        get("eventImportStatus");
+
+      if (status) {
+        status.textContent = message;
+      }
+
+      setStatus(message, true);
+      return;
+    }
+
     const currentAccess =
       await refreshAccess();
 

@@ -63,20 +63,20 @@ if (!report.chests.gold.ready) {
 }
 
 if (
-  report.chests.gold.regularRewards !== 20 ||
-  report.chests.gold.bonusRewards !== 9
+  report.chests.gold.regularRewards !== 19 ||
+  report.chests.gold.bonusRewards !== 8
 ) {
   throw new Error(
-    `Expected Gold to contain 20 regular and 9 bonus rewards, found ${report.chests.gold.regularRewards} and ${report.chests.gold.bonusRewards}.`
+    `Expected Gold to contain 19 regular and 8 bonus rewards, found ${report.chests.gold.regularRewards} and ${report.chests.gold.bonusRewards}.`
   );
 }
 
-const foodPackRows = NoirChestTools.findRewards("1.4M Food Pack")
+const seasonSigilRows = NoirChestTools.findRewards("Misfitrise Sigil")
   .filter(row => row.chestType === "gold");
 
-if (foodPackRows.length !== 2) {
+if (seasonSigilRows.length !== 3) {
   throw new Error(
-    `Expected the Gold regular and bonus pools to expose the friendly 1.4M Food Pack name, found ${foodPackRows.length} matches.`
+    `Expected the Gold regular and bonus pools to expose the friendly Misfitrise Sigil name, found ${seasonSigilRows.length} matches.`
   );
 }
 
@@ -128,7 +128,7 @@ console.log(
       goldRewards: {
         regular: report.chests.gold.regularRewards,
         bonus: report.chests.gold.bonusRewards,
-        foodPackName: foodPackRows[0].name
+        seasonSigilName: seasonSigilRows[0].name
       },
       superSigilRewards: {
         regular: report.chests.super_sigil.regularRewards,

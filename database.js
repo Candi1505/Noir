@@ -976,6 +976,46 @@ async publishLiveEvent(
     );
   }
 
+  const requiredChestTypes = [
+    "gold",
+    "platinum",
+    "draconic",
+    "freedom",
+    "arcane",
+    "super_sigil"
+  ];
+
+  const incompleteChestTypes =
+    requiredChestTypes.filter(
+      chestType => {
+        const chest =
+          eventData.chests[
+            chestType
+          ];
+
+        return !(
+          chest?.found === true &&
+          Array.isArray(chest.deck) &&
+          chest.deck.length > 0 &&
+          !(
+            Array.isArray(chest.warnings) &&
+            chest.warnings.length > 0
+          )
+        );
+      }
+    );
+
+  if (
+    eventData.ready !== true ||
+    Number(eventData.readyChestCount) !==
+      requiredChestTypes.length ||
+    incompleteChestTypes.length
+  ) {
+    throw new Error(
+      `The live event is incomplete (${incompleteChestTypes.join(", ") || "readiness check"}). No cloud predictor records were changed.`
+    );
+  }
+
   const publishedAt =
     new Date().toISOString();
 
@@ -989,7 +1029,8 @@ async publishLiveEvent(
     "currentValue",
     "openedSinceBonus",
     "chestsUntilBonus",
-    "nextChestIsBonus"
+    "nextChestIsBonus",
+    "warnings"
   ];
 
   const sharedChests =
@@ -1013,6 +1054,41 @@ async publishLiveEvent(
         })
     );
 
+  const sharedDoubleArmory =
+    eventData.doubleArmory &&
+    typeof eventData.doubleArmory ===
+      "object"
+      ? {
+          ...eventData.doubleArmory,
+          sides: Object.fromEntries(
+            Object.entries(
+              eventData.doubleArmory.sides ||
+              {}
+            ).map(([sideType, sideData]) => {
+              const sharedSide = {
+                ...(sideData || {})
+              };
+
+              /*
+               * Each armory side carries the importing administrator's
+               * personal deck cursors. Decks and drops may be shared, but
+               * those cursor positions must remain on their device.
+               */
+              delete sharedSide.deckIndices;
+
+              return [
+                sideType,
+                sharedSide
+              ];
+            })
+          )
+        }
+      : {
+          detected: false,
+          ready: false,
+          sides: {}
+        };
+
   const sanitisedEvent = {
     schema: "noir-live-event-v1",
     event: eventData.event || "Current event",
@@ -1034,11 +1110,7 @@ async publishLiveEvent(
     spinTypes:
       eventData.spinTypes || [],
     doubleArmory:
-      eventData.doubleArmory || {
-        detected: false,
-        ready: false,
-        sides: {}
-      }
+      sharedDoubleArmory
   };
 
   const chestTypes = [

@@ -27,14 +27,30 @@ const eventData = {
         currentValue: 2,
         openedSinceBonus: 7,
         chestsUntilBonus: 8,
-        nextChestIsBonus: false
+        nextChestIsBonus: false,
+        warnings: []
       }
     ])
   ),
   decks: {},
   drops: {},
   deckIndices: {},
-  spinTypes: []
+  spinTypes: [],
+  doubleArmory: {
+    detected: true,
+    ready: true,
+    sides: {
+      assault: {
+        ready: true,
+        deckIndices: {
+          gold_chest: 91
+        },
+        decks: {
+          gold_chest: [0, 1, 2]
+        }
+      }
+    }
+  }
 };
 
 function runMigrationCoverageTest() {
@@ -121,12 +137,31 @@ async function runSuccessfulPublishTest() {
     "currentValue",
     "openedSinceBonus",
     "chestsUntilBonus",
-    "nextChestIsBonus"
+    "nextChestIsBonus",
+    "warnings"
   ].forEach(field => {
     if (field in publishedEvent.chests.gold) {
       throw new Error(`Private chest field was published: ${field}`);
     }
   });
+
+  if (
+    "deckIndices" in
+      publishedEvent.doubleArmory.sides.assault
+  ) {
+    throw new Error(
+      "Private Double Armory cursor positions were published."
+    );
+  }
+
+  if (
+    publishedEvent.doubleArmory.sides.assault
+      .decks.gold_chest.length !== 3
+  ) {
+    throw new Error(
+      "Shared Double Armory deck data was removed during sanitisation."
+    );
+  }
 }
 
 async function runMissingFunctionTest() {
@@ -162,6 +197,45 @@ async function runMissingFunctionTest() {
   }
 }
 
+async function runIncompleteEventTest() {
+  let rpcCalls = 0;
+  global.chestSupabase = {
+    async rpc() {
+      rpcCalls += 1;
+      return { data: [], error: null };
+    }
+  };
+  ChestDatabase.getCurrentAccess = async () => ({
+    isAdmin: true,
+    user: { id: "admin-user" }
+  });
+
+  const incompleteEvent = {
+    ...eventData,
+    readyChestCount: 1,
+    chests: {
+      gold: eventData.chests.gold
+    }
+  };
+
+  let message = "";
+  try {
+    await ChestDatabase.publishLiveEvent(incompleteEvent);
+  } catch (error) {
+    message = error.message;
+  }
+
+  if (rpcCalls !== 0) {
+    throw new Error("An incomplete event reached the atomic publisher.");
+  }
+  if (
+    !message.includes("live event is incomplete") ||
+    !message.includes("No cloud predictor records were changed")
+  ) {
+    throw new Error("Incomplete event publishing did not fail closed.");
+  }
+}
+
 vm.runInThisContext(
   fs.readFileSync("database.js", "utf8"),
   { filename: "database.js" }
@@ -169,6 +243,7 @@ vm.runInThisContext(
 
 Promise.resolve()
   .then(runMigrationCoverageTest)
+  .then(runIncompleteEventTest)
   .then(runSuccessfulPublishTest)
   .then(runMissingFunctionTest)
   .then(() => {

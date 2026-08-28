@@ -183,6 +183,7 @@
     iceShard: "Ice Shards",
     mysticFragment: "Mystic Fragments",
     urbanflareSigil: "Urbanflare Sigil",
+    misfitriseSigil: "Misfitrise Sigil",
     xpMultiplierSpellConsumable01: "Dragon XP Boost",
     xpMultiplierSpellConsumable02: "Dragon XP Boost",
     expediteConsumable1: "15 Min Speedup",
@@ -611,9 +612,34 @@
     return Boolean(
       eventData &&
       typeof eventData === "object" &&
-      eventData.chests &&
-      typeof eventData.chests ===
-        "object"
+      SUPPORTED_CHESTS.some(
+        chestType => {
+          const chestData =
+            eventData.chests?.[
+              chestType
+            ];
+          const deckKey =
+            CHEST_DECK_KEYS[
+              chestType
+            ];
+
+          return (
+            Array.isArray(
+              chestData?.deck
+            ) &&
+            chestData.deck.length > 0
+          ) || (
+            Array.isArray(
+              eventData.decks?.[
+                deckKey
+              ]
+            ) &&
+            eventData.decks[
+              deckKey
+            ].length > 0
+          );
+        }
+      )
     );
   }
 
@@ -3100,7 +3126,7 @@ function valuesMatch(
       state.activeChest
   ) {
     if (!bonusDeck.length) {
-      return 0;
+      return null;
     }
 
     const observations =
@@ -3109,7 +3135,7 @@ function valuesMatch(
       );
 
     if (!observations.length) {
-      return 0;
+      return null;
     }
 
     const candidates = [];
@@ -3146,8 +3172,8 @@ function valuesMatch(
       }
     }
 
-    if (!candidates.length) {
-      return 0;
+    if (candidates.length !== 1) {
+      return null;
     }
 
     return (
@@ -3243,7 +3269,8 @@ function valuesMatch(
     reward,
     chestType,
     quantity = 1,
-    isBonus = false
+    isBonus = false,
+    amountOverride = null
   ) {
     const normalisedChest =
       normaliseChestType(
@@ -3256,6 +3283,40 @@ function valuesMatch(
     0,
     normalisedChest
   );
+
+    const recordedAmount =
+      amountOverride === null
+        ? normalisedReward.amount
+        : amountOverride;
+
+    const amountChanged =
+      amountOverride !== null &&
+      amountOverride !==
+        normalisedReward.amount;
+
+    const recordedMatchValue =
+      !amountChanged
+        ? cloneValue(
+            normalisedReward.matchValue
+          )
+        : isObject(
+            normalisedReward.matchValue
+          )
+          ? {
+              ...cloneValue(
+                normalisedReward.matchValue
+              ),
+              amount:
+                recordedAmount
+            }
+          : {
+              name:
+                normalisedReward.name,
+              code:
+                normalisedReward.code,
+              amount:
+                recordedAmount
+            };
 
     return {
       number:
@@ -3278,7 +3339,7 @@ function valuesMatch(
         normalisedReward.code,
 
       amount:
-        normalisedReward.amount,
+        recordedAmount,
 
       quantity,
 
@@ -3296,12 +3357,12 @@ function valuesMatch(
 
       value:
         cloneValue(
-          normalisedReward.matchValue
+          recordedMatchValue
         ),
 
       matchValue:
         cloneValue(
-          normalisedReward.matchValue
+          recordedMatchValue
         ),
 
       reward:
@@ -3315,11 +3376,11 @@ function valuesMatch(
         ),
 
       displayValue:
-  normalisedReward.amount === null
+  recordedAmount === null
     ? normalisedReward.name
     : (
         `${normalisedReward.name} — ` +
-        `${normalisedReward.amount}`
+        `${recordedAmount}`
       ),
 
       recordedAt:
@@ -3386,6 +3447,27 @@ function valuesMatch(
         )
       );
 
+    if (quantity !== 1) {
+      throw new Error(
+        "Record each chest reward separately so its sequence stays accurate."
+      );
+    }
+
+    const amountOverride =
+      toFiniteNumber(
+        resolvedPayload.amount,
+        null
+      );
+
+    if (
+      amountOverride !== null &&
+      amountOverride < 0
+    ) {
+      throw new Error(
+        "Reward amount must be zero or greater."
+      );
+    }
+
     const added = [];
 
     for (
@@ -3403,7 +3485,8 @@ function valuesMatch(
           reward,
           normalisedChest,
           1,
-          isBonus
+          isBonus,
+          amountOverride
         );
 
       observation.bonusProgressBefore =
@@ -4468,7 +4551,7 @@ function valuesMatch(
         normalised
       );
 
-    const predictedRegularRewards = [];
+    let predictedRegularRewards = [];
     const nestedState =
       solution.nestedState ||
       partialNestedState;
@@ -4512,6 +4595,116 @@ function valuesMatch(
               : null;
         }
       );
+    }
+
+    function appendBonusPrediction(
+      afterRegularChest
+    ) {
+      const chestLabel =
+        getChestLabel(normalised);
+
+      const bonusReward =
+        bonusDeck.length &&
+        bonusOffset !== null
+          ? (() => {
+              const startingReward =
+                bonusDeck[
+                  bonusOffset %
+                  bonusDeck.length
+                ];
+
+              const sharedAdvance =
+                countSharedPoolAdvances(
+                  predictedRegularRewards,
+                  startingReward,
+                  normalised
+                );
+
+              return bonusDeck[
+                (
+                  bonusOffset +
+                  sharedAdvance
+                ) %
+                bonusDeck.length
+              ];
+            })()
+          : null;
+
+      upcoming.push({
+        number: upcoming.length + 1,
+        index:
+          bonusReward?.index ??
+          null,
+        position:
+          bonusReward?.position ??
+          null,
+        name:
+          bonusReward?.name ||
+          `${chestLabel} Bonus Chest`,
+        label:
+          bonusReward?.name ||
+          `${chestLabel} Bonus Chest`,
+        code:
+          bonusReward?.code ||
+          `${normalised}_bonus`,
+        amount:
+          bonusReward?.amount ??
+          null,
+        value:
+          cloneValue(
+            bonusReward?.matchValue
+          ),
+        matchValue:
+          cloneValue(
+            bonusReward?.matchValue
+          ),
+        reward:
+          cloneValue(
+            bonusReward?.raw
+          ),
+        raw:
+          cloneValue(
+            bonusReward?.raw
+          ),
+        isBonus: true,
+        bonus: true,
+        bonusEvery,
+        bonusAfterRegularChest:
+          afterRegularChest,
+        exactBonusReward:
+          Boolean(bonusReward),
+        displayValue:
+          bonusReward
+            ? (
+                bonusReward.amount ===
+                null
+                  ? bonusReward.name
+                  : (
+                      `${bonusReward.name} — ` +
+                      `${bonusReward.amount}`
+                    )
+              )
+            : `${chestLabel} Bonus Chest`
+      });
+
+      if (bonusOffset !== null) {
+        bonusOffset =
+          (
+            bonusOffset + 1
+          ) %
+          bonusDeck.length;
+      }
+
+      predictedRegularRewards = [];
+      regularSinceBonus = 0;
+    }
+
+    if (
+      bonusEvery &&
+      regularSinceBonus !== null &&
+      regularSinceBonus >= bonusEvery
+    ) {
+      appendBonusPrediction(0);
     }
 
     for (
@@ -4637,92 +4830,8 @@ function valuesMatch(
       ) {
         regularSinceBonus += 1;
 
-        if (regularSinceBonus === bonusEvery) {
-          const chestLabel =
-            getChestLabel(normalised);
-
-          const bonusReward =
-            bonusDeck.length
-              ? (() => {
-                  const startingReward =
-                    bonusDeck[
-                      bonusOffset %
-                      bonusDeck.length
-                    ];
-
-                  const sharedAdvance =
-                    countSharedPoolAdvances(
-                      predictedRegularRewards,
-                      startingReward,
-                      normalised
-                    );
-
-                  return bonusDeck[
-                    (
-                      bonusOffset +
-                      sharedAdvance
-                    ) %
-                    bonusDeck.length
-                  ];
-                })()
-              : null;
-
-          upcoming.push({
-            number: upcoming.length + 1,
-            index:
-              bonusReward?.index ??
-              null,
-            position:
-              bonusReward?.position ??
-              null,
-            name:
-              bonusReward?.name ||
-              `${chestLabel} Bonus Chest`,
-            label:
-              bonusReward?.name ||
-              `${chestLabel} Bonus Chest`,
-            code:
-              bonusReward?.code ||
-              `${normalised}_bonus`,
-            amount:
-              bonusReward?.amount ??
-              null,
-            value:
-              cloneValue(
-                bonusReward?.matchValue
-              ),
-            matchValue:
-              cloneValue(
-                bonusReward?.matchValue
-              ),
-            reward:
-              cloneValue(
-                bonusReward?.raw
-              ),
-            raw:
-              cloneValue(
-                bonusReward?.raw
-              ),
-            isBonus: true,
-            bonus: true,
-            bonusEvery,
-            bonusAfterRegularChest: offset,
-            displayValue:
-              bonusReward
-                ? (
-                    bonusReward.amount ===
-                    null
-                      ? bonusReward.name
-                      : (
-                          `${bonusReward.name} — ` +
-                          `${bonusReward.amount}`
-                        )
-                  )
-                : `${chestLabel} Bonus Chest`
-          });
-
-          bonusOffset += 1;
-          regularSinceBonus = 0;
+        if (regularSinceBonus >= bonusEvery) {
+          appendBonusPrediction(offset);
         }
       }
     }

@@ -137,6 +137,7 @@
     electrumBar: "Electrum Bars",
     cosmicCharge: "Cosmic Charge",
     urbanflareSigil: "Urbanflare Sigil",
+    misfitriseSigil: "Misfitrise Sigil",
     innerFire01: "Inner Fire",
     innerFireConsumable: "Inner Fire",
     cmCrystaldarkGemstone: "Dark Crafting Gemstones",

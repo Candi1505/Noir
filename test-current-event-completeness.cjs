@@ -30,6 +30,7 @@ const harText = fs.readFileSync(harPath, "utf8");
 const event = EventParser.parse(harText);
 const captured = HarGachaParser.parse(harText);
 const chestTypes = ["gold", "platinum", "draconic", "freedom", "arcane", "super_sigil"];
+const availableOpeningTypes = ["gold", "platinum", "draconic", "arcane"];
 
 if (event.readyChestCount !== chestTypes.length || !event.ready) {
   throw new Error(`Expected ${chestTypes.length} ready chests; found ${event.readyChestCount}.`);
@@ -39,13 +40,36 @@ if (captured.unknownSpinTypes.length) {
   throw new Error(`Unlabelled captured chest types: ${captured.unknownSpinTypes.join(", ")}`);
 }
 
-const superSigilOpening = captured.openings.find(opening => opening.spinType === "7");
+const capturedOpeningTypes = [...new Set(
+  captured.openings
+    .filter(opening => !opening.isBonus)
+    .map(opening => opening.parentChestKey || opening.chestKey)
+)].sort();
+
 if (
-  !superSigilOpening ||
-  superSigilOpening.chestLabel !== "Super Sigil Chest" ||
-  !superSigilOpening.rewards.some(reward => reward.name === "Super Sigil Bonus Chests")
+  JSON.stringify(capturedOpeningTypes) !==
+  JSON.stringify([...availableOpeningTypes].sort())
 ) {
-  throw new Error("The captured Super Sigil chest or its bonus-chest reward is not fully labelled.");
+  throw new Error(
+    `Expected one opening from each available chest (${availableOpeningTypes.join(", ")}); found ${capturedOpeningTypes.join(", ")}.`
+  );
+}
+
+if (captured.totalRegularChestsOpened !== availableOpeningTypes.length) {
+  throw new Error(
+    `Expected ${availableOpeningTypes.length} captured openings; found ${captured.totalRegularChestsOpened}.`
+  );
+}
+
+const capturedPlatinumSigil = captured.openings
+  .find(opening => opening.parentChestKey === "platinum")
+  ?.rewards.find(reward => reward.id === "misfitriseSigil");
+
+if (
+  capturedPlatinumSigil?.name !== "Misfitrise Sigil" ||
+  capturedPlatinumSigil?.knownName !== true
+) {
+  throw new Error("The captured Platinum reward was not labelled Misfitrise Sigil.");
 }
 
 for (const chestType of chestTypes) {
@@ -110,6 +134,7 @@ console.log(JSON.stringify({
   catalogueSizes,
   selectableRewardVariations: Object.values(catalogueSizes).reduce((a, b) => a + b, 0),
   capturedOpeningRequests: captured.requestCount,
+  capturedOpeningTypes,
   unknownCapturedSpinTypes: captured.unknownSpinTypes,
   playerIsolation: "passed",
   technicalRewardNames: "none"

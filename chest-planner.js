@@ -13,7 +13,8 @@
     "platinum",
     "draconic",
     "freedom",
-    "arcane"
+    "arcane",
+    "super_sigil"
   ];
 
   const CHEST_META = {
@@ -21,13 +22,14 @@
     platinum: { label: "Platinum", icon: "✦" },
     draconic: { label: "Draconic", icon: "D" },
     freedom: { label: "Freedom", icon: "F" },
-    arcane: { label: "Arcane", icon: "A" }
+    arcane: { label: "Arcane", icon: "A" },
+    super_sigil: { label: "Super Sigil", icon: "S" }
   };
 
   const CATEGORIES = [
     {
       key: "sigils",
-      label: "Urbanflare Sigil",
+      label: "Misfitrise Sigil",
       test: name => /sigil/i.test(name)
     },
     {

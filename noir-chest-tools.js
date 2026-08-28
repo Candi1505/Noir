@@ -300,19 +300,41 @@
   function calculateChestBudget(currency, chestType) {
     const available = Math.max(0, Math.floor(Number(currency) || 0));
     const meta = CHEST_META[chestType] || CHEST_META.gold;
-    const tenPacks = Math.floor(available / meta.tenPackCost);
-    const afterPacks = available - tenPacks * meta.tenPackCost;
-    const singles = Math.floor(afterPacks / meta.singleCost);
-    const spent =
-      tenPacks * meta.tenPackCost +
-      singles * meta.singleCost;
+    const maximumPacks = Math.floor(available / meta.tenPackCost);
+    let best = {
+      openings: 0,
+      tenPacks: 0,
+      singles: 0,
+      spent: 0
+    };
+
+    for (let tenPacks = 0; tenPacks <= maximumPacks; tenPacks += 1) {
+      const afterPacks = available - tenPacks * meta.tenPackCost;
+      const singles = Math.floor(afterPacks / meta.singleCost);
+      const spent =
+        tenPacks * meta.tenPackCost +
+        singles * meta.singleCost;
+      const openings = tenPacks * 10 + singles;
+
+      if (
+        openings > best.openings ||
+        (
+          openings === best.openings &&
+          spent < best.spent
+        )
+      ) {
+        best = {
+          openings,
+          tenPacks,
+          singles,
+          spent
+        };
+      }
+    }
 
     return {
-      openings: tenPacks * 10 + singles,
-      tenPacks,
-      singles,
-      spent,
-      remaining: available - spent
+      ...best,
+      remaining: available - best.spent
     };
   }
 
@@ -417,10 +439,9 @@
       try {
         observations =
           window.LivePredictorEngine?.getObservations?.(chestType) || [];
-        confidence =
-          Number(
-            window.LivePredictorEngine?.getChestData?.(chestType)?.confidence
-          ) || 0;
+        const status =
+          window.LivePredictorEngine?.getChestStatus?.(chestType);
+        confidence = Number(status?.confidence) || 0;
       } catch (error) {
         // Saved observations remain useful before the solver finishes loading.
       }
@@ -784,7 +805,7 @@
         </button>
         <article class="nct-private-summary">
           <p class="eyebrow">PRIVATE TEST SUMMARY</p>
-          <strong>${solved} of 4 chest predictors solved on this device</strong>
+          <strong>${solved} of ${CHEST_ORDER.length} chest predictors solved on this device</strong>
           <p>No player names, reward histories or test results are uploaded.</p>
           ${CHEST_ORDER.map(type => `
             <span>${CHEST_META[type].label}: ${summary[type].recorded} recorded${summary[type].solved ? " · solved" : ""}</span>

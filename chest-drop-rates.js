@@ -81,6 +81,7 @@
     iceShard: "Ice Shards",
     mysticFragment: "Mystic Fragments",
     urbanflareSigil: "Urbanflare Sigil",
+    misfitriseSigil: "Misfitrise Sigil",
     xpMultiplierSpellConsumable01: "Dragon XP Boost",
     xpMultiplierSpellConsumable02: "Dragon XP Boost",
     expediteConsumable1: "15 Min Speedup",

@@ -37,6 +37,7 @@
     elementalEmber: "Elemental Embers",
     electrumBar: "Electrum Bars",
     urbanflareSigil: "Urbanflare Sigil",
+    misfitriseSigil: "Misfitrise Sigil",
     blackPearl: "Black Pearls",
     fireShard: "Fire Shards",
     iceShard: "Ice Shards",

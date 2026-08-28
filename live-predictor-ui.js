@@ -3183,41 +3183,11 @@
                   placeholder="Reward amount"
                 />
               </div>
-
-              <div class="lp-field">
-                <label for="lpRewardQuantity">
-                  Chests opened
-                </label>
-
-                <select
-                  id="lpRewardQuantity"
-                  class="lp-select"
-                >
-                  <option value="1">
-                    1 chest
-                  </option>
-
-                  <option value="2">
-                    2 chests
-                  </option>
-
-                  <option value="3">
-                    3 chests
-                  </option>
-
-                  <option value="4">
-                    4 chests
-                  </option>
-
-                  <option value="5">
-                    5 chests
-                  </option>
-
-                  <option value="10">
-                    10 chests
-                  </option>
-                </select>
-              </div>
+              <input
+                id="lpRewardQuantity"
+                type="hidden"
+                value="1"
+              />
             </div>
 
             <div class="lp-field">
@@ -4326,6 +4296,10 @@
             urbanflareSigil: [
               "urbanflare sigil",
               "urbanflare sigils"
+            ],
+            misfitriseSigil: [
+              "misfitrise sigil",
+              "misfitrise sigils"
             ],
             energyPack: [
               "energy pack",

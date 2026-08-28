@@ -82,7 +82,7 @@ for (const [chestType, [, , cadence]] of Object.entries(chestConfig)) {
   LivePredictorEngine.resetHistory(chestType);
   LivePredictorEngine.setBonusProgress(
     chestType,
-    cadence - 2,
+    cadence - 1,
     { silent: true }
   );
 
