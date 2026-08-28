@@ -194,6 +194,29 @@
     }
   }
 
+  function getCurrentChestTypes(
+    eventData = getEventData()
+  ) {
+    const chestTypes =
+      Object.keys(CHESTS);
+
+    if (
+      eventData?.availabilityKnown ===
+        true &&
+      Array.isArray(
+        eventData.availableChestTypes
+      )
+    ) {
+      return chestTypes.filter(
+        chestType =>
+          eventData.availableChestTypes
+            .includes(chestType)
+      );
+    }
+
+    return chestTypes;
+  }
+
   function getDefinitionNestedKey(
     definition,
     eventData
@@ -1015,6 +1038,30 @@
       calculateAllRates(
         eventData
       );
+    const currentChestTypes =
+      getCurrentChestTypes(
+        eventData
+      );
+
+    if (
+      !currentChestTypes.includes(
+        state.chestType
+      )
+    ) {
+      state.chestType =
+        currentChestTypes[0] ||
+        "gold";
+    }
+
+    const currentRates =
+      Object.fromEntries(
+        currentChestTypes.map(
+          chestType => [
+            chestType,
+            rates[chestType]
+          ]
+        )
+      );
     const chest =
       rates[
         state.chestType
@@ -1043,7 +1090,10 @@
         </header>
 
         <nav class="cdr-chest-tabs" aria-label="Chest types">
-          ${Object.entries(CHESTS).map(([chestType, config]) => `
+          ${currentChestTypes.map(chestType => {
+            const config = CHESTS[chestType];
+
+            return `
             <button
               type="button"
               data-cdr-chest="${chestType}"
@@ -1052,7 +1102,8 @@
               <span>${config.icon}</span>
               ${config.label}
             </button>
-          `).join("")}
+          `;
+          }).join("")}
           <button
             type="button"
             data-cdr-compare
@@ -1064,7 +1115,7 @@
 
         ${
           state.compare
-            ? renderCompare(rates)
+            ? renderCompare(currentRates)
             : `
               <section class="cdr-controls">
                 <div class="cdr-mode-toggle" role="group" aria-label="Reward type">
@@ -1644,6 +1695,7 @@
   const api = Object.freeze({
     calculateAllRates,
     calculateChestRates,
+    getCurrentChestTypes,
     resolveDistribution,
     findBonusRoot,
     getEventData,

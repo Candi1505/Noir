@@ -227,6 +227,31 @@ const availabilityStatus =
   LivePredictorEngine.getStatus();
 
 assert.deepEqual(
+  ChestDropRates.getCurrentChestTypes(
+    currentAvailabilityEvent
+  ),
+  [
+    "gold",
+    "platinum",
+    "draconic",
+    "arcane"
+  ],
+  "Drop Rates must offer only chests in the current live menu."
+);
+assert.deepEqual(
+  NoirChestTools.getCurrentChestOrder(
+    currentAvailabilityEvent
+  ),
+  [
+    "gold",
+    "platinum",
+    "draconic",
+    "arcane"
+  ],
+  "Player tools must offer only chests in the current live menu."
+);
+
+assert.deepEqual(
   availabilityStatus.chests.map(
     chest => chest.chestType
   ),
@@ -269,6 +294,7 @@ assert.match(plannerSource, /getCurrentChestOrder\(\)/);
 
 const toolsSource = fs.readFileSync("noir-chest-tools.js", "utf8");
 assert.match(toolsSource, /getCurrentChestOrder/);
+assert.match(toolsSource, /currentChestOrder\.map\(type/);
 
 const commandSource = fs.readFileSync("onyx-command.js", "utf8");
 assert.match(commandSource, /currentEventChests\(\)/);

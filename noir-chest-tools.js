@@ -822,11 +822,26 @@
   function renderShare(context) {
     const summary = getVerificationSummary();
     const solved = Object.values(summary).filter(item => item.solved).length;
+    const currentChestOrder =
+      getCurrentChestOrder(
+        context?.eventData
+      );
+
+    if (
+      !currentChestOrder.includes(
+        state.chestType
+      )
+    ) {
+      state.chestType =
+        currentChestOrder[0] ||
+        "gold";
+    }
+
     return `
       <section class="nct-section">
         <label>Chest
           <select id="nctShareChest" class="nct-input">
-            ${CHEST_ORDER.map(type => `
+            ${currentChestOrder.map(type => `
               <option value="${type}" ${type === state.chestType ? "selected" : ""}>
                 ${CHEST_META[type].label}
               </option>
@@ -1074,6 +1089,7 @@
     getBudgetPrediction,
     getVerificationSummary,
     getEventIdentity,
+    getCurrentChestOrder,
     renderReadinessBanner,
     open,
     close,
