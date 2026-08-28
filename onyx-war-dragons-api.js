@@ -94,7 +94,9 @@
       guildTitle: cleanText(source.guild_title, 50),
       previousLeague: cleanText(source.previous_guild_league, 40),
       online: source.online === true,
-      level: cleanInteger(source.xp),
+      // The public profile calls this field `xp`. It is accumulated player XP,
+      // not the player's displayed game level.
+      playerXp: cleanInteger(source.xp),
       defencePower: cleanInteger(source.defense_power),
       rosterPower: cleanInteger(source.roster_power),
       attackWinPercent: cleanPercent(source["attack_win_%"]),
@@ -156,7 +158,7 @@
 
     const primary = getElement("onyxWdPrimaryMetrics");
     clearElement(primary);
-    appendLabelledValue(primary, "onyx-wd-metric", "Player level", formatNumber(mapped.level));
+    appendLabelledValue(primary, "onyx-wd-metric", "Player XP", formatNumber(mapped.playerXp));
     appendLabelledValue(primary, "onyx-wd-metric", "Defence power", formatNumber(mapped.defencePower));
     appendLabelledValue(primary, "onyx-wd-metric", "Roster power", formatNumber(mapped.rosterPower));
     appendLabelledValue(primary, "onyx-wd-metric", "Weekly trophies", formatNumber(mapped.weeklyTrophies));
