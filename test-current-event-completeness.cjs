@@ -36,6 +36,38 @@ if (event.readyChestCount !== chestTypes.length || !event.ready) {
   throw new Error(`Expected ${chestTypes.length} ready chests; found ${event.readyChestCount}.`);
 }
 
+if (
+  event.availabilityKnown !== true ||
+  JSON.stringify(
+    event.availableChestTypes
+  ) !==
+    JSON.stringify(
+      availableOpeningTypes
+    ) ||
+  event.availableChestCount !==
+    availableOpeningTypes.length
+) {
+  throw new Error(
+    `Expected only the four current live chests; found ${JSON.stringify(event.availableChestTypes)}.`
+  );
+}
+
+for (const chestType of chestTypes) {
+  const expectedAvailable =
+    availableOpeningTypes.includes(
+      chestType
+    );
+
+  if (
+    event.chests?.[chestType]
+      ?.available !== expectedAvailable
+  ) {
+    throw new Error(
+      `${chestType} availability did not match the current live menu.`
+    );
+  }
+}
+
 if (captured.unknownSpinTypes.length) {
   throw new Error(`Unlabelled captured chest types: ${captured.unknownSpinTypes.join(", ")}`);
 }
@@ -131,6 +163,8 @@ for (const privateMarker of [
 console.log(JSON.stringify({
   event: event.event,
   readyChests: event.readyChestCount,
+  availableChests:
+    event.availableChestTypes,
   catalogueSizes,
   selectableRewardVariations: Object.values(catalogueSizes).reduce((a, b) => a + b, 0),
   capturedOpeningRequests: captured.requestCount,

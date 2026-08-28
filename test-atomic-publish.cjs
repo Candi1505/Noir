@@ -15,6 +15,14 @@ const eventData = {
   event: "Upgrade Buildings",
   ready: true,
   readyChestCount: 6,
+  availabilityKnown: true,
+  availableChestTypes: [
+    "gold",
+    "platinum",
+    "draconic",
+    "arcane"
+  ],
+  availableChestCount: 4,
   chests: Object.fromEntries(
     chestTypes.map(chestType => [
       chestType,
@@ -128,6 +136,23 @@ async function runSuccessfulPublishTest() {
     publishedEvent.chests.gold.found !== true
   ) {
     throw new Error("Shared Gold deck data was removed during sanitisation.");
+  }
+
+  if (
+    publishedEvent.availabilityKnown !== true ||
+    publishedEvent.availableChestCount !== 4 ||
+    JSON.stringify(
+      publishedEvent.availableChestTypes
+    ) !== JSON.stringify([
+      "gold",
+      "platinum",
+      "draconic",
+      "arcane"
+    ])
+  ) {
+    throw new Error(
+      "Current chest availability was not preserved during sanitisation."
+    );
   }
 
   [

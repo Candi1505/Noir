@@ -1099,6 +1099,28 @@ async publishLiveEvent(
     ready: Boolean(eventData.ready),
     readyChestCount:
       Number(eventData.readyChestCount) || 0,
+    availabilityKnown:
+      eventData.availabilityKnown === true,
+    availableChestTypes:
+      Array.isArray(
+        eventData.availableChestTypes
+      )
+        ? requiredChestTypes.filter(
+            chestType =>
+              eventData.availableChestTypes
+                .includes(chestType)
+          )
+        : [],
+    availableChestCount:
+      Array.isArray(
+        eventData.availableChestTypes
+      )
+        ? requiredChestTypes.filter(
+            chestType =>
+              eventData.availableChestTypes
+                .includes(chestType)
+          ).length
+        : 0,
     chests: sharedChests,
     decks: eventData.decks || {},
     drops: eventData.drops || {},

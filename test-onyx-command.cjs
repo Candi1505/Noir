@@ -49,11 +49,12 @@ assert.match(
   /live-predictor-ui\.js\?v=20260828-chest-correctness-1/
 );
 assert.match(html, /onyx-tower-inventory-bridge\.js\?v=20260827-base-command-1/);
-assert.match(html, /database\.js\?v=20260828-chest-correctness-1/);
-assert.match(html, /live-predictor-engine\.js\?v=20260828-chest-correctness-1/);
+assert.match(html, /database\.js\?v=20260828-chest-availability-2/);
+assert.match(html, /har-event-adapter\.js\?v=20260828-chest-availability-2/);
+assert.match(html, /live-predictor-engine\.js\?v=20260828-chest-availability-2/);
 assert.match(html, /chest-drop-rates\.js\?v=20260828-chest-correctness-1/);
-assert.match(html, /chest-planner\.js\?v=20260828-chest-correctness-1/);
-assert.match(html, /noir-chest-tools\.js\?v=20260828-chest-correctness-1/);
+assert.match(html, /chest-planner\.js\?v=20260828-chest-availability-2/);
+assert.match(html, /noir-chest-tools\.js\?v=20260828-chest-availability-2/);
 assert.match(html, /onyx-fortification-command\.js\?v=20260828-fortification-command-1/);
 assert.match(html, /onyx-base-command\.js\?v=20260828-fortification-command-1/);
 assert.match(html, /onyx-season-data\.js\?v=20260827-season-branch-1/);
@@ -61,7 +62,7 @@ assert.match(html, /onyx-rider-intelligence-data\.js\?v=20260828-rider-command-1
 assert.match(html, /onyx-atlas-command\.js\?v=20260828-castle-hunter-1/);
 assert.match(html, /onyx-war-dragons-api\.js\?v=20260828-castle-hunter-1/);
 assert.match(html, /onyx-war-dragons-auth\.js\?v=20260828-player-oauth-1/);
-assert.match(html, /onyx-command\.js\?v=20260828-castle-hunter-1/);
+assert.match(html, /onyx-command\.js\?v=20260828-chest-availability-2/);
 assert.doesNotMatch(commandSource, /Private source boundary/);
 assert.match(html, /onyx-command\.css\?v=20260828-war-dragons-profile-3/);
 assert.match(html, /onyx-atlas-command\.css\?v=20260828-atlas-live-1/);

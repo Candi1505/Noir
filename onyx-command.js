@@ -696,6 +696,29 @@
     `;
   }
 
+  function currentEventChests() {
+    const status =
+      window.LivePredictorEngine
+        ?.getStatus?.();
+
+    if (
+      status?.availabilityKnown !== true ||
+      !Array.isArray(
+        status.availableChestTypes
+      )
+    ) {
+      return CHESTS;
+    }
+
+    const available = new Set(
+      status.availableChestTypes
+    );
+
+    return CHESTS.filter(
+      chest => available.has(chest.id)
+    );
+  }
+
   function renderChest() {
     return shell("Chest Command", "CHEST INTELLIGENCE", `
       <section class="onyx-source-banner limited">
@@ -709,7 +732,7 @@
           <span class="onyx-source-chip">Private progress</span>
         </div>
         <div class="onyx-chest-list">
-          ${CHESTS.map(chestBadge).join("")}
+          ${currentEventChests().map(chestBadge).join("")}
         </div>
       </section>
 

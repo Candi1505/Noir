@@ -75,6 +75,26 @@
     };
   }
 
+  function getCurrentChestOrder(
+    eventData = getContext()?.eventData
+  ) {
+    if (
+      eventData?.availabilityKnown ===
+        true &&
+      Array.isArray(
+        eventData.availableChestTypes
+      )
+    ) {
+      return CHEST_ORDER.filter(
+        chestType =>
+          eventData.availableChestTypes
+            .includes(chestType)
+      );
+    }
+
+    return CHEST_ORDER;
+  }
+
   function getEventName(eventData) {
     const candidates = [
       eventData?.event?.name,
@@ -234,7 +254,9 @@
     if (!context) return [];
 
     const rows = [];
-    CHEST_ORDER.forEach(chestType => {
+    getCurrentChestOrder(
+      context.eventData
+    ).forEach(chestType => {
       const chest = context.rates[chestType];
       ["regular", "bonus"].forEach(pool => {
         chest[pool].rewards.forEach(reward => {
@@ -536,6 +558,21 @@
   }
 
   function renderBudget(context) {
+    const currentChestOrder =
+      getCurrentChestOrder(
+        context?.eventData
+      );
+
+    if (
+      !currentChestOrder.includes(
+        state.chestType
+      )
+    ) {
+      state.chestType =
+        currentChestOrder[0] ||
+        "gold";
+    }
+
     const budget = calculateChestBudget(state.currency, state.chestType);
     const openings = budget.openings;
     const expected = expectedRewards(state.chestType, openings, context).slice(0, 8);
@@ -565,7 +602,7 @@
         <div class="nct-fields">
           <label>Chest
             <select id="nctBudgetChest" class="nct-input">
-              ${CHEST_ORDER.map(type => `
+              ${currentChestOrder.map(type => `
                 <option value="${type}" ${type === state.chestType ? "selected" : ""}>
                   ${CHEST_META[type].label}
                 </option>

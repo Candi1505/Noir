@@ -196,6 +196,68 @@ assert.equal(
   "The private verification summary must use all six live solver statuses."
 );
 
+const currentAvailabilityEvent =
+  structuredClone(event);
+currentAvailabilityEvent.availabilityKnown =
+  true;
+currentAvailabilityEvent.availableChestTypes = [
+  "gold",
+  "platinum",
+  "draconic",
+  "arcane"
+];
+currentAvailabilityEvent.availableChestCount =
+  4;
+
+for (const chestType of Object.keys(chestConfig)) {
+  currentAvailabilityEvent.chests[
+    chestType
+  ].available =
+    currentAvailabilityEvent
+      .availableChestTypes
+      .includes(chestType);
+}
+
+LivePredictorEngine.publishEventData(
+  currentAvailabilityEvent
+);
+LivePredictorEngine.setActiveChest("freedom");
+
+const availabilityStatus =
+  LivePredictorEngine.getStatus();
+
+assert.deepEqual(
+  availabilityStatus.chests.map(
+    chest => chest.chestType
+  ),
+  [
+    "gold",
+    "platinum",
+    "draconic",
+    "arcane"
+  ],
+  "Dormant chest decks must remain supported without being offered as live."
+);
+assert.equal(
+  availabilityStatus.allChests.length,
+  6
+);
+assert.equal(
+  availabilityStatus.readyChestCount,
+  4
+);
+assert.equal(
+  availabilityStatus.activeChest,
+  "gold",
+  "A saved dormant chest must fall back to the first current chest."
+);
+assert.equal(
+  LivePredictorEngine
+    .getChestStatus("freedom")
+    .available,
+  false
+);
+
 const uiSource = fs.readFileSync("live-predictor-ui.js", "utf8");
 assert.doesNotMatch(uiSource, /<option value="10">/);
 assert.match(uiSource, /id="lpRewardQuantity"[\s\S]*?type="hidden"[\s\S]*?value="1"/);
@@ -203,5 +265,13 @@ assert.match(uiSource, /id="lpRewardQuantity"[\s\S]*?type="hidden"[\s\S]*?value=
 const plannerSource = fs.readFileSync("chest-planner.js", "utf8");
 assert.match(plannerSource, /"super_sigil"/);
 assert.match(plannerSource, /super_sigil:\s*\{ label: "Super Sigil"/);
+assert.match(plannerSource, /getCurrentChestOrder\(\)/);
+
+const toolsSource = fs.readFileSync("noir-chest-tools.js", "utf8");
+assert.match(toolsSource, /getCurrentChestOrder/);
+
+const commandSource = fs.readFileSync("onyx-command.js", "utf8");
+assert.match(commandSource, /currentEventChests\(\)/);
+assert.match(commandSource, /status\.availableChestTypes/);
 
 console.log("Chest correctness tests passed for all six predictors.");

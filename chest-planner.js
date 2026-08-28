@@ -103,6 +103,29 @@
     };
   }
 
+  function getCurrentChestOrder() {
+    const eventData =
+      window.ChestDropRates
+        ?.getEventData?.();
+    const availableChestTypes =
+      eventData?.availabilityKnown ===
+        true &&
+      Array.isArray(
+        eventData.availableChestTypes
+      )
+        ? eventData.availableChestTypes
+        : null;
+
+    return availableChestTypes
+      ? CHEST_ORDER.filter(
+          chestType =>
+            availableChestTypes.includes(
+              chestType
+            )
+        )
+      : CHEST_ORDER;
+  }
+
   function normaliseName(name) {
     return String(name || "")
       .trim()
@@ -112,7 +135,7 @@
   function getRewardNames(rates) {
     const names = new Set();
 
-    CHEST_ORDER.forEach(chestType => {
+    getCurrentChestOrder().forEach(chestType => {
       const chest =
         rates[chestType];
 
@@ -191,7 +214,7 @@
     const wanted =
       normaliseName(rewardName);
 
-    return CHEST_ORDER
+    return getCurrentChestOrder()
       .map(chestType => {
         const chest =
           rates[chestType];
@@ -474,7 +497,7 @@
     const categoryResults =
       CATEGORIES.map(category => {
         const ranking =
-          CHEST_ORDER
+          getCurrentChestOrder()
             .map(chestType => ({
               chestType,
               ...calculateExpectedForChest(
@@ -495,7 +518,7 @@
       });
     const wins =
       Object.fromEntries(
-        CHEST_ORDER.map(
+        getCurrentChestOrder().map(
           chestType => [
             chestType,
             0
@@ -518,7 +541,7 @@
     );
 
     const mostVersatile =
-      CHEST_ORDER
+      getCurrentChestOrder()
         .map(chestType => ({
           chestType,
           wins: wins[chestType]
@@ -533,7 +556,7 @@
         mostVersatile.chestType
       ];
     const fastestBonus =
-      [...CHEST_ORDER]
+      [...getCurrentChestOrder()]
         .sort(
           (left, right) =>
             rates[left].bonusEvery -

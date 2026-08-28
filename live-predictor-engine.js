@@ -1036,13 +1036,53 @@
       : "gold";
   }
 
+  function getAvailableChestTypes(
+    eventData = getEventData()
+  ) {
+    if (
+      eventData?.availabilityKnown ===
+        true &&
+      Array.isArray(
+        eventData.availableChestTypes
+      )
+    ) {
+      return SUPPORTED_CHESTS.filter(
+        chestType =>
+          eventData.availableChestTypes
+            .includes(chestType)
+      );
+    }
+
+    return [...SUPPORTED_CHESTS];
+  }
+
+  function isChestAvailable(
+    chestType,
+    eventData = getEventData()
+  ) {
+    return getAvailableChestTypes(
+      eventData
+    ).includes(
+      normaliseChestType(chestType)
+    );
+  }
+
   function setActiveChest(
     chestType
   ) {
-    const normalised =
+    const requested =
       normaliseChestType(
         chestType
       );
+    const availableChestTypes =
+      getAvailableChestTypes();
+    const normalised =
+      availableChestTypes.includes(
+        requested
+      )
+        ? requested
+        : availableChestTypes[0] ||
+          requested;
 
     state.activeChest =
       normalised;
@@ -1149,7 +1189,15 @@
   }
 
   function getActiveChest() {
-    return state.activeChest;
+    const availableChestTypes =
+      getAvailableChestTypes();
+
+    return availableChestTypes.includes(
+      state.activeChest
+    )
+      ? state.activeChest
+      : availableChestTypes[0] ||
+        state.activeChest;
   }
 
   function getChestLabel(
@@ -4891,6 +4939,11 @@ function valuesMatch(
           normalised
         ),
 
+      available:
+        isChestAvailable(
+          normalised
+        ),
+
       length:
         getDeckLength(
           normalised
@@ -4985,14 +5038,47 @@ function valuesMatch(
 
     syncPlayerEvent(eventData);
 
-    const chests =
+    const allChests =
       SUPPORTED_CHESTS.map(
         getChestStatus
       );
 
+    const availabilityKnown =
+      eventData?.availabilityKnown ===
+        true &&
+      Array.isArray(
+        eventData.availableChestTypes
+      );
+
+    const chests =
+      availabilityKnown
+        ? allChests.filter(
+            chest =>
+              chest.available
+          )
+        : allChests;
+
+    const activeChest =
+      chests.some(
+        chest =>
+          chest.chestType ===
+          state.activeChest
+      )
+        ? state.activeChest
+        : chests[0]?.chestType ||
+          state.activeChest;
+
+    if (activeChest !== state.activeChest) {
+      state.activeChest = activeChest;
+      savePlayerState();
+    }
+
     return {
       ready:
-        isReady(),
+        isReady() &&
+        chests.some(
+          chest => chest.loaded
+        ),
 
       event:
         getEventName(),
@@ -5004,19 +5090,35 @@ function valuesMatch(
         getSourceFile(),
 
       activeChest:
-        getActiveChest(),
+        activeChest,
 
       activeChestLabel:
         getChestLabel(),
 
       readyChestCount:
-        eventData?.readyChestCount ??
         chests.filter(
           chest =>
             chest.loaded
         ).length,
 
-      chests
+      loadedChestCount:
+        allChests.filter(
+          chest => chest.loaded
+        ).length,
+
+      availabilityKnown,
+
+      availableChestTypes:
+        chests.map(
+          chest => chest.chestType
+        ),
+
+      availableChestCount:
+        chests.length,
+
+      chests,
+
+      allChests
     };
   }
 
@@ -5856,6 +5958,8 @@ function inspectGachaHistory(
 
       isSupportedChest,
       normaliseChestType,
+      getAvailableChestTypes,
+      isChestAvailable,
       setActiveChest,
       getActiveChest,
       getChestLabel,

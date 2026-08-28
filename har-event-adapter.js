@@ -29,6 +29,26 @@
   const EMBEDDED_EVENT_DATA_MARKER =
     "window.params_and_data";
 
+  const SUPPORTED_CURRENT_SPINS =
+    Object.freeze({
+      "2": "gold",
+      "11": "platinum",
+      "27": "draconic",
+      "33": "freedom",
+      "37": "arcane",
+      "7": "super_sigil"
+    });
+
+  const SUPPORTED_CHEST_ORDER =
+    Object.freeze([
+      "gold",
+      "platinum",
+      "draconic",
+      "freedom",
+      "arcane",
+      "super_sigil"
+    ]);
+
   const REWARD_POOL_KEYS = [
     "epic_items",
     "legendary_items",
@@ -172,6 +192,114 @@
     }
 
     return JSON.parse(responseText);
+  }
+
+  /*
+   * about_v2 carries dormant deck definitions as well as current ones. The
+   * live event page is the authority for what a player can actually open.
+   * Reduce that page to chest-type labels only; never retain its profile,
+   * token or inventory fields.
+   */
+  function extractAvailableChestTypesFromHar(
+    har,
+    preferredEventKey = ""
+  ) {
+    const entries = har?.log?.entries;
+
+    if (!Array.isArray(entries)) {
+      return null;
+    }
+
+    const candidates = [];
+
+    entries.forEach((entry, entryIndex) => {
+      const url = String(
+        entry?.request?.url || ""
+      );
+
+      if (!CURRENT_EVENT_PAGE_PATTERN.test(url)) {
+        return;
+      }
+
+      try {
+        const payload =
+          extractEventDataPayload(entry);
+        const gacha = payload?.gacha;
+
+        if (!gacha || typeof gacha !== "object") {
+          return;
+        }
+
+        Object.entries(gacha)
+          .forEach(([eventKey, record]) => {
+            const spinTypes =
+              Array.isArray(record?.spin_types)
+                ? record.spin_types
+                : record?.gacha?.params
+                    ?.spin_types;
+
+            if (!Array.isArray(spinTypes)) {
+              return;
+            }
+
+            const currentChestTypes =
+              new Set(
+                spinTypes
+                  .map(spin =>
+                    SUPPORTED_CURRENT_SPINS[
+                      String(
+                        spin?.spin_type ??
+                        spin?.id ??
+                        ""
+                      )
+                    ]
+                  )
+                  .filter(Boolean)
+              );
+
+            if (!currentChestTypes.size) {
+              return;
+            }
+
+            candidates.push({
+              eventKey,
+              entryIndex,
+              chestTypes:
+                SUPPORTED_CHEST_ORDER.filter(
+                  chestType =>
+                    currentChestTypes.has(
+                      chestType
+                    )
+                ),
+              score:
+                currentChestTypes.size *
+                  100 +
+                (
+                  preferredEventKey &&
+                  eventKey ===
+                    preferredEventKey
+                    ? 100000
+                    : 0
+                )
+            });
+          });
+      } catch (error) {
+        console.warn(
+          "[Chest Companion] Ignored unreadable current chest availability.",
+          error
+        );
+      }
+    });
+
+    candidates.sort((left, right) => {
+      if (right.score !== left.score) {
+        return right.score - left.score;
+      }
+
+      return right.entryIndex - left.entryIndex;
+    });
+
+    return candidates[0] || null;
   }
 
   function scoreEventPayload(payload) {
@@ -689,6 +817,11 @@
     const extracted = extractAboutV2FromHar(parsed);
     const eventKey =
       findEventKey(extracted.payload);
+    const currentAvailability =
+      extractAvailableChestTypesFromHar(
+        parsed,
+        eventKey
+      );
     const rewardData =
       extractRewardDropsFromHar(
         parsed,
@@ -721,6 +854,9 @@
     return {
       kind: "har",
       eventPayload,
+      availableChestTypes:
+        currentAvailability?.chestTypes ||
+        null,
       sharedVerification: {
         arcane:
           arcaneBonusVerification
@@ -741,6 +877,9 @@
             : 0,
         eventName,
         eventKey,
+        availableChestTypes:
+          currentAvailability?.chestTypes ||
+          [],
         arcaneBonusVerified:
           Boolean(
             arcaneBonusVerification
@@ -777,6 +916,38 @@
       const parsedEvent = originalParse(
         JSON.stringify(imported.eventPayload)
       );
+
+      if (
+        Array.isArray(
+          imported.availableChestTypes
+        )
+      ) {
+        const availableChestTypes =
+          SUPPORTED_CHEST_ORDER.filter(
+            chestType =>
+              imported.availableChestTypes
+                .includes(chestType)
+          );
+        const availableSet =
+          new Set(availableChestTypes);
+
+        parsedEvent.availabilityKnown =
+          true;
+        parsedEvent.availableChestTypes =
+          availableChestTypes;
+        parsedEvent.availableChestCount =
+          availableChestTypes.length;
+
+        Object.entries(
+          parsedEvent.chests || {}
+        ).forEach(([chestType, chest]) => {
+          parsedEvent.chests[chestType] = {
+            ...chest,
+            available:
+              availableSet.has(chestType)
+          };
+        });
+      }
 
       const arcaneVerification =
         imported.sharedVerification?.arcane;
@@ -824,6 +995,7 @@
       parseImportText,
       extractAboutV2FromHar,
       extractRewardDropsFromHar,
+      extractAvailableChestTypesFromHar,
       extractArcaneBonusVerificationFromHar,
       inferEventName,
       findEventKey,
