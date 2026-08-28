@@ -5,6 +5,7 @@ const vm = require("node:vm");
 const html = fs.readFileSync("index.html", "utf8");
 const css = fs.readFileSync("onyx-command.css", "utf8");
 const source = fs.readFileSync("onyx-war-dragons-api.js", "utf8");
+const authSource = fs.readFileSync("onyx-war-dragons-auth.js", "utf8");
 const appSource = fs.readFileSync("app.js", "utf8");
 
 assert.match(html, /id="onyxWdApiTest"/);
@@ -12,6 +13,7 @@ assert.match(html, /id="onyxWdShapeOutput"/);
 assert.match(html, /id="onyxWdProfilePanel"/);
 assert.match(html, /id="onyxWdApplyProfile"/);
 assert.match(html, /onyx-war-dragons-api\.js\?v=20260828-war-dragons-profile-3/);
+assert.match(html, /onyx-war-dragons-auth\.js\?v=20260828-player-oauth-1/);
 assert.match(html, /onyx-command\.css\?v=20260828-war-dragons-profile-3/);
 assert.match(css, /\.onyx-api-link/);
 assert.match(css, /\.onyx-wd-dossier/);
@@ -24,6 +26,9 @@ assert.doesNotMatch(source, /localStorage|sessionStorage|console\.(?:log|warn|er
 assert.doesNotMatch(source, /\.innerHTML\s*=/);
 assert.doesNotMatch(source, /WAR_DRAGONS_(?:API_KEY|CLIENT_SECRET)/);
 assert.doesNotMatch(source, /\p{Extended_Pictographic}/u);
+assert.doesNotMatch(authSource, /localStorage|sessionStorage|console\.(?:log|warn|error)/);
+assert.doesNotMatch(authSource, /WAR_DRAGONS_(?:API_KEY|CLIENT_SECRET)|client_secret/);
+assert.match(authSource, /FUNCTION_NAME = "onyx-war-dragons-oauth"/);
 assert.match(appSource, /async function applyOfficialProfile/);
 assert.match(appSource, /applyOfficialProfile,/);
 

@@ -7,11 +7,16 @@ const source = fs.readFileSync("onyx-atlas-command.js", "utf8");
 const css = fs.readFileSync("onyx-atlas-command.css", "utf8");
 const commandSource = fs.readFileSync("onyx-command.js", "utf8");
 
-assert.match(html, /onyx-atlas-command\.css\?v=20260828-atlas-command-1/);
-assert.match(html, /onyx-atlas-command\.js\?v=20260828-atlas-terms-1/);
+assert.match(html, /onyx-atlas-command\.css\?v=20260828-atlas-live-1/);
+assert.match(html, /onyx-atlas-command\.js\?v=20260828-atlas-live-1/);
+assert.match(html, /onyx-war-dragons-auth\.js\?v=20260828-player-oauth-1/);
 assert.ok(
   html.indexOf("onyx-atlas-command.js") < html.indexOf("onyx-command.js"),
   "Atlas Command must load before the dashboard routes to it."
+);
+assert.ok(
+  html.indexOf("onyx-war-dragons-auth.js") < html.indexOf("onyx-atlas-command.js"),
+  "The secure player-authorisation client must load before Atlas Command."
 );
 assert.match(commandSource, /if \(command === "atlas"\)[\s\S]*?OnyxAtlasCommand/);
 assert.doesNotMatch(source, /\bfetch\s*\(|XMLHttpRequest|WebSocket|EventSource/);
@@ -25,8 +30,14 @@ assert.match(source, /Nothing is connected/);
 assert.match(source, /does not infer an opponent’s plans/);
 assert.match(source, /Onyx is not inferring hostile intent/);
 assert.match(source, /Official Atlas connection/);
-assert.match(source, /Not registered/);
-assert.match(source, /secure server-side connection/);
+assert.match(source, /LIVE ATLAS FOUNDATION/);
+assert.match(source, /PLAYER-AUTHORISED LINK/);
+assert.match(source, /Approval pending/);
+assert.match(source, /Vulnerable now/);
+assert.match(source, /Shield cooldown/);
+assert.match(source, /Shield dropping soon/);
+assert.match(source, /Onyx will not infer a missing shield state/);
+assert.match(source, /Missing timing remains missing/);
 assert.match(source, /atlas\.read/);
 assert.match(source, /player\.public\.read/);
 assert.match(source, /Save snapshot/);
@@ -69,7 +80,8 @@ const sandbox = {
   document: {
     readyState: "loading",
     addEventListener() {},
-    removeEventListener() {}
+    removeEventListener() {},
+    getElementById() { return null; }
   }
 };
 sandbox.window = sandbox;
@@ -149,5 +161,37 @@ const alertCondition = JSON.parse(JSON.stringify(command.commandCondition({
   castles: [{ name: "Crown", status: "contested" }]
 })));
 assert.equal(alertCondition.label, "Action watch");
+
+const live = JSON.parse(JSON.stringify(command.setLiveSnapshot({
+  fetchedAt: "2026-08-28T10:15:00.000Z",
+  castles: [
+    {
+      id: " ATLAS/one ",
+      name: "  Night   Gate  ",
+      owner: "Ember Team",
+      region: "North",
+      level: 7,
+      troops: "123456",
+      fleets: 9,
+      shieldState: "cooldown",
+      cooldownEndsAt: "2026-08-28T11:15:00.000Z",
+      attackable: false,
+      source: "War Dragons API",
+      rawApiKey: "must disappear"
+    },
+    { name: "Veil", shieldState: "invented", attackable: true },
+    { name: "" }
+  ],
+  privateResponse: "drop"
+})));
+assert.equal(live.castles.length, 2);
+assert.equal(live.castles[0].id, "ATLAS-one");
+assert.equal(live.castles[0].name, "Night Gate");
+assert.equal(live.castles[0].troops, 123456);
+assert.equal(live.castles[0].shieldState, "cooldown");
+assert.equal(live.castles[0].source, "War Dragons API");
+assert.equal(live.castles[1].shieldState, "unknown");
+assert.equal("rawApiKey" in live.castles[0], false);
+assert.equal("privateResponse" in live, false);
 
 console.log("Onyx Atlas Command regression checks passed.");

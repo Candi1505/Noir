@@ -56,6 +56,25 @@ function readPublishableKey() {
   return Deno.env.get("SUPABASE_ANON_KEY") || "";
 }
 
+function readSecretKey() {
+  const keySet = Deno.env.get("SUPABASE_SECRET_KEYS");
+
+  if (keySet) {
+    try {
+      const parsed = JSON.parse(keySet) as Record<string, string>;
+      if (parsed.default) return parsed.default;
+
+      const firstKey = Object.values(parsed)
+        .find(value => typeof value === "string" && value.length > 0);
+      if (firstKey) return firstKey;
+    } catch {
+      // Fall through to the legacy key during the Supabase key migration.
+    }
+  }
+
+  return Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+}
+
 async function authenticatedUserId(
   authorization: string,
   supabaseUrl: string,
@@ -81,6 +100,103 @@ async function sha256Hex(value: string) {
   return Array.from(new Uint8Array(digest))
     .map(byte => byte.toString(16).padStart(2, "0"))
     .join("");
+}
+
+function base64ToBytes(value: string) {
+  const binary = atob(value);
+  return Uint8Array.from(binary, character => character.charCodeAt(0));
+}
+
+async function tokenEncryptionKey() {
+  const secret = Deno.env.get("WAR_DRAGONS_TOKEN_ENCRYPTION_KEY") || "";
+  if (secret.length < 24) throw new Error("encryption-not-configured");
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(secret),
+  );
+  return crypto.subtle.importKey(
+    "raw",
+    digest,
+    { name: "AES-GCM" },
+    false,
+    ["decrypt"],
+  );
+}
+
+async function decryptApiKey(
+  ciphertext: string,
+  iv: string,
+  playerId: string,
+) {
+  const cleartext = await crypto.subtle.decrypt(
+    {
+      name: "AES-GCM",
+      iv: base64ToBytes(iv),
+      additionalData: new TextEncoder().encode(playerId),
+    },
+    await tokenEncryptionKey(),
+    base64ToBytes(ciphertext),
+  );
+  const value = new TextDecoder().decode(cleartext);
+  if (value.length < 8 || value.length > 4096 || /[\u0000-\u001f]/.test(value)) {
+    throw new Error("invalid-api-key");
+  }
+  return value;
+}
+
+type PlayerConnection = {
+  player_id: string;
+  api_key_ciphertext: string;
+  api_key_iv: string;
+};
+
+async function loadPlayerConnection(
+  userId: string,
+  supabaseUrl: string,
+  serviceKey: string,
+) {
+  const query = new URLSearchParams({
+    select: "player_id,api_key_ciphertext,api_key_iv",
+    user_id: `eq.${userId}`,
+    revoked_at: "is.null",
+    limit: "1",
+  });
+  const response = await fetch(
+    `${supabaseUrl}/rest/v1/war_dragons_connections?${query.toString()}`,
+    {
+      headers: {
+        apikey: serviceKey,
+        authorization: `Bearer ${serviceKey}`,
+      },
+    },
+  );
+  if (!response.ok) throw new Error("connection-read-failed");
+  const rows = await response.json() as PlayerConnection[];
+  return rows[0] || null;
+}
+
+async function markConnectionVerified(
+  userId: string,
+  supabaseUrl: string,
+  serviceKey: string,
+) {
+  if (!serviceKey) return;
+  const query = new URLSearchParams({ user_id: `eq.${userId}` });
+  await fetch(
+    `${supabaseUrl}/rest/v1/war_dragons_connections?${query.toString()}`,
+    {
+      method: "PATCH",
+      headers: {
+        apikey: serviceKey,
+        authorization: `Bearer ${serviceKey}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        last_verified_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }),
+    },
+  ).catch(() => undefined);
 }
 
 function isResourceName(value: unknown): value is ResourceName {
@@ -122,16 +238,15 @@ Deno.serve(async request => {
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
   const publishableKey = readPublishableKey();
+  const serviceKey = readSecretKey();
   const ownerUserId = Deno.env.get("WAR_DRAGONS_OWNER_USER_ID") || "";
-  const apiKey = Deno.env.get("WAR_DRAGONS_API_KEY") || "";
+  const ownerApiKey = Deno.env.get("WAR_DRAGONS_API_KEY") || "";
   const clientSecret =
     Deno.env.get("WAR_DRAGONS_CLIENT_SECRET") || "";
 
   if (
     !supabaseUrl ||
     !publishableKey ||
-    !ownerUserId ||
-    !apiKey ||
     !clientSecret
   ) {
     return json(origin, 503, {
@@ -146,10 +261,45 @@ Deno.serve(async request => {
     publishableKey,
   );
 
-  if (!userId || userId !== ownerUserId) {
+  if (!userId) {
+    return json(origin, 401, {
+      ok: false,
+      message: "Sign in to Onyx Command first.",
+    });
+  }
+
+  let apiKey = "";
+  let encryptedConnection = false;
+  if (serviceKey && Deno.env.get("WAR_DRAGONS_TOKEN_ENCRYPTION_KEY")) {
+    try {
+      const connection = await loadPlayerConnection(
+        userId,
+        supabaseUrl,
+        serviceKey,
+      );
+      if (connection) {
+        apiKey = await decryptApiKey(
+          connection.api_key_ciphertext,
+          connection.api_key_iv,
+          connection.player_id,
+        );
+        encryptedConnection = true;
+      }
+    } catch {
+      if (userId !== ownerUserId || !ownerApiKey) {
+        return json(origin, 503, {
+          ok: false,
+          message: "The secure War Dragons connection could not be opened.",
+        });
+      }
+    }
+  }
+
+  if (!apiKey && userId === ownerUserId) apiKey = ownerApiKey;
+  if (!apiKey) {
     return json(origin, 403, {
       ok: false,
-      message: "This War Dragons connection belongs to the Onyx owner.",
+      message: "Authorise your War Dragons account in Atlas Command first.",
     });
   }
 
@@ -212,6 +362,10 @@ Deno.serve(async request => {
         ok: false,
         message: "War Dragons returned an unexpected response.",
       });
+    }
+
+    if (encryptedConnection) {
+      await markConnectionVerified(userId, supabaseUrl, serviceKey);
     }
 
     return json(origin, 200, {

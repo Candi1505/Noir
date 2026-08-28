@@ -4,8 +4,10 @@
   const OVERLAY_ID = "onyxAtlasCommandOverlay";
   const STORAGE_PREFIX = "onyxAtlasManualV1";
   const MODE_PREFIX = "onyxAtlasModeV1";
-  const VALID_MODES = new Set(["demo", "manual"]);
+  const VALID_MODES = new Set(["live", "demo", "manual"]);
   const VALID_TABS = new Set(["overview", "battles", "castles", "team", "entry"]);
+  const VALID_LIVE_FILTERS = new Set(["vulnerable", "cooldown", "dropping", "shielded", "all"]);
+  const LIVE_SHIELD_STATES = new Set(["vulnerable", "cooldown", "dropping", "shielded", "unknown"]);
   const MEMBER_STATUSES = new Set(["ready", "watch", "support"]);
   const CASTLE_STATUSES = new Set(["clear", "watch", "contested"]);
   const BATTLE_SIDES = new Set(["attack", "defence"]);
@@ -23,6 +25,9 @@
     fleet: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17h18l-3 4H6ZM6 17V8h12v9M9 8V4h6v4M3 13h3m12 0h3"/></svg>`,
     alert: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 10 18H2ZM12 9v5m0 3v1"/></svg>`,
     link: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 14 8 16a4 4 0 1 1-6-6l4-4a4 4 0 0 1 6 0M14 10l2-2a4 4 0 1 1 6 6l-4 4a4 4 0 0 1-6 0M8 12h8"/></svg>`,
+    clock: `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>`,
+    refresh: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5M6.1 8.2A7 7 0 0 1 18.8 9M5.2 15A7 7 0 0 0 17.9 15.8"/></svg>`,
+    lock: `<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"/></svg>`,
     plus: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v16M4 12h16"/></svg>`,
     trash: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 3h6l1 4H8ZM7 7l1 14h8l1-14M10 11v6m4-6v6"/></svg>`
   });
@@ -58,8 +63,22 @@
     updatedAt: "Synthetic scenario"
   });
 
-  let activeMode = "demo";
+  let activeMode = "live";
   let activeTab = "overview";
+  let liveFilter = "vulnerable";
+  let liveCastles = [];
+  let liveFetchedAt = null;
+  let liveConnection = Object.freeze({
+    phase: "checking",
+    connected: false,
+    readyToAuthorise: false,
+    reviewStatus: "pending_review",
+    playerId: null,
+    scopes: [],
+    connectedAt: null,
+    lastVerifiedAt: null,
+    message: "Checking the secure War Dragons connection."
+  });
   let manualSaved = null;
   let manualDraft = emptyManualState();
   let manualDirty = false;
@@ -122,6 +141,59 @@
       castles: [],
       battles: [],
       updatedAt: null
+    };
+  }
+
+  function emptyLiveState() {
+    return {
+      version: 1,
+      team: {
+        name: "Live Atlas",
+        alliance: "Official player-authorised intelligence",
+        totalTroops: null,
+        monthlyGold: null,
+        monthlyMaterials: null,
+        monthlyPrims: null,
+        eventScore: null
+      },
+      members: [],
+      castles: liveCastles,
+      battles: [],
+      updatedAt: liveFetchedAt
+    };
+  }
+
+  function normaliseLiveCastle(value, index) {
+    const source = value && typeof value === "object" ? value : {};
+    const name = cleanText(source.name, 70);
+    if (!name) return null;
+    const shieldState = LIVE_SHIELD_STATES.has(source.shieldState)
+      ? source.shieldState
+      : "unknown";
+    return {
+      id: cleanId(source.id, `official-castle-${index + 1}`),
+      name,
+      owner: cleanText(source.owner, 70),
+      region: cleanText(source.region, 70),
+      level: cleanNumber(source.level, 999),
+      troops: cleanNumber(source.troops),
+      fleets: cleanNumber(source.fleets, 99999),
+      shieldState,
+      shieldEndsAt: cleanText(source.shieldEndsAt, 64) || null,
+      cooldownEndsAt: cleanText(source.cooldownEndsAt, 64) || null,
+      attackable: source.attackable === true,
+      source: source.source === "War Dragons API" ? "War Dragons API" : "Verified server contract"
+    };
+  }
+
+  function normaliseLiveSnapshot(value) {
+    const source = value && typeof value === "object" ? value : {};
+    return {
+      castles: (Array.isArray(source.castles) ? source.castles : [])
+        .slice(0, 200)
+        .map(normaliseLiveCastle)
+        .filter(Boolean),
+      fetchedAt: cleanText(source.fetchedAt, 64) || null
     };
   }
 
@@ -209,11 +281,11 @@
       manualSaved = saved ? normaliseManualState(JSON.parse(saved)) : null;
       manualDraft = clone(manualSaved || emptyManualState());
       const mode = localStorage.getItem(storageKey(MODE_PREFIX));
-      activeMode = VALID_MODES.has(mode) ? mode : "demo";
+      activeMode = VALID_MODES.has(mode) ? mode : "live";
     } catch (_error) {
       manualSaved = null;
       manualDraft = emptyManualState();
-      activeMode = "demo";
+      activeMode = "live";
     }
     manualDirty = false;
   }
@@ -237,6 +309,7 @@
   }
 
   function currentState() {
+    if (activeMode === "live") return clone(emptyLiveState());
     return activeMode === "demo" ? clone(DEMO_STATE) : clone(manualDraft);
   }
 
@@ -336,6 +409,15 @@
   }
 
   function sourceBanner() {
+    if (activeMode === "live") {
+      const connected = liveConnection.connected === true;
+      return `<section class="oac-source-banner live ${connected ? "connected" : "pending"}">
+        <span>${connected ? "OFFICIAL PLAYER-AUTHORISED INTELLIGENCE" : "LIVE ATLAS FOUNDATION"}</span>
+        <p>${escapeHtml(connected
+          ? "This workspace accepts only sanitised, read-only fields returned through the secure Onyx gateway."
+          : liveConnection.message || "War Dragons multi-player API review is pending.")}</p>
+      </section>`;
+    }
     if (activeMode === "demo") {
       return `<section class="oac-source-banner demo">
         <span>FICTIONAL DEMO INTELLIGENCE</span>
@@ -349,12 +431,18 @@
   }
 
   function renderModeRail() {
+    const modeTitle = activeMode === "live"
+      ? "Official castle watch"
+      : activeMode === "demo"
+        ? "Command simulation"
+        : "Manual command board";
     return `<section class="oac-mode-rail" aria-label="Atlas data mode">
       <div>
         <p>INTELLIGENCE MODE</p>
-        <h3>${activeMode === "demo" ? "Command simulation" : "Manual command board"}</h3>
+        <h3>${modeTitle}</h3>
       </div>
       <div class="oac-mode-switch" role="group" aria-label="Choose Atlas intelligence mode">
+        <button type="button" data-oac-mode="live" class="${activeMode === "live" ? "active" : ""}" aria-pressed="${activeMode === "live"}">Live</button>
         <button type="button" data-oac-mode="demo" class="${activeMode === "demo" ? "active" : ""}" aria-pressed="${activeMode === "demo"}">Demo</button>
         <button type="button" data-oac-mode="manual" class="${activeMode === "manual" ? "active" : ""}" aria-pressed="${activeMode === "manual"}">Manual</button>
       </div>
@@ -374,7 +462,124 @@
     </nav>`;
   }
 
+  function formatLiveTime(value, fallback = "Timing unavailable") {
+    if (!value) return fallback;
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return fallback;
+    return date.toLocaleString("en-AU", {
+      day: "numeric",
+      month: "short",
+      hour: "numeric",
+      minute: "2-digit"
+    });
+  }
+
+  function liveShieldLabel(castle) {
+    return {
+      vulnerable: "Vulnerable now",
+      cooldown: "Shield cooldown",
+      dropping: "Shield dropping soon",
+      shielded: "Shielded",
+      unknown: "Shield state unavailable"
+    }[castle?.shieldState] || "Shield state unavailable";
+  }
+
+  function liveShieldDetail(castle) {
+    if (castle?.shieldState === "cooldown") {
+      return castle.cooldownEndsAt
+        ? `Cooldown ends ${formatLiveTime(castle.cooldownEndsAt)}`
+        : "Official cooldown state; end time was not supplied.";
+    }
+    if (["dropping", "shielded"].includes(castle?.shieldState)) {
+      return castle.shieldEndsAt
+        ? `Shield ends ${formatLiveTime(castle.shieldEndsAt)}`
+        : "Official shield state; end time was not supplied.";
+    }
+    if (castle?.shieldState === "vulnerable") {
+      return castle.attackable
+        ? "Officially reported unshielded and attackable."
+        : "Officially reported unshielded; attackability was not confirmed.";
+    }
+    return "Onyx will not infer a missing shield state.";
+  }
+
+  function liveCounts() {
+    return liveCastles.reduce((counts, castle) => {
+      counts.all += 1;
+      if (Object.hasOwn(counts, castle.shieldState)) counts[castle.shieldState] += 1;
+      return counts;
+    }, { vulnerable: 0, cooldown: 0, dropping: 0, shielded: 0, unknown: 0, all: 0 });
+  }
+
+  function filteredLiveCastles() {
+    const castles = liveFilter === "all"
+      ? [...liveCastles]
+      : liveCastles.filter(castle => castle.shieldState === liveFilter);
+    return castles.sort((left, right) => left.name.localeCompare(right.name));
+  }
+
+  function renderLiveFilterRail() {
+    const counts = liveCounts();
+    const filters = [
+      ["vulnerable", "Vulnerable", counts.vulnerable],
+      ["cooldown", "Cooldown", counts.cooldown],
+      ["dropping", "Dropping soon", counts.dropping],
+      ["shielded", "Shielded", counts.shielded],
+      ["all", "All castles", counts.all]
+    ];
+    return `<div class="oac-live-filters" role="group" aria-label="Filter official castles by shield state">
+      ${filters.map(([value, label, count]) => `<button type="button" data-oac-live-filter="${value}" class="${liveFilter === value ? "active" : ""}" aria-pressed="${liveFilter === value}"><span>${escapeHtml(label)}</span><b>${count}</b></button>`).join("")}
+    </div>`;
+  }
+
+  function renderLiveLockedState() {
+    if (liveConnection.connected) {
+      return `<section class="oac-live-locked connected-empty">
+        <div class="oac-live-lock-orbit">${icon("shield")}</div>
+        <p>OFFICIAL LINK ACTIVE</p>
+        <h3>Awaiting verified castle fields</h3>
+        <span>Your account is connected. Onyx will populate this board only after the official castle response shape has been reviewed and mapped.</span>
+        <button type="button" data-oac-refresh-connection>${icon("refresh")} Refresh status</button>
+      </section>`;
+    }
+    const pending = liveConnection.reviewStatus !== "ready";
+    return `<section class="oac-live-locked">
+      <div class="oac-live-lock-orbit">${icon(pending ? "clock" : "lock")}</div>
+      <p>${pending ? "APPLICATION REVIEW" : "PLAYER AUTHORISATION"}</p>
+      <h3>${pending ? "Live castle intelligence is being prepared" : "Connect your War Dragons account"}</h3>
+      <span>${pending
+        ? "The secure multi-player foundation is ready. Live castle fields stay locked until War Dragons approves the application."
+        : "Authorise read-only access to activate your official castle watchboard. Your account credentials remain with War Dragons."}</span>
+      ${pending
+        ? `<button type="button" disabled>Approval pending</button>`
+        : `<button type="button" data-oac-connect>${icon("link")} Authorise War Dragons</button>`}
+    </section>`;
+  }
+
+  function renderLivePreview() {
+    if (!liveConnection.connected || !liveCastles.length) {
+      return renderLiveLockedState();
+    }
+    const castles = liveCastles.slice(0, 4);
+    return `<section class="oac-live-preview">
+      ${castles.map(castle => `<article class="${escapeHtml(castle.shieldState)}">
+        ${icon(castle.shieldState === "cooldown" || castle.shieldState === "dropping" ? "clock" : "shield")}
+        <div><small>${escapeHtml(liveShieldLabel(castle))}</small><strong>${escapeHtml(castle.name)}</strong><span>${escapeHtml(castle.owner || "Owner not supplied")}</span></div>
+      </article>`).join("")}
+    </section>`;
+  }
+
   function renderNetwork(state) {
+    if (activeMode === "live") {
+      return `<section class="oac-network-card oac-live-network-card">
+        <div class="oac-section-heading">
+          <div><p>OFFICIAL CASTLE SIGNAL</p><h3>Live target board</h3></div>
+          <span>${liveCastles.length} verified</span>
+        </div>
+        ${renderLiveFilterRail()}
+        ${renderLivePreview()}
+      </section>`;
+    }
     const points = [
       { x: 19, y: 68 },
       { x: 42, y: 28 },
@@ -424,19 +629,62 @@
   }
 
   function renderConnectionCard() {
+    const connected = liveConnection.connected === true;
+    const pending = liveConnection.reviewStatus !== "ready";
+    const phaseLabel = connected
+      ? "Securely connected"
+      : pending
+        ? "Approval pending"
+        : liveConnection.phase === "checking" || liveConnection.phase === "working"
+          ? "Checking connection"
+          : "Ready to authorise";
     return `<section class="oac-connection-card">
       <div class="oac-connection-mark">${icon("link")}</div>
       <div>
-        <p>FUTURE LIVE LINK</p>
+        <p>PLAYER-AUTHORISED LINK</p>
         <h3>Official Atlas connection</h3>
-        <span>Not registered</span>
-        <p>Live sync remains locked until Onyx has its registered application and a secure server-side connection. Demo and manual mode require no game login.</p>
+        <span>${escapeHtml(phaseLabel)}</span>
+        <p>${escapeHtml(liveConnection.message || "Onyx is checking the secure connection.")}</p>
       </div>
-      <div class="oac-scope-list"><span>atlas.read</span><span>player.public.read</span></div>
+      <div class="oac-connection-actions">
+        <div class="oac-scope-list"><span>atlas.read</span><span>player.public.read</span></div>
+        ${connected
+          ? `<button type="button" data-oac-disconnect>Disconnect</button>`
+          : pending
+            ? `<button type="button" disabled>Review pending</button>`
+            : `<button type="button" data-oac-connect>Authorise</button>`}
+        <button type="button" class="secondary" data-oac-refresh-connection aria-label="Refresh connection status">${icon("refresh")} Refresh status</button>
+      </div>
     </section>`;
   }
 
+  function renderLiveOverview() {
+    const counts = liveCounts();
+    const condition = liveConnection.connected
+      ? { tone: "clear", label: "Official link active", detail: `${counts.all} verified castle${counts.all === 1 ? "" : "s"} on the board.` }
+      : { tone: "idle", label: liveConnection.reviewStatus === "ready" ? "Authorisation needed" : "Application review", detail: "No live castle state is shown until the secure official link is active." };
+    return `<div class="oac-workspace" role="tabpanel">
+      <section class="oac-hero ${condition.tone}">
+        <div class="oac-hero-copy">
+          <p>ATLAS OPERATIONS</p>
+          <h2>Live castle watch</h2>
+          <span>Verified shield intelligence, separated from demo and manual records.</span>
+        </div>
+        <div class="oac-condition"><i></i><div><small>COMMAND CONDITION</small><strong>${escapeHtml(condition.label)}</strong><span>${escapeHtml(condition.detail)}</span></div></div>
+      </section>
+      <section class="oac-metric-grid">
+        ${metricCard("VULNERABLE NOW", formatNumber(counts.vulnerable), "Officially reported", "alert")}
+        ${metricCard("SHIELD COOLDOWN", formatNumber(counts.cooldown), "No guessed timers", "clock")}
+        ${metricCard("DROPPING SOON", formatNumber(counts.dropping), "Verified window", "clock")}
+        ${metricCard("SHIELDED", formatNumber(counts.shielded), "Currently protected", "shield")}
+      </section>
+      ${renderNetwork(emptyLiveState())}
+      ${renderConnectionCard()}
+    </div>`;
+  }
+
   function renderOverview(state) {
+    if (activeMode === "live") return renderLiveOverview();
     const condition = commandCondition(state);
     return `<div class="oac-workspace" role="tabpanel">
       <section class="oac-hero ${condition.tone}">
@@ -460,6 +708,14 @@
   }
 
   function renderBattles(state) {
+    if (activeMode === "live") {
+      return renderLiveReservedWorkspace(
+        "BATTLE INTELLIGENCE",
+        "Official battle ledger",
+        "The workspace is prepared, but battle records remain locked until the approved response fields have been reviewed.",
+        "battles"
+      );
+    }
     return `<div class="oac-workspace" role="tabpanel">
       <section class="oac-workspace-lead">
         <div><p>BATTLE INTELLIGENCE</p><h2>Battle ledger</h2><span>Logged outcomes, Primarchs, destruction, Glory and Prim losses.</span></div>
@@ -480,7 +736,50 @@
     </div>`;
   }
 
+  function renderLiveCastles() {
+    const castles = filteredLiveCastles();
+    const fetched = liveFetchedAt
+      ? `Last refreshed ${formatLiveTime(liveFetchedAt)}`
+      : "No official castle response received yet";
+    return `<div class="oac-workspace" role="tabpanel">
+      <section class="oac-workspace-lead oac-live-castle-lead">
+        <div><p>LIVE FORTIFICATION WATCH</p><h2>Castle target board</h2><span>Official shield states grouped for fast, tap-first Atlas scanning.</span></div>
+        <b>${liveCastles.length}</b>
+      </section>
+      <section class="oac-live-source-line">
+        <div>${icon("shield")}<span><strong>War Dragons API only</strong><small>${escapeHtml(fetched)}</small></span></div>
+        <button type="button" data-oac-refresh-connection>${icon("refresh")} Refresh connection</button>
+      </section>
+      ${renderLiveFilterRail()}
+      ${!liveConnection.connected
+        ? renderLiveLockedState()
+        : !liveCastles.length
+          ? renderLiveLockedState()
+          : castles.length
+            ? `<div class="oac-live-castle-grid">${castles.map((castle, index) => `<article class="oac-live-castle-card ${escapeHtml(castle.shieldState)}" id="oacLiveCastle${index}">
+                <header>
+                  <span>${icon(castle.shieldState === "cooldown" || castle.shieldState === "dropping" ? "clock" : "shield")}</span>
+                  <div><small>${escapeHtml(castle.region || castle.id)}</small><h3>${escapeHtml(castle.name)}</h3><p>${escapeHtml(castle.owner || "Owner not supplied")}</p></div>
+                  <b>${castle.level === null ? "FORT —" : `FORT ${formatNumber(castle.level)}`}</b>
+                </header>
+                <section class="oac-live-shield-signal">
+                  <div><small>OFFICIAL SHIELD STATE</small><strong>${escapeHtml(liveShieldLabel(castle))}</strong><span>${escapeHtml(liveShieldDetail(castle))}</span></div>
+                  <i></i>
+                </section>
+                <dl>
+                  <div><dt>Stationed troops</dt><dd>${formatNumber(castle.troops)}</dd></div>
+                  <div><dt>Visible fleets</dt><dd>${formatNumber(castle.fleets)}</dd></div>
+                </dl>
+                <footer><span>${escapeHtml(castle.source)}</span><b>${castle.attackable ? "Attackable confirmed" : "No attackability claim"}</b></footer>
+              </article>`).join("")}</div>`
+            : `<section class="oac-live-filter-empty">${icon("shield")}<h3>No castles in this verified group</h3><p>Choose another shield-state filter. Onyx will not move a castle into this list without an official field.</p></section>`}
+      <p class="oac-evidence-note">Vulnerable and cooldown labels are shown only when supported by official response fields. Missing timing remains missing; Onyx does not manufacture a countdown.</p>
+      ${renderConnectionCard()}
+    </div>`;
+  }
+
   function renderCastles(state) {
+    if (activeMode === "live") return renderLiveCastles();
     return `<div class="oac-workspace" role="tabpanel">
       <section class="oac-workspace-lead">
         <div><p>FORTIFICATION WATCH</p><h2>Castle watchboard</h2><span>Ownership, fort level, stationed forces and recorded shield windows.</span></div>
@@ -500,6 +799,14 @@
   }
 
   function renderTeam(state) {
+    if (activeMode === "live") {
+      return renderLiveReservedWorkspace(
+        "TEAM READINESS",
+        "Official contribution board",
+        "Team and contribution fields will appear here only when the authorised API returns them for this player.",
+        "team"
+      );
+    }
     const members = [...state.members].sort((left, right) => (right.troops || 0) - (left.troops || 0));
     const total = members.reduce((sum, member) => sum + (member.troops || 0), 0);
     return `<div class="oac-workspace" role="tabpanel">
@@ -518,6 +825,22 @@
         }).join("")}` : renderEmpty("team", "No team members recorded", "Open Enter intel to create a private readiness snapshot.")}
       </div>
       <p class="oac-evidence-note">The order reflects recorded troop totals only. It is not a player rating or performance judgement.</p>
+    </div>`;
+  }
+
+  function renderLiveReservedWorkspace(kicker, title, detail, iconName) {
+    return `<div class="oac-workspace" role="tabpanel">
+      <section class="oac-workspace-lead">
+        <div><p>${escapeHtml(kicker)}</p><h2>${escapeHtml(title)}</h2><span>Official, read-only player-authorised intelligence.</span></div>
+        ${icon(iconName)}
+      </section>
+      <section class="oac-live-locked reserved">
+        <div class="oac-live-lock-orbit">${icon("lock")}</div>
+        <p>VERIFIED FIELDS REQUIRED</p>
+        <h3>Prepared without invented data</h3>
+        <span>${escapeHtml(detail)}</span>
+      </section>
+      ${renderConnectionCard()}
     </div>`;
   }
 
@@ -732,9 +1055,9 @@
     overlay.querySelector("#oacClose")?.addEventListener("click", close);
     overlay.querySelectorAll("[data-oac-mode]").forEach(button => {
       button.addEventListener("click", () => {
-        activeMode = VALID_MODES.has(button.dataset.oacMode) ? button.dataset.oacMode : "demo";
+        activeMode = VALID_MODES.has(button.dataset.oacMode) ? button.dataset.oacMode : "live";
         if (activeMode === "manual" && activeTab === "overview" && !hasManualData()) activeTab = "entry";
-        if (activeMode === "demo" && activeTab === "entry") activeTab = "overview";
+        if (activeMode !== "manual" && activeTab === "entry") activeTab = "overview";
         writeMode();
         notice = "";
         render({ focusSelector: `[data-oac-mode="${activeMode}"]` });
@@ -759,6 +1082,34 @@
         const index = button.dataset.oacCastleJump;
         activeTab = "castles";
         render({ focusSelector: `#oacCastle${index}` });
+      });
+    });
+    overlay.querySelectorAll("[data-oac-live-filter]").forEach(button => {
+      button.addEventListener("click", () => {
+        liveFilter = VALID_LIVE_FILTERS.has(button.dataset.oacLiveFilter)
+          ? button.dataset.oacLiveFilter
+          : "vulnerable";
+        render({ focusSelector: `[data-oac-live-filter="${liveFilter}"]` });
+      });
+    });
+    overlay.querySelectorAll("[data-oac-connect]").forEach(button => {
+      button.addEventListener("click", async () => {
+        button.disabled = true;
+        await window.OnyxWarDragonsAuth?.beginAuthorization?.();
+      });
+    });
+    overlay.querySelectorAll("[data-oac-refresh-connection]").forEach(button => {
+      button.addEventListener("click", async () => {
+        button.disabled = true;
+        await window.OnyxWarDragonsAuth?.refreshStatus?.();
+      });
+    });
+    overlay.querySelectorAll("[data-oac-disconnect]").forEach(button => {
+      button.addEventListener("click", async () => {
+        const allowed = window.confirm?.("Remove this encrypted War Dragons connection from Onyx? You can also revoke the app inside War Dragons.");
+        if (!allowed) return;
+        button.disabled = true;
+        await window.OnyxWarDragonsAuth?.disconnect?.();
       });
     });
     overlay.querySelector("#oacSaveManual")?.addEventListener("click", () => {
@@ -810,6 +1161,37 @@
     }
   }
 
+  function handleLiveConnectionEvent(event) {
+    const detail = event?.detail && typeof event.detail === "object"
+      ? event.detail
+      : {};
+    liveConnection = Object.freeze({
+      ...liveConnection,
+      phase: cleanText(detail.phase, 30) || "error",
+      connected: detail.connected === true,
+      readyToAuthorise: detail.readyToAuthorise === true,
+      reviewStatus: detail.reviewStatus === "ready" ? "ready" : "pending_review",
+      playerId: cleanText(detail.playerId, 160) || null,
+      scopes: Array.isArray(detail.scopes)
+        ? detail.scopes.filter(scope => ["atlas.read", "player.public.read"].includes(scope))
+        : [],
+      connectedAt: cleanText(detail.connectedAt, 64) || null,
+      lastVerifiedAt: cleanText(detail.lastVerifiedAt, 64) || null,
+      message: cleanText(detail.message, 220) || "The secure connection status changed."
+    });
+    const overlay = document.getElementById(OVERLAY_ID);
+    if (overlay?.classList.contains("open")) render();
+  }
+
+  function setLiveSnapshot(value) {
+    const snapshot = normaliseLiveSnapshot(value);
+    liveCastles = snapshot.castles;
+    liveFetchedAt = snapshot.fetchedAt;
+    const overlay = document.getElementById(OVERLAY_ID);
+    if (overlay?.classList.contains("open") && activeMode === "live") render();
+    return clone(snapshot);
+  }
+
   function open(tab = "overview") {
     const currentUser = userId();
     if (openedForUser !== currentUser) {
@@ -827,6 +1209,7 @@
     document.body.classList.add("onyx-modal-open");
     document.addEventListener?.("keydown", handleModalKeydown);
     overlay.querySelector("#oacClose")?.focus?.();
+    window.OnyxWarDragonsAuth?.refreshStatus?.();
   }
 
   function close() {
@@ -843,8 +1226,13 @@
     close,
     getDemoState: () => clone(DEMO_STATE),
     getManualState: () => clone(manualDraft),
+    getLiveState: () => clone({ castles: liveCastles, fetchedAt: liveFetchedAt }),
+    setLiveSnapshot,
+    normaliseLiveSnapshot,
     normaliseManualState,
     deriveAlerts,
     commandCondition
   });
+
+  window.addEventListener?.("onyx-war-dragons-connection", handleLiveConnectionEvent);
 })();

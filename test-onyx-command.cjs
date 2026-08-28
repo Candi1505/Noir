@@ -9,6 +9,7 @@ const riderDataSource = fs.readFileSync("onyx-rider-intelligence-data.js", "utf8
 const baseSource = fs.readFileSync("onyx-base-command.js", "utf8");
 const fortificationSource = fs.readFileSync("onyx-fortification-command.js", "utf8");
 const warDragonsApiSource = fs.readFileSync("onyx-war-dragons-api.js", "utf8");
+const warDragonsAuthSource = fs.readFileSync("onyx-war-dragons-auth.js", "utf8");
 const commandCss = fs.readFileSync("onyx-command.css", "utf8");
 const chestToolsSource = fs.readFileSync("noir-chest-tools.js", "utf8");
 const livePredictorSource = fs.readFileSync("live-predictor-ui.js", "utf8");
@@ -39,7 +40,7 @@ assert.doesNotMatch(
   /"(?:sessionToken|cookie|email|playerId|request|response|headers?)"\s*:/i
 );
 assert.doesNotMatch(
-  html + commandSource + seasonSource + chestToolsSource + livePredictorSource + fortificationSource + warDragonsApiSource,
+  html + commandSource + seasonSource + chestToolsSource + livePredictorSource + fortificationSource + warDragonsApiSource + warDragonsAuthSource,
   /\p{Extended_Pictographic}/u,
   "The Onyx mobile shell must use its SVG icon system instead of emoji."
 );
@@ -53,12 +54,13 @@ assert.match(html, /onyx-fortification-command\.js\?v=20260828-fortification-com
 assert.match(html, /onyx-base-command\.js\?v=20260828-fortification-command-1/);
 assert.match(html, /onyx-season-data\.js\?v=20260827-season-branch-1/);
 assert.match(html, /onyx-rider-intelligence-data\.js\?v=20260828-rider-command-1/);
-assert.match(html, /onyx-atlas-command\.js\?v=20260828-atlas-terms-1/);
+assert.match(html, /onyx-atlas-command\.js\?v=20260828-atlas-live-1/);
 assert.match(html, /onyx-war-dragons-api\.js\?v=20260828-war-dragons-profile-3/);
+assert.match(html, /onyx-war-dragons-auth\.js\?v=20260828-player-oauth-1/);
 assert.match(html, /onyx-command\.js\?v=20260828-atlas-command-1/);
 assert.doesNotMatch(commandSource, /Private source boundary/);
 assert.match(html, /onyx-command\.css\?v=20260828-war-dragons-profile-3/);
-assert.match(html, /onyx-atlas-command\.css\?v=20260828-atlas-command-1/);
+assert.match(html, /onyx-atlas-command\.css\?v=20260828-atlas-live-1/);
 assert.match(commandSource, /window\.OnyxAtlasCommand\?\.open\?\.\(\)/);
 assert.match(livePredictorSource, /ONYX COMMAND · CHEST INTELLIGENCE/);
 assert.match(livePredictorSource, /aria-pressed/);
