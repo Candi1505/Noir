@@ -929,11 +929,6 @@
 
   function renderHelp() {
     return shell("Help & Support", "PLAYER GUIDE", `
-      <section class="onyx-source-banner verified onyx-help-intro">
-        <strong>Onyx Command player guide</strong>
-        <p>Open only the section you need. The command screens stay compact for experienced players.</p>
-      </section>
-
       <section class="onyx-help-list" aria-label="Onyx Command help topics">
         ${helpSection("Getting started", "Account, navigation and saving", `
           <ol>

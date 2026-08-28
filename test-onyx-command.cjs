@@ -62,7 +62,7 @@ assert.match(html, /onyx-rider-intelligence-data\.js\?v=20260828-audit-2/);
 assert.match(html, /onyx-atlas-command\.js\?v=20260828-audit-2/);
 assert.match(html, /onyx-war-dragons-api\.js\?v=20260828-audit-2/);
 assert.match(html, /onyx-war-dragons-auth\.js\?v=20260828-audit-2/);
-assert.match(html, /onyx-command\.js\?v=20260828-audit-2/);
+assert.match(html, /onyx-command\.js\?v=20260828-help-tidy-1/);
 assert.doesNotMatch(commandSource, /Private source boundary/);
 assert.match(html, /onyx-command\.css\?v=20260828-audit-2/);
 assert.match(html, /onyx-atlas-command\.css\?v=20260828-audit-2/);
