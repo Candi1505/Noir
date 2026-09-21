@@ -303,7 +303,7 @@
       button.disabled = true;
       return;
     }
-    if (!apiState.readyToAuthorise) {
+    if (!apiState.connected && !apiState.readyToAuthorise) {
       setApiStatus("API approval pending", "pending");
       button.textContent = "Scan live";
       button.disabled = true;
