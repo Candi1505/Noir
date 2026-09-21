@@ -27,7 +27,7 @@ test('direct team lookup sends one exact team and releases only its public capit
   assert.equal(JSON.stringify(result).includes('roster'), false);
   assert.equal(f.requests[0].options.method, 'GET');
   const query = new URL(f.requests[0].url).searchParams;
-  assert.deepEqual(JSON.parse(query.get('teams')), ['SeveredReality']);
+  assert.equal(query.get('teams'), 'SeveredReality');
   assert.equal(query.get('k_id'), '1');
   assert.equal(query.get('realm_name'), 'Celestial_Haven');
 });

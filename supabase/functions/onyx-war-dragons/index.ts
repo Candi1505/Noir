@@ -562,7 +562,7 @@ async function handleAtlasTeam(apiKey: string, clientSecret: string, body: JsonR
   }
   const upstream = await upstreamJson(
     "/api/v1/atlas/teams/metadata", apiKey, clientSecret,
-    new URLSearchParams({ k_id: String(kingdomId), realm_name: realmName, teams: JSON.stringify([teamName]) }),
+    new URLSearchParams({ k_id: String(kingdomId), realm_name: realmName, teams: teamName }),
   );
   if (!upstream.ok) return { ok: false as const, status: upstream.status, code: "atlas-team-unavailable" };
   if (!upstream.data || typeof upstream.data !== "object" || Array.isArray(upstream.data)) {
