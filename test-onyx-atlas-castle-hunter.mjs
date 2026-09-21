@@ -5,6 +5,24 @@ await import(new URL("./onyx-atlas-castle-hunter-core.js", import.meta.url));
 
 const Core = globalThis.OnyxAtlasCore;
 
+test("official metadata cannot prove shield status without event and timing rules", () => {
+  for (const enabled of [true, false]) {
+    const state = Core.computeOfficialShieldState({ rawLevel: 4 }, {
+      observedAt: 1000,
+      fort: { shieldTurnedOn: enabled, shieldTimeTs: 2000 }
+    }, { topologySource: "official-metadata", majorEvent: false }, 1000);
+    assert.equal(state.state, "unknown");
+    assert.equal(state.endAt, null);
+  }
+});
+
+test("X/Y search finds a castle independently of missing names and ownership", () => {
+  const record = castle({ name: "", ownerTeam: null, mapPosition: { x: -310.5, y: 726.9 } });
+  assert.equal(Core.filterCastles([record], { query: "X:-310.5" }, 1000).records.length, 1);
+  assert.equal(Core.filterCastles([record], { query: "726.9" }, 1000).records.length, 1);
+  assert.equal(Core.filterCastles([record], { query: "726.8" }, 1000).records.length, 0);
+});
+
 test("official map positions stay separate from castle IDs and reject missing axes", () => {
   assert.equal(Core.formatMapPosition({ x: -310.5, y: 726.9 }), "X:-310.5 Y:726.9");
   assert.equal(Core.formatMapPosition({ x: 0, y: 0 }), "X:0 Y:0");

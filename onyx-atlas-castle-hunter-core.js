@@ -511,6 +511,7 @@
         const searchable = [
           record.name,
           record.coordinate,
+          formatMapPosition(record.mapPosition),
           record.ownerTeam,
           record.regionId,
           record.regionName
@@ -541,6 +542,9 @@
       endAt: null,
       shipsUntilTrigger: null
     };
+    // The official metadata does not establish whether event protection is active.
+    // A fort toggle or timestamp alone cannot establish current vulnerability.
+    if (atlas?.topologySource === "official-metadata") return result;
     if (fort.shieldTurnedOn === false) {
       result.state = "disabled";
       return result;
@@ -662,7 +666,7 @@
         realmName,
         shieldConfig: null,
         gloryMaxCastleLevel: null,
-        majorEvent: false,
+        majorEvent: null,
         configObservedAt: updatedAt,
         topologySource: "official-metadata"
       },

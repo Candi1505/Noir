@@ -172,6 +172,16 @@
   }
 
   function upgradeLegacySnapshot(value) {
+    if (value?.atlas?.topologySource === "official-metadata") {
+      return {
+        ...value,
+        atlas: { ...value.atlas, majorEvent: null },
+        records: value.records.map(record => ({
+          ...record,
+          shield: { ...record.shield, state: "unknown", endAt: null }
+        }))
+      };
+    }
     if (value?.schemaVersion !== 1) return value;
     return {
       ...value,
@@ -942,7 +952,7 @@
         </fieldset>
 
         <div class="atlas-filter-grid">
-          <label class="atlas-filter-wide" for="atlasSearch"><span>Castle, team or castle ID</span><input id="atlasSearch" type="search" autocomplete="off" placeholder="Search"></label>
+          <label class="atlas-filter-wide" for="atlasSearch"><span>Castle, team, castle ID or X/Y</span><input id="atlasSearch" type="search" autocomplete="off" placeholder="Name or X:-310.5"></label>
           <label for="atlasAprMin"><span>APR minimum</span><input id="atlasAprMin" type="number" min="0" step="1" inputmode="numeric" placeholder="Any"></label>
           <label for="atlasAprMax"><span>APR maximum</span><input id="atlasAprMax" type="number" min="0" step="1" inputmode="numeric" placeholder="Any"></label>
           <label for="atlasGloryFilter"><span>Glory</span><select id="atlasGloryFilter"><option value="any">Any glory</option><option value="confirmed100">100% confirmed</option><option value="needsData">Needs defender data</option></select></label>
