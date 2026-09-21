@@ -381,8 +381,12 @@ function sanitiseMacro(castlePayload: unknown, teamPayload: unknown, kingdomId: 
     const ownerTeam = safeTeamName(value.owner_team);
     const team = ownerTeam ? teamMap.get(ownerTeam) : null;
     const rawLevel = integer(value.level);
+    const coords = value.coords as JsonRecord | undefined;
+    const x = typeof coords?.x === "number" && Number.isFinite(coords.x) ? coords.x : null;
+    const y = typeof coords?.y === "number" && Number.isFinite(coords.y) ? coords.y : null;
     records.push({
       coordinate,
+      mapPosition: x !== null && y !== null ? { x, y } : null,
       ownerTeam,
       rawLevel: rawLevel !== null && rawLevel >= 0 && rawLevel <= 4 ? rawLevel : null,
       apr: team?.apr ?? null,

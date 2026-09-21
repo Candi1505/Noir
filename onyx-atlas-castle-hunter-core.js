@@ -35,6 +35,17 @@
     return number !== null && Number.isInteger(number) ? number : null;
   }
 
+  function mapPosition(value) {
+    return typeof value?.x === "number" && Number.isFinite(value.x) &&
+      typeof value?.y === "number" && Number.isFinite(value.y)
+      ? { x: value.x, y: value.y } : null;
+  }
+
+  function formatMapPosition(value) {
+    const position = mapPosition(value);
+    return position ? `X:${position.x} Y:${position.y}` : "";
+  }
+
   function castleRegion(castleKey) {
     const match = String(castleKey || "").match(/^(A[0-9]+)-[0-9]+$/);
     return match ? match[1] : null;
@@ -618,6 +629,7 @@
       const regionId = castleRegion(castleKey) || "";
       return [{
         coordinate,
+        mapPosition: mapPosition(value.mapPosition),
         castleKey,
         name: "",
         tier: rawLevel + 1,
@@ -685,6 +697,7 @@
       return {
         ...record,
         rawLevel: nextRawLevel,
+        mapPosition: mapPosition(update.mapPosition),
         tier: Number.isInteger(nextRawLevel) ? nextRawLevel + 1 : record.tier,
         ownerTeam: typeof update.ownerTeam === "string" ? update.ownerTeam : null,
         apr: integer(update.apr),
@@ -797,6 +810,7 @@
     COORDINATE_PATTERN,
     LIVE_TTL_SECONDS,
     DEFAULT_FILTERS,
+    formatMapPosition,
     castleRegion,
     isCanonicalCoordinate,
     normaliseFilters,

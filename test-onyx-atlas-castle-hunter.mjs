@@ -5,6 +5,19 @@ await import(new URL("./onyx-atlas-castle-hunter-core.js", import.meta.url));
 
 const Core = globalThis.OnyxAtlasCore;
 
+test("official map positions stay separate from castle IDs and reject missing axes", () => {
+  assert.equal(Core.formatMapPosition({ x: -310.5, y: 726.9 }), "X:-310.5 Y:726.9");
+  assert.equal(Core.formatMapPosition({ x: 0, y: 0 }), "X:0 Y:0");
+  for (const value of [null, {}, { x: null, y: 1 }, { x: 1, y: Infinity }, "1-A130-1"]) {
+    assert.equal(Core.formatMapPosition(value), "");
+  }
+  const payload = { records: [{ coordinate: "1-A130-1", rawLevel: 4, mapPosition: { x: -310.5, y: 726.9 } }] };
+  const snapshot = Core.createOfficialSnapshot(payload, { kingdomId: 1, realmName: "Celestial_Haven" });
+  assert.equal(snapshot.records[0].coordinate, "1-A130-1");
+  assert.equal(Core.formatMapPosition(snapshot.records[0].mapPosition), "X:-310.5 Y:726.9");
+  assert.equal(Core.mergeOfficialMacro(snapshot, { records: [{ coordinate: "1-A130-1", rawLevel: 4 }] }).records[0].mapPosition, null);
+});
+
 function node(level = 3, connections = {}, mat = "stone") {
   return { x: 0, y: 0, level, area: 1, mat, connections };
 }

@@ -454,7 +454,7 @@
     const title = document.createElement("h4");
     const coordinate = document.createElement("code");
     title.textContent = record.name || record.coordinate;
-    coordinate.textContent = record.coordinate;
+    coordinate.textContent = `Castle ID: ${record.coordinate}`;
     identity.append(title, coordinate);
     const owner = document.createElement("p");
     owner.textContent = record.ownerTeam || "Owner not supplied";
@@ -483,13 +483,14 @@
     const connected = Array.isArray(record.connectedRegions) && record.connectedRegions.length
       ? ` · ${record.connectedRegions.join(", ")}`
       : "";
-    location.textContent = `${record.regionName || record.regionId || "Atlas"}${connected}`;
+    const mapCoordinates = Core.formatMapPosition(record.mapPosition);
+    location.textContent = `${record.regionName || record.regionId || "Atlas"}${connected} · ${mapCoordinates || "Map coordinates unavailable — reload official map"}`;
     const copy = document.createElement("button");
     copy.type = "button";
     copy.className = "atlas-copy-button";
-    copy.dataset.atlasCopy = record.coordinate;
+    copy.dataset.atlasCopy = mapCoordinates;
     copy.textContent = "Copy coordinates";
-    copy.disabled = !Core.isCanonicalCoordinate(record.coordinate);
+    copy.disabled = !mapCoordinates;
     footer.append(location, copy);
 
     card.append(heading, metrics, footer);
@@ -602,7 +603,7 @@
 
   async function copyCoordinate(button) {
     const coordinate = String(button.dataset.atlasCopy || "");
-    if (!Core.isCanonicalCoordinate(coordinate)) return;
+    if (!/^X:-?\d+(?:\.\d+)? Y:-?\d+(?:\.\d+)?$/.test(coordinate)) return;
     try {
       if (window.navigator.clipboard?.writeText) {
         await window.navigator.clipboard.writeText(coordinate);
@@ -941,13 +942,13 @@
         </fieldset>
 
         <div class="atlas-filter-grid">
-          <label class="atlas-filter-wide" for="atlasSearch"><span>Castle, team or coordinates</span><input id="atlasSearch" type="search" autocomplete="off" placeholder="Search"></label>
+          <label class="atlas-filter-wide" for="atlasSearch"><span>Castle, team or castle ID</span><input id="atlasSearch" type="search" autocomplete="off" placeholder="Search"></label>
           <label for="atlasAprMin"><span>APR minimum</span><input id="atlasAprMin" type="number" min="0" step="1" inputmode="numeric" placeholder="Any"></label>
           <label for="atlasAprMax"><span>APR maximum</span><input id="atlasAprMax" type="number" min="0" step="1" inputmode="numeric" placeholder="Any"></label>
           <label for="atlasGloryFilter"><span>Glory</span><select id="atlasGloryFilter"><option value="any">Any glory</option><option value="confirmed100">100% confirmed</option><option value="needsData">Needs defender data</option></select></label>
           <label for="atlasShieldFilter"><span>Shield</span><select id="atlasShieldFilter"><option value="any">Any shield state</option><option value="down">Shield down now</option><option value="observedDown">Observed down in capture</option><option value="cooldown">Cooldown</option><option value="shielded">Shielded / bubbled</option><option value="inactive">Offline / disabled</option><option value="notChecked">Not checked / stale</option></select></label>
           <label for="atlasGateFilter"><span>Gate</span><select id="atlasGateFilter"><option value="any">Any castle</option><option value="gate">Gate castles</option><option value="critical">Critical gates</option><option value="none">Non-gates</option></select></label>
-          <label for="atlasSort"><span>Sort</span><select id="atlasSort"><option value="glory">Best glory</option><option value="shield">Shield opportunity</option><option value="aprDesc">APR high to low</option><option value="aprAsc">APR low to high</option><option value="tierDesc">Tier high to low</option><option value="coordinate">Coordinates</option></select></label>
+          <label for="atlasSort"><span>Sort</span><select id="atlasSort"><option value="glory">Best glory</option><option value="shield">Shield opportunity</option><option value="aprDesc">APR high to low</option><option value="aprAsc">APR low to high</option><option value="tierDesc">Tier high to low</option><option value="coordinate">Castle ID</option></select></label>
         </div>
         <p id="atlasFilterError" class="atlas-filter-error hidden" role="alert"></p>
       </section>
