@@ -1052,7 +1052,7 @@
 
 .oac-live-filters {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 7px;
   margin-top: 18px;
 }
@@ -1365,8 +1365,8 @@
   .oac-connection-card { grid-template-columns: auto 1fr; }
   .oac-connection-actions { grid-column: 1 / -1; grid-template-columns: 1fr auto auto; justify-items: stretch; width: 100%; }
   .oac-connection-actions .oac-scope-list { justify-content: flex-start; max-width: none; }
-  .oac-live-filters { display: flex; overflow-x: auto; padding-bottom: 4px; scroll-snap-type: x proximity; }
-  .oac-live-filters button { min-width: 124px; flex: 0 0 auto; scroll-snap-align: start; }
+  .oac-live-filters { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .oac-live-filters button { min-width: 0; }
   .oac-live-preview,
   .oac-live-castle-grid { grid-template-columns: 1fr; }
   .oac-battle-card { grid-template-columns: 92px 1fr; gap: 13px; }

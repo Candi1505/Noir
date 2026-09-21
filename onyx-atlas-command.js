@@ -6,7 +6,7 @@
   const MODE_PREFIX = "onyxAtlasModeV1";
   const VALID_MODES = new Set(["live", "demo", "manual"]);
   const VALID_TABS = new Set(["overview", "hunter", "battles", "castles", "team", "entry"]);
-  const VALID_LIVE_FILTERS = new Set(["vulnerable", "cooldown", "dropping", "shielded", "all"]);
+  const VALID_LIVE_FILTERS = new Set(["vulnerable", "cooldown", "dropping", "shielded", "unknown", "all"]);
   const LIVE_SHIELD_STATES = new Set(["vulnerable", "cooldown", "dropping", "shielded", "unknown"]);
   const MEMBER_STATUSES = new Set(["ready", "watch", "support"]);
   const CASTLE_STATUSES = new Set(["clear", "watch", "contested"]);
@@ -562,6 +562,7 @@
       ["cooldown", "Cooldown", counts.cooldown],
       ["dropping", "Dropping soon", counts.dropping],
       ["shielded", "Shielded", counts.shielded],
+      ["unknown", "Unknown", counts.unknown],
       ["all", "All castles", counts.all]
     ];
     return `<div class="oac-live-filters" role="group" aria-label="Filter Atlas castles by shield state">
@@ -597,7 +598,8 @@
     if (!liveCastles.length) {
       return renderLiveLockedState();
     }
-    const castles = liveCastles.slice(0, 4);
+    const castles = filteredLiveCastles().slice(0, 4);
+    if (!castles.length) return `<p class="oac-evidence-note">No verified matches in this group. ${formatNumber(liveCounts().unknown)} castles have unknown shield states.</p>`;
     return `<section class="oac-live-preview">
       ${castles.map(castle => `<article class="${escapeHtml(castle.shieldState)}">
         ${icon(castle.shieldState === "cooldown" || castle.shieldState === "dropping" ? "clock" : "shield")}
@@ -706,7 +708,7 @@
   function renderLiveOverview() {
     const counts = liveCounts();
     const condition = counts.all
-      ? { tone: "clear", label: liveSource === "War Dragons API" ? "Official data loaded" : liveSource === "Mixed Atlas sources" ? "Mixed sources loaded" : "Capture loaded", detail: `${counts.all} source-labelled castle${counts.all === 1 ? "" : "s"} on the board.` }
+      ? { tone: counts.unknown ? "idle" : "clear", label: counts.unknown === counts.all ? "Catalogue loaded · shields unknown" : "Castle observations loaded", detail: `${formatNumber(counts.all)} castles indexed · ${formatNumber(counts.all - counts.unknown)} classified · ${formatNumber(counts.unknown)} unknown. Zero matches does not mean the whole map was checked.` }
       : liveConnection.connected
         ? { tone: "clear", label: "Official link active", detail: "Awaiting verified castle data." }
       : { tone: "idle", label: liveConnection.reviewStatus === "ready" ? "Authorisation needed" : "Application review", detail: "No live castle state is shown until the secure official link is active." };
@@ -720,11 +722,13 @@
         <div class="oac-condition"><i></i><div><small>COMMAND CONDITION</small><strong>${escapeHtml(condition.label)}</strong><span>${escapeHtml(condition.detail)}</span></div></div>
       </section>
       <section class="oac-metric-grid">
-        ${metricCard("VULNERABLE NOW", formatNumber(counts.vulnerable), "Reported by named source", "alert")}
-        ${metricCard("SHIELD COOLDOWN", formatNumber(counts.cooldown), "No guessed timers", "clock")}
-        ${metricCard("DROPPING SOON", formatNumber(counts.dropping), "Source-reported window", "clock")}
-        ${metricCard("SHIELDED", formatNumber(counts.shielded), "Currently protected", "shield")}
+        ${metricCard("VULNERABLE NOW", counts.all === counts.unknown ? "—" : formatNumber(counts.vulnerable), "Among classified castles", "alert")}
+        ${metricCard("SHIELD COOLDOWN", counts.all === counts.unknown ? "—" : formatNumber(counts.cooldown), "Among classified castles", "clock")}
+        ${metricCard("DROPPING SOON", counts.all === counts.unknown ? "—" : formatNumber(counts.dropping), "Among classified castles", "clock")}
+        ${metricCard("SHIELDED", counts.all === counts.unknown ? "—" : formatNumber(counts.shielded), "Among classified castles", "shield")}
       </section>
+      <p class="oac-evidence-note">Catalogue entries do not confirm shields. Open Hunter, narrow your targets and scan live. Missing shield rules or event protection remain unknown.</p>
+      <button type="button" data-oac-tab="hunter">Open Hunter to check shields</button>
       ${renderNetwork(emptyLiveState())}
       ${renderConnectionCard()}
     </div>`;
@@ -787,7 +791,7 @@
     const castles = filteredLiveCastles();
     const visibleCastles = castles.slice(0, 200);
     const fetched = liveFetchedAt
-      ? `${liveSource === "Atlas capture" ? "Captured" : "Last refreshed"} ${formatLiveTime(liveFetchedAt)}`
+      ? `Snapshot timestamp ${formatLiveTime(liveFetchedAt)} · not a whole-map shield check`
       : "No verified castle response received yet";
     return `<div class="oac-workspace" role="tabpanel">
       <section class="oac-workspace-lead oac-live-castle-lead">
@@ -796,7 +800,7 @@
       </section>
       <section class="oac-live-source-line">
         <div>${icon("shield")}<span><strong>${escapeHtml(liveSource)}</strong><small>${escapeHtml(fetched)}</small></span></div>
-        <button type="button" data-oac-refresh-connection>${icon("refresh")} Refresh connection</button>
+        <button type="button" data-oac-tab="hunter">Check shields in Hunter</button>
       </section>
       ${renderLiveFilterRail()}
       ${!liveCastles.length
@@ -818,7 +822,7 @@
                 </dl>
                 <footer><span>${escapeHtml(castle.source)}</span><b>${castle.attackable ? "Attackable confirmed" : "No attackability claim"}</b></footer>
               </article>`).join("")}</div>`
-            : `<section class="oac-live-filter-empty">${icon("shield")}<h3>No castles in this source group</h3><p>Choose another shield-state filter. Onyx keeps each castle in the group reported by its named source.</p></section>`}
+            : `<section class="oac-live-filter-empty">${icon("shield")}<h3>No verified matches in this group</h3><p>${formatNumber(liveCounts().unknown)} castles have unknown shield states. Choose Unknown to see them, or check a narrowed group in Hunter.</p></section>`}
       ${castles.length > visibleCastles.length
         ? `<p class="oac-evidence-note">Showing first ${formatNumber(visibleCastles.length)} of ${formatNumber(castles.length)}. Use the filters to narrow the board.</p>`
         : ""}

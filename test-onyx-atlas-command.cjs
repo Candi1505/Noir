@@ -11,8 +11,8 @@ const hunterCss = fs.readFileSync("onyx-atlas-castle-hunter.css", "utf8");
 const hunterCore = fs.readFileSync("onyx-atlas-castle-hunter-core.js", "utf8");
 const hunterWorker = fs.readFileSync("onyx-atlas-har-worker.js", "utf8");
 
-assert.match(html, /onyx-atlas-command\.css\?v=20260828-audit-2/);
-assert.match(html, /onyx-atlas-command\.js\?v=20260921-owner-api-1/);
+assert.match(html, /onyx-atlas-command\.css\?v=20260921-shield-coverage-1/);
+assert.match(html, /onyx-atlas-command\.js\?v=20260921-shield-coverage-1/);
 assert.match(html, /onyx-war-dragons-auth\.js\?v=20260921-owner-api-1/);
 assert.match(html, /onyx-atlas-castle-hunter\.css\?v=20260828-audit-2/);
 assert.match(html, /onyx-atlas-castle-hunter-core\.js\?v=20260921-official-map-1/);
@@ -109,7 +109,7 @@ sandbox.window = sandbox;
 vm.createContext(sandbox);
 const testableSource = source.replace(
   "window.OnyxAtlasCommand = Object.freeze({",
-  "window.OnyxAtlasCommand = Object.freeze({ renderLiveCastles,"
+  "window.OnyxAtlasCommand = Object.freeze({ renderLiveCastles, renderLiveOverview, renderLivePreview, setTestFilter: value => { liveFilter = value; },"
 );
 vm.runInContext(testableSource, sandbox);
 
@@ -238,4 +238,20 @@ assert.equal((renderedLargeSnapshot.match(/id="oacLiveCastle\d+"/g) || []).lengt
 assert.match(renderedLargeSnapshot, /Showing first 200 of 50,000\. Use the filters to narrow the board\./);
 assert.doesNotMatch(renderedLargeSnapshot, /Castle 00200/);
 
+command.setLiveSnapshot({ source: "War Dragons API", castles: [
+  {name: "Unknown Keep", shieldState: "unknown", source: "War Dragons API"},
+] });
+assert.match(command.renderLiveOverview(), /Catalogue loaded · shields unknown/);
+assert.match(command.renderLiveOverview(), /1 unknown/);
+assert.doesNotMatch(command.renderLivePreview(), /<strong>Unknown Keep<\/strong>/);
+command.setTestFilter("unknown");
+assert.match(command.renderLivePreview(), /Unknown Keep/);
+assert.match(command.renderLiveCastles(), /data-oac-live-filter="unknown" class="active"/);
+command.setLiveSnapshot({ castles: [
+  {name: "Bubble Keep", shieldState: "shielded"},
+  {name: "Open Keep", shieldState: "vulnerable"}
+] });
+command.setTestFilter("shielded");
+assert.match(command.renderLivePreview(), /Bubble Keep/);
+assert.doesNotMatch(command.renderLivePreview(), /Open Keep/);
 console.log("Onyx Atlas Command regression checks passed.");
