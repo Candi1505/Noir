@@ -68,6 +68,8 @@ assert.match(gatewaySource, /atlasInfo/);
 assert.match(gatewaySource, /MAX_CASTLES_PER_REQUEST = 100/);
 assert.match(gatewaySource, /MAX_CASTLE_ID_LENGTH = 64/);
 assert.match(gatewaySource, /function isSafeCastleId\(value: unknown\): value is string/);
+assert.match(gatewaySource, /function normaliseMacroCoordinate\(value: string, kingdomId: number\)/);
+assert.match(gatewaySource, /MACRO_CASTLE_KEY_PATTERN\.test\(value\)/);
 assert.match(gatewaySource, /typeof value === "string"/);
 assert.match(gatewaySource, /value\.length <= MAX_CASTLE_ID_LENGTH/);
 assert.match(gatewaySource, /rpc\/claim_war_dragons_critical_request/);

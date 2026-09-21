@@ -12,6 +12,7 @@ const MAX_CASTLE_ID_LENGTH = 64;
 const MACRO_CACHE_MS = 60_000;
 const CRITICAL_INTERVAL_MS = 1_000;
 const CASTLE_ID_PATTERN = /^[1-9][0-9]*-A[0-9]+-[0-9]+$/;
+const MACRO_CASTLE_KEY_PATTERN = /^A[0-9]+-[0-9]+$/;
 
 const RESOURCE_SCOPES = Object.freeze({
   profile: "player.public.read",
@@ -253,6 +254,17 @@ function safeCastleIds(value: unknown) {
   return ids;
 }
 
+function normaliseMacroCoordinate(value: string, kingdomId: number) {
+  const coordinate = isSafeCastleId(value)
+    ? value
+    : MACRO_CASTLE_KEY_PATTERN.test(value)
+      ? `${kingdomId}-${value}`
+      : "";
+  return isSafeCastleId(coordinate) && coordinate.startsWith(`${kingdomId}-`)
+    ? coordinate
+    : "";
+}
+
 function safeRealmName(value: unknown) {
   const realm = String(value || "").trim();
   return /^[A-Za-z0-9_ -]{1,120}$/.test(realm) ? realm : "";
@@ -341,7 +353,7 @@ async function upstreamJson(
   }
 }
 
-function sanitiseMacro(castlePayload: unknown, teamPayload: unknown) {
+function sanitiseMacro(castlePayload: unknown, teamPayload: unknown, kingdomId: number) {
   const castles = (castlePayload as JsonRecord)?.castles;
   const teams = (teamPayload as JsonRecord)?.teams;
   if (!castles || typeof castles !== "object" || !teams || typeof teams !== "object") {
@@ -361,8 +373,9 @@ function sanitiseMacro(castlePayload: unknown, teamPayload: unknown) {
   });
 
   const records: JsonRecord[] = [];
-  Object.entries(castles as JsonRecord).slice(0, 50_000).forEach(([coordinate, raw]) => {
-    if (!isSafeCastleId(coordinate) || !raw || typeof raw !== "object") return;
+  Object.entries(castles as JsonRecord).slice(0, 50_000).forEach(([key, raw]) => {
+    const coordinate = normaliseMacroCoordinate(key, kingdomId);
+    if (!coordinate || !raw || typeof raw !== "object") return;
     const value = raw as JsonRecord;
     const ownerTeam = safeTeamName(value.owner_team);
     const team = ownerTeam ? teamMap.get(ownerTeam) : null;
@@ -519,7 +532,7 @@ async function handleAtlasMacro(
       code: "atlas-macro-unavailable",
     };
   }
-  const value = sanitiseMacro(castles.data, teams.data) as unknown as JsonRecord;
+  const value = sanitiseMacro(castles.data, teams.data, kingdomId) as unknown as JsonRecord;
   macroCache.set(cacheKey, { expiresAt: Date.now() + MACRO_CACHE_MS, value });
   trimMacroCache();
   return { ok: true as const, data: value, cached: false };
