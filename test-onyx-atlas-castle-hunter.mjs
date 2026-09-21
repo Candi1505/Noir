@@ -29,6 +29,24 @@ function castle(overrides = {}) {
   };
 }
 
+test("builds a conservative Atlas map from official metadata", () => {
+  const snapshot = Core.createOfficialSnapshot({
+    updatedAt: 2000,
+    records: [
+      { coordinate: "1-A10-0", rawLevel: 3, ownerTeam: "Live Team", apr: 80, atlasRank: 12 },
+      { coordinate: "not-a-castle", rawLevel: 3 }
+    ]
+  }, { kingdomId: 1, realmName: "Celestial_Haven" });
+
+  assert.equal(snapshot.records.length, 1);
+  assert.equal(snapshot.records[0].coordinate, "1-A10-0");
+  assert.equal(snapshot.records[0].regionId, "A10");
+  assert.equal(snapshot.records[0].tier, 4);
+  assert.equal(snapshot.records[0].gateType, "none");
+  assert.equal(snapshot.records[0].source, "official");
+  assert.equal(snapshot.atlas.topologySource, "official-metadata");
+});
+
 test("defaults to a multi-select T2 through T5 castle list", () => {
   assert.deepEqual(Core.normaliseFilters({}).tiers, [2, 3, 4, 5]);
 
@@ -306,7 +324,8 @@ test("merges only canonical official critical records and timestamps them fresh"
           shieldTimeTs: -20000,
           shieldShipsLost: 0
         },
-        guards: 12345
+        guards: 12345,
+        fleetCount: 4
       },
       { coordinate: "not-a-castle", available: true, observedAt: 10000 }
     ]
@@ -316,6 +335,7 @@ test("merges only canonical official critical records and timestamps them fresh"
   assert.equal(merged.records.length, 1);
   assert.equal(merged.records[0].ownerTeam, "Live Team");
   assert.equal(merged.records[0].guards, 12345);
+  assert.equal(merged.records[0].fleetCount, 4);
   assert.equal(merged.records[0].shield.state, "down");
   assert.equal(Core.effectiveShieldState(merged.records[0].shield, 10000), "down");
 });

@@ -594,6 +594,77 @@
     return result;
   }
 
+  function createOfficialSnapshot(payload, identity = {}) {
+    if (!Array.isArray(payload?.records)) return null;
+    const kingdomId = integer(identity.kingdomId);
+    const realmName = typeof identity.realmName === "string"
+      ? identity.realmName.trim().slice(0, 120)
+      : "";
+    if (kingdomId === null || kingdomId < 1 || !realmName) return null;
+
+    const records = payload.records.slice(0, 50000).flatMap(value => {
+      const coordinate = String(value?.coordinate || "");
+      const rawLevel = integer(value?.rawLevel);
+      if (
+        !isCanonicalCoordinate(coordinate) ||
+        rawLevel === null ||
+        rawLevel < 0 ||
+        rawLevel > 4
+      ) {
+        return [];
+      }
+      const castleKey = coordinate.replace(/^[1-9][0-9]*-/, "");
+      const regionId = castleRegion(castleKey) || "";
+      return [{
+        coordinate,
+        castleKey,
+        name: "",
+        tier: rawLevel + 1,
+        rawLevel,
+        apr: integer(value.apr),
+        atlasRank: integer(value.atlasRank),
+        ownerTeam: typeof value.ownerTeam === "string" ? value.ownerTeam : null,
+        regionId,
+        regionName: regionId,
+        gateType: "none",
+        connectedRegions: [],
+        glory: "needsData",
+        shield: unknownShield(),
+        guards: null,
+        fleetCount: null,
+        checked: false,
+        dataConflict: false,
+        source: "official"
+      }];
+    });
+    if (!records.length) return null;
+
+    const updatedAt = finiteNumber(payload.updatedAt) ?? Date.now() / 1000;
+    return {
+      schemaVersion: 2,
+      capturedAt: updatedAt,
+      catalogueUpdatedAt: updatedAt,
+      atlas: {
+        kingdomId,
+        realmName,
+        shieldConfig: null,
+        gloryMaxCastleLevel: null,
+        majorEvent: false,
+        configObservedAt: updatedAt,
+        topologySource: "official-metadata"
+      },
+      records,
+      summary: {
+        indexedCount: records.length,
+        checkedCount: 0,
+        gateCount: 0,
+        criticalGateCount: 0,
+        connectionCount: 0,
+        relevantEntries: 0
+      }
+    };
+  }
+
   function mergeOfficialMacro(snapshot, payload) {
     if (!snapshot || !Array.isArray(snapshot.records) || !Array.isArray(payload?.records)) {
       return snapshot;
@@ -648,10 +719,14 @@
         finiteNumber(update.observedAt) || 0
       );
       const guardCount = finiteNumber(update.guards);
+      const fleetCount = integer(update.fleetCount);
       return {
         ...record,
         ownerTeam: typeof update.ownerTeam === "string" ? update.ownerTeam : null,
         guards: guardCount !== null && guardCount >= 0 ? guardCount : record.guards,
+        fleetCount: fleetCount !== null && fleetCount >= 0
+          ? fleetCount
+          : record.fleetCount,
         shield: computeOfficialShieldState(
           record,
           update,
@@ -715,6 +790,7 @@
     effectiveShieldState,
     filterCastles,
     sortCastles,
+    createOfficialSnapshot,
     mergeOfficialMacro,
     mergeOfficialCritical,
     mergeOfficialInfo

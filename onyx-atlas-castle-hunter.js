@@ -16,6 +16,7 @@
   const LIVE_BATCH_SIZE = 100;
   const LIVE_BATCH_INTERVAL_MS = 1100;
   const DROPPING_SOON_SECONDS = 2 * 60 * 60;
+  const DEFAULT_KINGDOM_ID = 1;
   const DEFAULT_REALM_NAME = "Celestial_Haven";
   const LEGACY_ATLAS_CONFIG = Object.freeze({
     realmName: DEFAULT_REALM_NAME,
@@ -237,7 +238,7 @@
             : Number.isFinite(Number(guards))
               ? Number(guards)
               : null,
-          fleets: null,
+          fleets: Number.isInteger(record?.fleetCount) ? record.fleetCount : null,
           shieldState,
           shieldEndsAt: ["dropping", "shielded"].includes(shieldState) ? shieldEnd : null,
           cooldownEndsAt: shieldState === "cooldown" ? shieldEnd : null,
@@ -322,8 +323,8 @@
       return;
     }
     setApiStatus("Official API", "ready");
-    button.textContent = snapshot ? "Scan live" : "Import map first";
-    button.disabled = !snapshot;
+    button.textContent = snapshot ? "Scan live" : "Load official map";
+    button.disabled = false;
   }
 
   function formatCaptureTime(epochSeconds) {
@@ -656,7 +657,7 @@
     const progressBar = get("atlasImportProgress");
     progressBar.value = 1;
     progressBar.textContent = "1%";
-    activeWorker = new Worker("onyx-atlas-har-worker.js?v=20260828-audit-2");
+    activeWorker = new Worker("onyx-atlas-har-worker.js?v=20260921-official-map-1");
 
     activeWorker.addEventListener("message", async event => {
       if (event.data?.type === "progress") {
@@ -694,7 +695,7 @@
 
   function atlasIdentity() {
     return {
-      kingdomId: Number(snapshot?.atlas?.kingdomId) || inferredKingdomId(snapshot),
+      kingdomId: Number(snapshot?.atlas?.kingdomId) || inferredKingdomId(snapshot) || DEFAULT_KINGDOM_ID,
       realmName: String(snapshot?.atlas?.realmName || DEFAULT_REALM_NAME)
     };
   }
@@ -721,7 +722,7 @@
   }
 
   async function refreshOfficialAtlas() {
-    if (!snapshot || !WarDragons || liveScanning) return;
+    if (!WarDragons || liveScanning) return;
     liveScanning = true;
     cancelLiveScan = false;
     renderApiState();
@@ -735,13 +736,22 @@
 
       try {
         const macro = await WarDragons.atlasMacro(identity);
-        snapshot = Core.mergeOfficialMacro(snapshot, macro);
-        syncAtlasCommandSnapshot(snapshot);
-        applyFilters({ persist: false });
+        if (snapshot) {
+          snapshot = Core.mergeOfficialMacro(snapshot, macro);
+          syncAtlasCommandSnapshot(snapshot);
+          applyFilters({ persist: false });
+        } else {
+          const officialSnapshot = Core.createOfficialSnapshot(macro, identity);
+          if (!officialSnapshot) {
+            throw new Error("Official Atlas metadata did not contain a usable castle map.");
+          }
+          await activateSnapshot(officialSnapshot, { save: true });
+        }
       } catch (error) {
         if (["authorisation_required", "scope_required", "pending_review"].includes(error?.code)) {
           throw error;
         }
+        if (!snapshot) throw error;
         setImportStatus("Using cached catalogue · live scan continuing");
       }
 
@@ -800,7 +810,7 @@
       setApiStatus("Stopping scan", "working");
       return;
     }
-    if (!apiState.readyToAuthorise) return;
+    if (!apiState.connected && !apiState.readyToAuthorise) return;
     if (!apiState.connected) {
       try {
         setApiStatus("Opening War Dragons", "working");
