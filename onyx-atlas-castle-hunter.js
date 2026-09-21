@@ -494,12 +494,12 @@
       ? ` · ${record.connectedRegions.join(", ")}`
       : "";
     const mapCoordinates = Core.formatMapPosition(record.mapPosition);
-    location.textContent = `${record.regionName || record.regionId || "Atlas"}${connected} · ${mapCoordinates || "Map coordinates unavailable — reload official map"}`;
+    location.textContent = `${record.regionName || record.regionId || "Atlas"}${connected} · ${mapCoordinates ? `API ${mapCoordinates} · game position unverified` : "API coordinates unavailable — scan live to refresh"}`;
     const copy = document.createElement("button");
     copy.type = "button";
     copy.className = "atlas-copy-button";
     copy.dataset.atlasCopy = mapCoordinates;
-    copy.textContent = "Copy coordinates";
+    copy.textContent = "Copy API X/Y";
     copy.disabled = !mapCoordinates;
     footer.append(location, copy);
 
@@ -566,6 +566,16 @@
     get("atlasIndexedCount").textContent = formatNumber(summary.indexedCount || 0);
     get("atlasCheckedCount").textContent = formatNumber(freshChecked);
     get("atlasMatchCount").textContent = formatNumber(filteredRecords.length);
+    const sourceDates = get("atlasSourceDates");
+    if (sourceDates) {
+      const formatSourceDate = value => {
+        const iso = epochIso(value);
+        return iso ? new Date(iso).toLocaleString("en-AU") : "not supplied";
+      };
+      sourceDates.textContent = snapshot?.atlas?.topologySource === "official-metadata"
+        ? `API map: ${snapshot.atlas.realmName}, kingdom ${snapshot.atlas.kingdomId}. Castle catalogue updated: ${formatSourceDate(snapshot.castleUpdatedAt)}. Team catalogue updated: ${formatSourceDate(snapshot.teamUpdatedAt)}. Map match and event protection remain unverified.`
+        : "";
+    }
   }
 
   function applyFilters({ persist = true } = {}) {
@@ -932,6 +942,7 @@
           <div><span>Matches</span><strong id="atlasMatchCount">0</strong></div>
         </div>
         <p id="atlasImportStatus" class="atlas-import-status" role="status" aria-live="polite">No Atlas capture loaded</p>
+        <p id="atlasSourceDates" class="atlas-import-status"></p>
         <progress id="atlasImportProgress" class="atlas-import-progress hidden" max="100" value="0">0%</progress>
       </section>
 

@@ -661,6 +661,8 @@
       schemaVersion: 2,
       capturedAt: updatedAt,
       catalogueUpdatedAt: updatedAt,
+      castleUpdatedAt: finiteNumber(payload.castleUpdatedAt),
+      teamUpdatedAt: finiteNumber(payload.teamUpdatedAt),
       atlas: {
         kingdomId,
         realmName,
@@ -714,6 +716,8 @@
     return {
       ...snapshot,
       catalogueUpdatedAt: finiteNumber(payload.updatedAt) ?? Date.now() / 1000,
+      castleUpdatedAt: finiteNumber(payload.castleUpdatedAt),
+      teamUpdatedAt: finiteNumber(payload.teamUpdatedAt),
       records
     };
   }

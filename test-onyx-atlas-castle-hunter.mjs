@@ -5,6 +5,17 @@ await import(new URL("./onyx-atlas-castle-hunter-core.js", import.meta.url));
 
 const Core = globalThis.OnyxAtlasCore;
 
+test("castle and team catalogue timestamps retain independent source ages", () => {
+  const payload = { updatedAt: 2000, castleUpdatedAt: 1000, teamUpdatedAt: 2000,
+    records: [{ coordinate: "1-A130-1", rawLevel: 4 }] };
+  const snapshot = Core.createOfficialSnapshot(payload, { kingdomId: 1, realmName: "Celestial_Haven" });
+  assert.equal(snapshot.castleUpdatedAt, 1000);
+  assert.equal(snapshot.teamUpdatedAt, 2000);
+  const merged = Core.mergeOfficialMacro(snapshot, { ...payload, castleUpdatedAt: null, teamUpdatedAt: 3000 });
+  assert.equal(merged.castleUpdatedAt, null);
+  assert.equal(merged.teamUpdatedAt, 3000);
+});
+
 test("official metadata cannot prove shield status without event and timing rules", () => {
   for (const enabled of [true, false]) {
     const state = Core.computeOfficialShieldState({ rawLevel: 4 }, {

@@ -396,6 +396,8 @@ function sanitiseMacro(castlePayload: unknown, teamPayload: unknown, kingdomId: 
 
   return {
     records,
+    castleUpdatedAt: finite((castlePayload as JsonRecord)?.update_ts),
+    teamUpdatedAt: finite((teamPayload as JsonRecord)?.update_ts),
     updatedAt: Math.max(
       finite((castlePayload as JsonRecord)?.update_ts) || 0,
       finite((teamPayload as JsonRecord)?.update_ts) || 0,
