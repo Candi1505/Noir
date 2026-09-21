@@ -25,8 +25,11 @@ test('direct team lookup sends one exact team and releases only its public capit
   assert.equal(result.data.teams.length, 1);
   assert.equal(result.data.teams[0].capitalId, '1-A123-2');
   assert.equal(JSON.stringify(result).includes('roster'), false);
-  assert.equal(f.requests[0].options.method, 'POST');
-  assert.deepEqual(JSON.parse(f.requests[0].options.body), {k_id:1, realm_name:'Celestial_Haven', teams:['SeveredReality']});
+  assert.equal(f.requests[0].options.method, 'GET');
+  const query = new URL(f.requests[0].url).searchParams;
+  assert.deepEqual(JSON.parse(query.get('teams')), ['SeveredReality']);
+  assert.equal(query.get('k_id'), '1');
+  assert.equal(query.get('realm_name'), 'Celestial_Haven');
 });
 test('missing team remains missing and malformed capital is not a coordinate', async () => {
   assert.equal((await fixture({}).run(body)).data.teams.length, 0);

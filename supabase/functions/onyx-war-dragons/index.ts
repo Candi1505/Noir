@@ -321,7 +321,6 @@ async function upstreamJson(
   apiKey: string,
   clientSecret: string,
   query: URLSearchParams = new URLSearchParams(),
-  postBody?: JsonRecord,
 ) {
   const timestamp = Math.floor(Date.now() / 1000).toString();
   const signature = await sha256Hex(`${clientSecret}:${apiKey}:${timestamp}`);
@@ -332,14 +331,12 @@ async function upstreamJson(
 
   try {
     const response = await fetch(url, {
-      method: postBody ? "POST" : "GET",
-      ...(postBody ? { body: JSON.stringify(postBody) } : {}),
+      method: "GET",
       headers: {
         "X-WarDragons-APIKey": apiKey,
         "X-WarDragons-Request-Timestamp": timestamp,
         "X-WarDragons-Signature": signature,
         accept: "application/json",
-        ...(postBody ? { "content-type": "application/json" } : {}),
       },
       signal: controller.signal,
     });
@@ -564,8 +561,8 @@ async function handleAtlasTeam(apiKey: string, clientSecret: string, body: JsonR
     return { ok: false as const, status: 400, code: "invalid-atlas-team" };
   }
   const upstream = await upstreamJson(
-    "/api/v1/atlas/teams/metadata", apiKey, clientSecret, new URLSearchParams(),
-    { k_id: kingdomId, realm_name: realmName, teams: [teamName] },
+    "/api/v1/atlas/teams/metadata", apiKey, clientSecret,
+    new URLSearchParams({ k_id: String(kingdomId), realm_name: realmName, teams: JSON.stringify([teamName]) }),
   );
   if (!upstream.ok) return { ok: false as const, status: upstream.status, code: "atlas-team-unavailable" };
   if (!upstream.data || typeof upstream.data !== "object" || Array.isArray(upstream.data)) {
