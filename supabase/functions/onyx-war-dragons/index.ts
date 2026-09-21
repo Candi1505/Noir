@@ -785,7 +785,9 @@ Deno.serve(async request => {
             ? "Live Atlas is pacing requests to the official limit."
             : authorisationRejected
               ? "War Dragons rejected this authorisation or request signature. Re-authorise the player; if it persists, check the server clock and app secret."
-            : "War Dragons did not return this intelligence.",
+            : body.resource === "atlasTeam"
+              ? `The official team endpoint returned HTTP ${result.status}. No team match could be verified.`
+              : "War Dragons did not return this intelligence.",
           ...(retryAfterMs ? { retryAfterMs } : {}),
         },
         retryAfterMs

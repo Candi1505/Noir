@@ -977,9 +977,12 @@
         </div>
         <p id="atlasImportStatus" class="atlas-import-status" role="status" aria-live="polite">No Atlas capture loaded</p>
         <p id="atlasSourceDates" class="atlas-import-status"></p>
-        <label for="atlasTeamName">Exact team name</label>
-        <input id="atlasTeamName" type="text" maxlength="120" autocomplete="off" placeholder="SeveredReality">
-        <button id="atlasTeamLookup" type="button" class="button">Check team API</button>
+        <div class="atlas-filter-grid">
+          <label class="atlas-filter-wide" for="atlasTeamName"><span>Exact team name</span>
+            <input id="atlasTeamName" type="text" maxlength="120" autocomplete="off" placeholder="SeveredReality">
+          </label>
+          <button id="atlasTeamLookup" type="button" class="button atlas-live-button">Check team API</button>
+        </div>
         <p id="atlasTeamResult" class="atlas-import-status" role="status" aria-live="polite"></p>
         <progress id="atlasImportProgress" class="atlas-import-progress hidden" max="100" value="0">0%</progress>
       </section>
