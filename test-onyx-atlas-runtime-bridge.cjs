@@ -22,6 +22,41 @@ assert.match(
   "Every successful live critical batch must update Atlas Command."
 );
 assert.match(
+  hunterSource,
+  /const LIVE_BATCH_SIZE = 25;/,
+  "Live critical requests must use conservative batches."
+);
+assert.match(
+  hunterSource,
+  /const MAX_LIVE_SCAN_CASTLES = 250;/,
+  "A live scan must have a bounded castle count."
+);
+assert.match(
+  hunterSource,
+  /if \(loadedCatalogue\) \{[\s\S]*?narrow the filters[\s\S]*?return;/,
+  "Loading the official catalogue must not automatically scan the whole Atlas."
+);
+assert.match(
+  hunterSource,
+  /candidates\.length > MAX_LIVE_SCAN_CASTLES/,
+  "Broad live scans must be refused until the operator narrows the filters."
+);
+assert.match(
+  hunterSource,
+  /function liveScanCandidates\(\) \{\s*const filters = readFilters\(\);/,
+  "Live batches must honour the selected shield-state filter."
+);
+assert.doesNotMatch(
+  hunterSource,
+  /liveScanCandidates\(\)[\s\S]{0,180}shield:\s*["']any["']/,
+  "Live batches must not silently replace the shield-state filter."
+);
+assert.match(
+  hunterSource,
+  />Shielded \/ bubbled</,
+  "The shield selector must use the player's bubbled terminology."
+);
+assert.match(
   commandSource,
   /activeMode === "live" \? "#oacLiveCastle" : "#oacCastle"/,
   "Live castle jumps must focus the live-card identifier."

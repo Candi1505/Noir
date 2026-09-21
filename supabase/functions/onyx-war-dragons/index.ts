@@ -706,6 +706,7 @@ Deno.serve(async request => {
     }
 
     if (!result.ok) {
+      const authorisationRejected = result.status === 401 || result.status === 403;
       const status = result.status === 429
         ? 429
         : result.status >= 400 && result.status < 500
@@ -717,9 +718,13 @@ Deno.serve(async request => {
         status,
         {
           ok: false,
-          code: "code" in result ? result.code : "upstream-unavailable",
+          code: authorisationRejected
+            ? "war-dragons-authorisation-rejected"
+            : "code" in result ? result.code : "upstream-unavailable",
           message: status === 429
             ? "Live Atlas is pacing requests to the official limit."
+            : authorisationRejected
+              ? "War Dragons rejected this authorisation or request signature. Re-authorise the player; if it persists, check the server clock and app secret."
             : "War Dragons did not return this intelligence.",
           ...(retryAfterMs ? { retryAfterMs } : {}),
         },
@@ -746,6 +751,7 @@ Deno.serve(async request => {
     const timedOut = error instanceof DOMException && error.name === "AbortError";
     return json(origin, timedOut ? 504 : 502, {
       ok: false,
+      code: timedOut ? "upstream-timeout" : "upstream-unavailable",
       message: timedOut
         ? "War Dragons took too long to respond."
         : "War Dragons intelligence is temporarily unavailable.",

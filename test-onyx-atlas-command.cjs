@@ -40,7 +40,7 @@ assert.match(hunterSource, /APR minimum/);
 assert.match(hunterSource, /Critical gates/);
 assert.match(hunterSource, /data-atlas-tier checked/);
 assert.match(hunterSource, /Copy coordinates/);
-assert.match(hunterSource, /LIVE_BATCH_SIZE = 100/);
+assert.match(hunterSource, /LIVE_BATCH_SIZE = 25/);
 assert.match(hunterWorker, /Only an allowlisted/);
 assert.match(hunterWorker, /onyx-atlas-castle-hunter-core\.js\?v=20260921-official-map-1/);
 assert.doesNotMatch(hunterSource, /WAR_DRAGONS_(?:API_KEY|CLIENT_SECRET)|client_secret/i);

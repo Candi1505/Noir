@@ -13,8 +13,9 @@
   const SNAPSHOT_STORE = "snapshots";
   const FILTER_KEY_PREFIX = "onyxAtlasFiltersV1";
   const PAGE_SIZE = 50;
-  const LIVE_BATCH_SIZE = 100;
+  const LIVE_BATCH_SIZE = 25;
   const LIVE_BATCH_INTERVAL_MS = 1100;
+  const MAX_LIVE_SCAN_CASTLES = 250;
   const DROPPING_SOON_SECONDS = 2 * 60 * 60;
   const DEFAULT_KINGDOM_ID = 1;
   const DEFAULT_REALM_NAME = "Celestial_Haven";
@@ -701,7 +702,7 @@
   }
 
   function liveScanCandidates() {
-    const filters = { ...readFilters(), shield: "any" };
+    const filters = readFilters();
     return Core.filterCastles(
       snapshot?.records || [],
       filters,
@@ -730,6 +731,7 @@
 
     try {
       const identity = atlasIdentity();
+      let loadedCatalogue = false;
       if (!identity.kingdomId || !identity.realmName) {
         throw new Error("Atlas map identity is unavailable.");
       }
@@ -746,6 +748,7 @@
             throw new Error("Official Atlas metadata did not contain a usable castle map.");
           }
           await activateSnapshot(officialSnapshot, { save: true });
+          loadedCatalogue = true;
         }
       } catch (error) {
         if (["authorisation_required", "scope_required", "pending_review"].includes(error?.code)) {
@@ -755,9 +758,21 @@
         setImportStatus("Using cached catalogue · live scan continuing");
       }
 
+      if (loadedCatalogue) {
+        setImportStatus("Official map loaded · narrow the filters, then scan live");
+        return;
+      }
+
       const candidates = liveScanCandidates();
       if (!candidates.length) {
         setImportStatus("No castles match the non-shield filters");
+        return;
+      }
+      if (candidates.length > MAX_LIVE_SCAN_CASTLES) {
+        setImportStatus(
+          `Narrow the filters to ${formatNumber(MAX_LIVE_SCAN_CASTLES)} castles or fewer before a live scan.`,
+          true
+        );
         return;
       }
 
@@ -911,7 +926,7 @@
           <label for="atlasAprMin"><span>APR minimum</span><input id="atlasAprMin" type="number" min="0" step="1" inputmode="numeric" placeholder="Any"></label>
           <label for="atlasAprMax"><span>APR maximum</span><input id="atlasAprMax" type="number" min="0" step="1" inputmode="numeric" placeholder="Any"></label>
           <label for="atlasGloryFilter"><span>Glory</span><select id="atlasGloryFilter"><option value="any">Any glory</option><option value="confirmed100">100% confirmed</option><option value="needsData">Needs defender data</option></select></label>
-          <label for="atlasShieldFilter"><span>Shield</span><select id="atlasShieldFilter"><option value="any">Any shield state</option><option value="down">Shield down now</option><option value="observedDown">Observed down in capture</option><option value="cooldown">Cooldown</option><option value="shielded">Shielded</option><option value="inactive">Offline / disabled</option><option value="notChecked">Not checked / stale</option></select></label>
+          <label for="atlasShieldFilter"><span>Shield</span><select id="atlasShieldFilter"><option value="any">Any shield state</option><option value="down">Shield down now</option><option value="observedDown">Observed down in capture</option><option value="cooldown">Cooldown</option><option value="shielded">Shielded / bubbled</option><option value="inactive">Offline / disabled</option><option value="notChecked">Not checked / stale</option></select></label>
           <label for="atlasGateFilter"><span>Gate</span><select id="atlasGateFilter"><option value="any">Any castle</option><option value="gate">Gate castles</option><option value="critical">Critical gates</option><option value="none">Non-gates</option></select></label>
           <label for="atlasSort"><span>Sort</span><select id="atlasSort"><option value="glory">Best glory</option><option value="shield">Shield opportunity</option><option value="aprDesc">APR high to low</option><option value="aprAsc">APR low to high</option><option value="tierDesc">Tier high to low</option><option value="coordinate">Coordinates</option></select></label>
         </div>
