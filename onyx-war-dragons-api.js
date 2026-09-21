@@ -339,6 +339,10 @@
     return invokeAtlasResource("atlasMacro", { kingdomId, realmName });
   }
 
+  function atlasContext() {
+    return invokeAtlasResource("atlasContext");
+  }
+
   function atlasTeam({ kingdomId, realmName, teamName }) {
     return invokeAtlasResource("atlasTeam", { kingdomId, realmName, teamName });
   }
@@ -514,6 +518,7 @@
 
   window.OnyxWarDragonsAPI = Object.freeze({
     install,
+    atlasContext,
     atlasMacro,
     atlasTeam,
     atlasCritical,

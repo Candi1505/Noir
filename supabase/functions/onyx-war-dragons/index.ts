@@ -16,6 +16,7 @@ const MACRO_CASTLE_KEY_PATTERN = /^A[0-9]+-[0-9]+$/;
 
 const RESOURCE_SCOPES = Object.freeze({
   profile: "player.public.read",
+  atlasContext: "atlas.read",
   atlasMacro: "atlas.read",
   atlasTeam: "atlas.read",
   atlasInfo: "atlas.read",
@@ -501,6 +502,47 @@ async function handleProfile(apiKey: string, clientSecret: string) {
   return { ok: true as const, data: upstream.data };
 }
 
+function sanitiseAtlasContext(payload: unknown) {
+  const reports = Array.isArray((payload as JsonRecord)?.reports)
+    ? (payload as JsonRecord).reports as unknown[]
+    : [];
+  let latestKingdomId: number | null = null;
+  let latestTimestamp = -Infinity;
+  let validReportCount = 0;
+  reports.slice(0, 500).forEach(raw => {
+    if (!raw || typeof raw !== "object") return;
+    const report = raw as JsonRecord;
+    const placeId = report.place_id && typeof report.place_id === "object"
+      ? report.place_id as JsonRecord
+      : null;
+    const kingdomId = integer(placeId?.k_id);
+    const timestamp = finite(report.ts);
+    if (kingdomId === null || kingdomId < 1 || kingdomId > 1_000_000) return;
+    validReportCount += 1;
+    if (latestKingdomId === null || (timestamp !== null && timestamp > latestTimestamp)) {
+      latestKingdomId = kingdomId;
+      latestTimestamp = timestamp ?? latestTimestamp;
+    }
+  });
+  return {
+    kingdomId: latestKingdomId,
+    evidence: latestKingdomId === null ? "unavailable" : "recent-team-battle",
+    validReportCount,
+  };
+}
+
+async function handleAtlasContext(apiKey: string, clientSecret: string) {
+  const upstream = await upstreamJson(
+    "/api/v1/atlas/team/battles",
+    apiKey,
+    clientSecret,
+  );
+  if (!upstream.ok) {
+    return { ok: false as const, status: upstream.status, code: "atlas-context-unavailable" };
+  }
+  return { ok: true as const, data: sanitiseAtlasContext(upstream.data) };
+}
+
 async function handleAtlasMacro(
   userId: string,
   apiKey: string,
@@ -741,11 +783,14 @@ Deno.serve(async request => {
   try {
     let result:
       | Awaited<ReturnType<typeof handleProfile>>
+      | Awaited<ReturnType<typeof handleAtlasContext>>
       | Awaited<ReturnType<typeof handleAtlasMacro>>
       | Awaited<ReturnType<typeof handleAtlasTeam>>
       | Awaited<ReturnType<typeof handleAtlasCastleBatch>>;
     if (body.resource === "profile") {
       result = await handleProfile(apiKey, clientSecret);
+    } else if (body.resource === "atlasContext") {
+      result = await handleAtlasContext(apiKey, clientSecret);
     } else if (body.resource === "atlasTeam") {
       result = await handleAtlasTeam(apiKey, clientSecret, body);
     } else if (body.resource === "atlasMacro") {

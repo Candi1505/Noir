@@ -787,15 +787,32 @@
     setApiStatus("Refreshing catalogue", "working");
 
     try {
-      const identity = atlasIdentity();
+      let identity = atlasIdentity();
       let loadedCatalogue = false;
       if (!identity.kingdomId || !identity.realmName) {
         throw new Error("Atlas map identity is unavailable.");
       }
 
+      if (WarDragons.atlasContext) {
+        try {
+          setApiStatus("Finding your Atlas kingdom", "working");
+          const context = await WarDragons.atlasContext();
+          const discoveredKingdomId = Number(context?.kingdomId);
+          if (Number.isSafeInteger(discoveredKingdomId) && discoveredKingdomId > 0) {
+            identity = { ...identity, kingdomId: discoveredKingdomId };
+          }
+        } catch {
+          // Older API connections may not expose recent team battles. The
+          // cached/imported map identity remains a safe fallback.
+        }
+      }
+
       try {
         const macro = await WarDragons.atlasMacro(identity);
-        if (snapshot) {
+        const sameMap = snapshot &&
+          Number(snapshot.atlas?.kingdomId) === identity.kingdomId &&
+          String(snapshot.atlas?.realmName || "") === identity.realmName;
+        if (sameMap) {
           snapshot = Core.mergeOfficialMacro(snapshot, macro);
           await cacheSnapshot(snapshot).catch(() => undefined);
           syncAtlasCommandSnapshot(snapshot);
