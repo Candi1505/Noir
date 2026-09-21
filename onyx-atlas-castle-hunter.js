@@ -378,7 +378,7 @@
     if (effective === "disabled") return { label: "Shield disabled", state: "inactive" };
     if (effective === "offline") return { label: "Infrastructure offline", state: "inactive" };
     if (effective === "notApplicable") return { label: "No shield", state: "inactive" };
-    return { label: "Not checked", state: "unknown" };
+    return { label: record.checked ? "Checked · shield timing unavailable" : "Not checked", state: "unknown" };
   }
 
   function readFilters() {
@@ -453,9 +453,12 @@
     const identity = document.createElement("div");
     const title = document.createElement("h4");
     const coordinate = document.createElement("code");
-    title.textContent = record.name || "Unnamed castle";
+    title.textContent = record.name || record.coordinate;
     coordinate.textContent = record.coordinate;
     identity.append(title, coordinate);
+    const owner = document.createElement("p");
+    owner.textContent = record.ownerTeam || "Owner not supplied";
+    identity.append(owner);
 
     const badges = document.createElement("div");
     badges.className = "atlas-card-badges";
@@ -545,10 +548,10 @@
   function renderSnapshotSummary() {
     const summary = snapshot?.summary || {};
     const nowEpoch = Date.now() / 1000;
-    const freshChecked = (snapshot?.records || []).filter(record => {
-      const state = Core.effectiveShieldState(record.shield, nowEpoch);
-      return state !== "unknown" && state !== "stale";
-    }).length;
+    const freshChecked = (snapshot?.records || []).filter(record =>
+      record.checked && Number(record.criticalObservedAt) > 0 &&
+      nowEpoch - Number(record.criticalObservedAt) <= Core.LIVE_TTL_SECONDS
+    ).length;
     get("atlasIndexedCount").textContent = formatNumber(summary.indexedCount || 0);
     get("atlasCheckedCount").textContent = formatNumber(freshChecked);
     get("atlasMatchCount").textContent = formatNumber(filteredRecords.length);
@@ -763,19 +766,35 @@
         return;
       }
 
-      const candidates = liveScanCandidates();
+      let candidates = liveScanCandidates();
       if (!candidates.length) {
-        setImportStatus("No castles match the non-shield filters");
+        setImportStatus("No known matches. Select Any shield state or Not checked / stale to discover new results.");
         return;
       }
       if (candidates.length > MAX_LIVE_SCAN_CASTLES) {
-        setImportStatus(
-          `Narrow the filters to ${formatNumber(MAX_LIVE_SCAN_CASTLES)} castles or fewer before a live scan.`,
-          true
-        );
-        return;
+        candidates = [...candidates].sort((a, b) =>
+          (Number(a.criticalObservedAt) || 0) - (Number(b.criticalObservedAt) || 0)
+        ).slice(0, LIVE_BATCH_SIZE);
+        setImportStatus("Checking the next 25 matching castles · oldest observations first");
       }
 
+      let infoNote = "";
+      const infoTargets = candidates.filter(record => !record.infoObservedAt || Date.now() / 1000 - record.infoObservedAt > 3600).slice(0, 25);
+      if (infoTargets.length) {
+        try {
+          setApiStatus("Loading castle names", "working");
+          const details = await WarDragons.atlasInfo(infoTargets.map(record => record.coordinate));
+          snapshot = Core.mergeOfficialInfo(snapshot, details);
+          await cacheSnapshot(snapshot).catch(() => undefined);
+          syncAtlasCommandSnapshot(snapshot);
+          applyFilters({ persist: false });
+          if (candidates.length > infoTargets.length) infoNote = " · names loaded for this detail batch";
+        } catch (error) {
+          infoNote = error?.code === "info-rate-limited"
+            ? ` · name lookup available in ${Math.ceil(error.retryAfterMs / 1000)}s`
+            : " · castle details unavailable";
+        }
+      }
       let processed = 0;
       for (let offset = 0; offset < candidates.length; offset += LIVE_BATCH_SIZE) {
         if (cancelLiveScan) break;
@@ -788,7 +807,7 @@
         processed += batch.length;
         setApiStatus(`Live ${formatNumber(processed)}/${formatNumber(candidates.length)}`, "working");
 
-        if (processed % 1000 === 0) {
+        {
           syncAtlasCommandSnapshot(snapshot);
           applyFilters({ persist: false });
           await cacheSnapshot(snapshot).catch(() => undefined);
@@ -804,7 +823,7 @@
       setImportStatus(
         cancelLiveScan
           ? `Live scan stopped · ${formatNumber(processed)} checked`
-          : `Live scan complete · ${formatNumber(processed)} checked`,
+          : `Live scan complete · ${formatNumber(processed)} requested${infoNote}`,
       );
       applyFilters({ persist: false });
     } catch (error) {

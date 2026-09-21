@@ -35,6 +35,7 @@ type MacroCacheEntry = {
 };
 
 const macroCache = new Map<string, MacroCacheEntry>();
+const infoCache = new Map<string, MacroCacheEntry>();
 
 function configuredOrigins() {
   const configured = (Deno.env.get("ONYX_ALLOWED_ORIGINS") || "")
@@ -404,7 +405,7 @@ function sanitiseFort(value: unknown) {
   return {
     level: integer(fort.level),
     upgradeEpoch: finite(fort.upgrade_epoch),
-    shieldTurnedOn: fort.shield_turned_on === true,
+    shieldTurnedOn: typeof fort.shield_turned_on === "boolean" ? fort.shield_turned_on : null,
     shieldTimeTs: finite(fort.shield_time_ts),
     shieldShipsLost: finite(fort.shield_ships_lost),
   };
@@ -552,6 +553,20 @@ async function handleAtlasCastleBatch(
     return { ok: false as const, status: 400, code: "invalid-castle-ids" };
   }
 
+  const infoCacheKey = resource === "atlasInfo"
+    ? `${userId}:${await sha256Hex(apiKey)}:${[...castleIds].sort().join(",")}` : "";
+  if (resource === "atlasInfo") {
+    const cached = infoCache.get(infoCacheKey);
+    if (cached && cached.expiresAt > Date.now()) return { ok: true as const, data: cached.value };
+    const claim = await fetch(`${supabaseUrl}/rest/v1/rpc/claim_war_dragons_info_request`, {
+      method: "POST", headers: serviceHeaders(serviceKey, true), body: "{}",
+    });
+    if (!claim.ok) throw new Error("info-rate-limit-unavailable");
+    const retryAfterMs = integer(await claim.json());
+    if (retryAfterMs === null || retryAfterMs < 0 || retryAfterMs > 61000) throw new Error("invalid-info-rate-limit");
+    if (retryAfterMs > 0) return { ok: false as const, status: 429, code: "info-rate-limited", retryAfterMs };
+  }
+
   if (resource === "atlasCritical") {
     const retryAfterMs = await claimCriticalRequest(
       userId,
@@ -577,12 +592,17 @@ async function handleAtlasCastleBatch(
     return { ok: false as const, status: upstream.status, code: "atlas-live-unavailable" };
   }
   const observedAt = Date.now() / 1000;
+  if (resource === "atlasInfo") {
+    const data = { records: sanitiseInfo(upstream.data, castleIds, observedAt), observedAt };
+    for (const [key, entry] of infoCache) if (entry.expiresAt <= Date.now()) infoCache.delete(key);
+    if (infoCache.size >= 20) infoCache.clear();
+    infoCache.set(infoCacheKey, { value: data, expiresAt: Date.now() + 60000 });
+    return { ok: true as const, data };
+  }
   return {
     ok: true as const,
     data: {
-      records: resource === "atlasCritical"
-        ? sanitiseCritical(upstream.data, castleIds, observedAt)
-        : sanitiseInfo(upstream.data, castleIds, observedAt),
+      records: sanitiseCritical(upstream.data, castleIds, observedAt),
       observedAt,
     },
   };

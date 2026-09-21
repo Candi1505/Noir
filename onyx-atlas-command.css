@@ -1057,6 +1057,17 @@
   margin-top: 18px;
 }
 
+.oac-workspace > button[data-oac-tab="hunter"] {
+  min-height: 44px;
+  padding: 12px 18px;
+  border: 1px solid rgba(226, 185, 79, .3);
+  border-radius: 12px;
+  color: #ecd186;
+  background: rgba(181, 131, 38, .12);
+  font: inherit;
+  cursor: pointer;
+}
+
 .oac-live-filters button {
   display: flex;
   align-items: center;

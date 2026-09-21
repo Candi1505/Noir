@@ -58,6 +58,22 @@ test("defaults to a multi-select T2 through T5 castle list", () => {
   assert.deepEqual(result.records.map(record => record.tier).sort(), [2, 4]);
 });
 
+test("official details enrich names without inventing shields or losing guards", () => {
+  const original = { records: [castle({ guards: 250 })] };
+  const merged = Core.mergeOfficialInfo(original, { records: [
+    { coordinate: "42-A1-1", available: true, name: "Verified Keep", ownerTeam: "Verified Team", observedAt: 1000 },
+    { coordinate: "not-valid", available: true, name: "Ignore" }
+  ] });
+  assert.equal(merged.records[0].name, "Verified Keep");
+  assert.equal(merged.records[0].guards, 250);
+  assert.deepEqual(merged.records[0].shield, original.records[0].shield);
+  assert.equal(original.records[0].name, "Synthetic Keep");
+});
+
+test("missing shield toggle is unknown, never disabled", () => {
+  assert.equal(Core.computeOfficialShieldState(castle(), { observedAt: 1000, fort: { shieldTurnedOn: null } }, {}, 1000).state, "unknown");
+});
+
 test("intersects inclusive APR bounds with tier and glory filters", () => {
   const records = [
     castle({ coordinate: "42-A1-1", tier: 4, apr: 99 }),

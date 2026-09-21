@@ -530,10 +530,11 @@
       endAt: null,
       shipsUntilTrigger: null
     };
-    if (fort.shieldTurnedOn !== true) {
+    if (fort.shieldTurnedOn === false) {
       result.state = "disabled";
       return result;
     }
+    if (fort.shieldTurnedOn !== true) return result;
     if (atlas?.majorEvent === true) {
       result.state = "event";
       return result;
@@ -700,6 +701,22 @@
     };
   }
 
+  function mergeOfficialInfo(snapshot, payload) {
+    if (!snapshot || !Array.isArray(payload?.records)) return snapshot;
+    const updates = new Map(payload.records.filter(value => value?.available === true && isCanonicalCoordinate(value.coordinate))
+      .map(value => [value.coordinate, value]));
+    return { ...snapshot, records: snapshot.records.map(record => {
+      const value = updates.get(record.coordinate);
+      if (!value) return record;
+      return { ...record,
+        name: typeof value.name === "string" && value.name.trim() ? value.name.trim().slice(0, 120) : record.name,
+        ownerTeam: typeof value.ownerTeam === "string" ? value.ownerTeam : record.ownerTeam,
+        infoObservedAt: finiteNumber(value.observedAt),
+        infrastructure: value.infrastructure || null
+      };
+    }) };
+  }
+
   function mergeOfficialCritical(snapshot, payload) {
     if (!snapshot || !Array.isArray(snapshot.records) || !Array.isArray(payload?.records)) {
       return snapshot;
@@ -734,6 +751,7 @@
           update.observedAt
         ),
         checked: true,
+        criticalObservedAt: finiteNumber(update.observedAt),
         source: "official"
       };
     });
@@ -793,6 +811,7 @@
     createOfficialSnapshot,
     mergeOfficialMacro,
     mergeOfficialCritical,
+    mergeOfficialInfo,
     mergeOfficialInfo
   });
 })(typeof globalThis !== "undefined" ? globalThis : window);
