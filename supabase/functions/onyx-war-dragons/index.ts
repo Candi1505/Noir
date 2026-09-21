@@ -17,6 +17,7 @@ const MACRO_CASTLE_KEY_PATTERN = /^A[0-9]+-[0-9]+$/;
 const RESOURCE_SCOPES = Object.freeze({
   profile: "player.public.read",
   atlasMacro: "atlas.read",
+  atlasTeam: "atlas.read",
   atlasInfo: "atlas.read",
   atlasCritical: "atlas.read",
 });
@@ -320,6 +321,7 @@ async function upstreamJson(
   apiKey: string,
   clientSecret: string,
   query: URLSearchParams = new URLSearchParams(),
+  postBody?: JsonRecord,
 ) {
   const timestamp = Math.floor(Date.now() / 1000).toString();
   const signature = await sha256Hex(`${clientSecret}:${apiKey}:${timestamp}`);
@@ -330,12 +332,14 @@ async function upstreamJson(
 
   try {
     const response = await fetch(url, {
-      method: "GET",
+      method: postBody ? "POST" : "GET",
+      ...(postBody ? { body: JSON.stringify(postBody) } : {}),
       headers: {
         "X-WarDragons-APIKey": apiKey,
         "X-WarDragons-Request-Timestamp": timestamp,
         "X-WarDragons-Signature": signature,
         accept: "application/json",
+        ...(postBody ? { "content-type": "application/json" } : {}),
       },
       signal: controller.signal,
     });
@@ -550,6 +554,28 @@ async function handleAtlasMacro(
   return { ok: true as const, data: value, cached: false };
 }
 
+// Team-specific lookup avoids treating absence from the macro directory as proof
+// a team does not exist. Only the requested team's public capital is returned.
+async function handleAtlasTeam(apiKey: string, clientSecret: string, body: JsonRecord) {
+  const kingdomId = integer(body.kingdomId);
+  const realmName = safeRealmName(body.realmName);
+  const teamName = safeTeamName(body.teamName)?.trim();
+  if (!teamName || kingdomId === null || kingdomId < 1 || kingdomId > 1_000_000 || !realmName) {
+    return { ok: false as const, status: 400, code: "invalid-atlas-team" };
+  }
+  const upstream = await upstreamJson(
+    "/api/v1/atlas/teams/metadata", apiKey, clientSecret, new URLSearchParams(),
+    { k_id: kingdomId, realm_name: realmName, teams: [teamName] },
+  );
+  if (!upstream.ok) return { ok: false as const, status: upstream.status, code: "atlas-team-unavailable" };
+  if (!upstream.data || typeof upstream.data !== "object" || Array.isArray(upstream.data)) {
+    throw new Error("invalid-team-response");
+  }
+  const teams = sanitiseMacro({ castles: {} }, { teams: upstream.data }, kingdomId).teams
+    .filter(team => team.name.toLowerCase() === teamName.toLowerCase());
+  return { ok: true as const, data: { teams, requestedTeam: teamName, kingdomId, realmName } };
+}
+
 async function handleAtlasCastleBatch(
   resource: "atlasInfo" | "atlasCritical",
   userId: string,
@@ -719,9 +745,12 @@ Deno.serve(async request => {
     let result:
       | Awaited<ReturnType<typeof handleProfile>>
       | Awaited<ReturnType<typeof handleAtlasMacro>>
+      | Awaited<ReturnType<typeof handleAtlasTeam>>
       | Awaited<ReturnType<typeof handleAtlasCastleBatch>>;
     if (body.resource === "profile") {
       result = await handleProfile(apiKey, clientSecret);
+    } else if (body.resource === "atlasTeam") {
+      result = await handleAtlasTeam(apiKey, clientSecret, body);
     } else if (body.resource === "atlasMacro") {
       result = await handleAtlasMacro(userId, apiKey, clientSecret, body);
     } else {

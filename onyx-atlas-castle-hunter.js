@@ -753,6 +753,32 @@
     throw new Error("Live Atlas pacing failed.");
   }
 
+  let teamLookupAfter = 0;
+  async function checkOfficialTeam() {
+    const button = get("atlasTeamLookup");
+    const output = get("atlasTeamResult");
+    const teamName = String(get("atlasTeamName")?.value || "").trim();
+    if (!teamName || !WarDragons?.atlasTeam || button.disabled) return;
+    if (Date.now() < teamLookupAfter) {
+      output.textContent = `Team lookup available in ${Math.ceil((teamLookupAfter - Date.now()) / 1000)}s.`;
+      return;
+    }
+    button.disabled = true;
+    teamLookupAfter = Date.now() + 61000;
+    output.textContent = `Checking ${teamName} directly…`;
+    try {
+      const result = await WarDragons.atlasTeam({ ...atlasIdentity(), teamName });
+      const team = result.teams?.[0];
+      output.textContent = team
+        ? `${team.name} returned by the team API. Capital castle ID: ${team.capitalId || "not supplied"}. Game position still unverified.`
+        : `The team API returned no matching entry for ${teamName} on ${result.realmName}, kingdom ${result.kingdomId}. This does not establish that the team is absent from your game map.`;
+    } catch (error) {
+      output.textContent = `Team lookup failed: ${error.message || "official source unavailable"}`;
+    } finally {
+      button.disabled = false;
+    }
+  }
+
   async function refreshOfficialAtlas() {
     if (!WarDragons || liveScanning) return;
     liveScanning = true;
@@ -771,6 +797,7 @@
         const macro = await WarDragons.atlasMacro(identity);
         if (snapshot) {
           snapshot = Core.mergeOfficialMacro(snapshot, macro);
+          await cacheSnapshot(snapshot).catch(() => undefined);
           syncAtlasCommandSnapshot(snapshot);
           applyFilters({ persist: false });
         } else {
@@ -950,6 +977,10 @@
         </div>
         <p id="atlasImportStatus" class="atlas-import-status" role="status" aria-live="polite">No Atlas capture loaded</p>
         <p id="atlasSourceDates" class="atlas-import-status"></p>
+        <label for="atlasTeamName">Exact team name</label>
+        <input id="atlasTeamName" type="text" maxlength="120" autocomplete="off" placeholder="SeveredReality">
+        <button id="atlasTeamLookup" type="button" class="button">Check team API</button>
+        <p id="atlasTeamResult" class="atlas-import-status" role="status" aria-live="polite"></p>
         <progress id="atlasImportProgress" class="atlas-import-progress hidden" max="100" value="0">0%</progress>
       </section>
 
@@ -1010,6 +1041,7 @@
       renderLimit += PAGE_SIZE;
       renderResults();
     });
+    get("atlasTeamLookup")?.addEventListener("click", checkOfficialTeam);
     get("atlasLiveButton")?.addEventListener("click", handleLiveButton);
     get("atlasResults")?.addEventListener("click", event => {
       const observedDown = event.target.closest("[data-atlas-show-observed-down]");
