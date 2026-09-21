@@ -361,15 +361,19 @@ function sanitiseMacro(castlePayload: unknown, teamPayload: unknown, kingdomId: 
     throw new Error("invalid-macro-response");
   }
 
-  const teamMap = new Map<string, { apr: number | null; atlasRank: number | null }>();
+  const teamMap = new Map<string, { apr: number | null; atlasRank: number | null; capitalId: string | null }>();
   Object.entries(teams as JsonRecord).slice(0, 50_000).forEach(([name, raw]) => {
     if (!safeTeamName(name) || !raw || typeof raw !== "object") return;
     const value = raw as JsonRecord;
     const apr = integer(value.power_rank);
     const atlasRank = integer(value.rank);
+    const capital = value.capital;
+    const capitalId = Array.isArray(capital) && capital.length === 3
+      ? `${capital[0]}-${capital[1]}-${capital[2]}` : "";
     teamMap.set(name, {
       apr: apr !== null && apr >= 0 ? apr : null,
       atlasRank: atlasRank !== null && atlasRank >= 0 ? atlasRank : null,
+      capitalId: isSafeCastleId(capitalId) ? capitalId : null,
     });
   });
 
@@ -396,6 +400,7 @@ function sanitiseMacro(castlePayload: unknown, teamPayload: unknown, kingdomId: 
 
   return {
     records,
+    teams: Array.from(teamMap, ([name, team]) => ({ name, capitalId: team.capitalId })),
     castleUpdatedAt: finite((castlePayload as JsonRecord)?.update_ts),
     teamUpdatedAt: finite((teamPayload as JsonRecord)?.update_ts),
     updatedAt: Math.max(

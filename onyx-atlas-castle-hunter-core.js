@@ -661,6 +661,7 @@
       schemaVersion: 2,
       capturedAt: updatedAt,
       catalogueUpdatedAt: updatedAt,
+      teams: Array.isArray(payload.teams) ? payload.teams : [],
       castleUpdatedAt: finiteNumber(payload.castleUpdatedAt),
       teamUpdatedAt: finiteNumber(payload.teamUpdatedAt),
       atlas: {
@@ -716,6 +717,7 @@
     return {
       ...snapshot,
       catalogueUpdatedAt: finiteNumber(payload.updatedAt) ?? Date.now() / 1000,
+      teams: Array.isArray(payload.teams) ? payload.teams : [],
       castleUpdatedAt: finiteNumber(payload.castleUpdatedAt),
       teamUpdatedAt: finiteNumber(payload.teamUpdatedAt),
       records

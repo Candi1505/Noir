@@ -575,6 +575,13 @@
       sourceDates.textContent = snapshot?.atlas?.topologySource === "official-metadata"
         ? `API map: ${snapshot.atlas.realmName}, kingdom ${snapshot.atlas.kingdomId}. Castle catalogue updated: ${formatSourceDate(snapshot.castleUpdatedAt)}. Team catalogue updated: ${formatSourceDate(snapshot.teamUpdatedAt)}. Map match and event protection remain unverified.`
         : "";
+      const query = String(get("atlasSearch")?.value || "").trim().toLocaleLowerCase("en-AU");
+      if (query && snapshot?.atlas?.topologySource === "official-metadata" && Array.isArray(snapshot.teams)) {
+        const teams = snapshot.teams.filter(team => typeof team.name === "string" && team.name.toLocaleLowerCase("en-AU").includes(query));
+        sourceDates.textContent += teams.length
+          ? ` Team directory matches: ${teams.slice(0, 5).map(team => `${team.name} (capital ID: ${team.capitalId || "not supplied"})`).join("; ")}.`
+          : " No matching team name in this API team directory.";
+      }
     }
   }
 
