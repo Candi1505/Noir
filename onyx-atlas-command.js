@@ -74,6 +74,7 @@
     connected: false,
     readyToAuthorise: false,
     reviewStatus: "pending_review",
+    connectionMode: null,
     playerId: null,
     scopes: [],
     connectedAt: null,
@@ -671,9 +672,10 @@
 
   function renderConnectionCard() {
     const connected = liveConnection.connected === true;
+    const ownerConnection = liveConnection.connectionMode === "owner";
     const pending = liveConnection.reviewStatus !== "ready";
     const phaseLabel = connected
-      ? "Securely connected"
+      ? ownerConnection ? "Secure owner connection" : "Securely connected"
       : pending
         ? "Approval pending"
         : liveConnection.phase === "checking" || liveConnection.phase === "working"
@@ -690,7 +692,9 @@
       <div class="oac-connection-actions">
         <div class="oac-scope-list"><span>atlas.read</span><span>player.public.read</span></div>
         ${connected
-          ? `<button type="button" data-oac-disconnect>Disconnect</button>`
+          ? ownerConnection
+            ? `<button type="button" disabled>Owner connection</button>`
+            : `<button type="button" data-oac-disconnect>Disconnect</button>`
           : pending
             ? `<button type="button" disabled>Review pending</button>`
             : `<button type="button" data-oac-connect>Authorise</button>`}
@@ -1231,6 +1235,9 @@
       connected: detail.connected === true,
       readyToAuthorise: detail.readyToAuthorise === true,
       reviewStatus: detail.reviewStatus === "ready" ? "ready" : "pending_review",
+      connectionMode: ["owner", "player"].includes(detail.connectionMode)
+        ? detail.connectionMode
+        : null,
       playerId: cleanText(detail.playerId, 160) || null,
       scopes: Array.isArray(detail.scopes)
         ? detail.scopes.filter(scope => ["atlas.read", "player.public.read"].includes(scope))

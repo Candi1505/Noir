@@ -4,11 +4,12 @@ const vm = require("node:vm");
 
 const html = fs.readFileSync("index.html", "utf8");
 const browserSource = fs.readFileSync("onyx-war-dragons-auth.js", "utf8");
+const atlasSource = fs.readFileSync("onyx-atlas-command.js", "utf8");
 const oauthSource = fs.readFileSync("supabase/functions/onyx-war-dragons-oauth/index.ts", "utf8");
 const gatewaySource = fs.readFileSync("supabase/functions/onyx-war-dragons/index.ts", "utf8");
 const sql = fs.readFileSync("supabase/war_dragons_multi_player_oauth.sql", "utf8");
 
-assert.match(html, /onyx-war-dragons-auth\.js\?v=20260828-audit-2/);
+assert.match(html, /onyx-war-dragons-auth\.js\?v=20260921-owner-api-1/);
 assert.ok(
   html.indexOf("onyx-war-dragons-api.js") < html.indexOf("onyx-war-dragons-auth.js")
   && html.indexOf("onyx-war-dragons-auth.js") < html.indexOf("onyx-atlas-command.js"),
@@ -24,8 +25,15 @@ assert.match(browserSource, /beginAuthorization/);
 assert.match(browserSource, /finishReturn/);
 assert.match(browserSource, /disconnect/);
 assert.match(browserSource, /api-dot-pgdragonsong\\\.appspot\\\.com/);
+assert.match(browserSource, /source\.connectionMode === "owner"/);
+assert.match(browserSource, /secure owner War Dragons connection is active/);
+assert.match(atlasSource, /liveConnection\.connectionMode === "owner"/);
+assert.match(atlasSource, /Owner connection/);
 
 assert.match(oauthSource, /WAR_DRAGONS_MULTI_PLAYER_ENABLED/);
+assert.match(oauthSource, /function ownerFallbackConfigured\(userId: string\)/);
+assert.match(oauthSource, /connectionMode: connection \? "player" : ownerFallback \? "owner" : null/);
+assert.match(oauthSource, /reviewStatus: connected \|\| configured \? "ready" : "pending_review"/);
 assert.match(oauthSource, /WAR_DRAGONS_TOKEN_ENCRYPTION_KEY/);
 assert.match(oauthSource, /AES-GCM/);
 assert.match(oauthSource, /crypto\.getRandomValues\(new Uint8Array\(32\)\)/);
@@ -108,6 +116,7 @@ assert.doesNotMatch(sql, /create policy/i);
 const listeners = new Map();
 const invocations = [];
 let assignedUrl = "";
+let ownerMode = false;
 const location = {
   href: "https://candi1505.github.io/Noir/",
   hash: "",
@@ -133,7 +142,19 @@ const sandbox = {
       async invoke(name, options) {
         invocations.push({ name, options });
         if (options.body.action === "status") {
-          return { data: { ok: true, connected: false, readyToAuthorise: true, reviewStatus: "ready" }, error: null };
+          return {
+            data: ownerMode
+              ? {
+                ok: true,
+                connected: true,
+                readyToAuthorise: false,
+                reviewStatus: "ready",
+                connectionMode: "owner",
+                scopes: ["atlas.read", "player.public.read"]
+              }
+              : { ok: true, connected: false, readyToAuthorise: true, reviewStatus: "ready" },
+            error: null
+          };
         }
         if (options.body.action === "begin") {
           return {
@@ -159,10 +180,16 @@ vm.runInContext(browserSource, sandbox);
   const status = await auth.refreshStatus();
   assert.equal(status.phase, "ready");
   assert.equal(status.connected, false);
+  ownerMode = true;
+  const ownerStatus = await auth.refreshStatus();
+  assert.equal(ownerStatus.phase, "connected");
+  assert.equal(ownerStatus.connected, true);
+  assert.equal(ownerStatus.connectionMode, "owner");
+  assert.match(ownerStatus.message, /secure owner War Dragons connection is active/);
   assert.equal(await auth.beginAuthorization(), true);
   assert.match(assignedUrl, /^https:\/\/api-dot-pgdragonsong\.appspot\.com\/api\/authorize\?/);
   assert.equal(new URL(assignedUrl).searchParams.get("state")?.length, 43);
-  assert.deepEqual(invocations.map(call => call.options.body.action), ["status", "begin"]);
+  assert.deepEqual(invocations.map(call => call.options.body.action), ["status", "status", "begin"]);
   assert.ok(invocations.every(call => call.name === "onyx-war-dragons-oauth"));
   console.log("Onyx multi-player War Dragons authorisation security checks passed.");
 })().catch(error => {

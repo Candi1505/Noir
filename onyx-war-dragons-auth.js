@@ -23,6 +23,7 @@
     connected: false,
     readyToAuthorise: false,
     reviewStatus: "pending_review",
+    connectionMode: null,
     playerId: null,
     scopes: [],
     connectedAt: null,
@@ -51,6 +52,9 @@
       connected,
       readyToAuthorise,
       reviewStatus: source.reviewStatus === "ready" ? "ready" : "pending_review",
+      connectionMode: ["owner", "player"].includes(source.connectionMode)
+        ? source.connectionMode
+        : null,
       playerId: cleanText(source.playerId, 160) || null,
       scopes: Array.isArray(source.scopes)
         ? source.scopes.filter(scope => ["atlas.read", "player.public.read"].includes(scope))
@@ -58,7 +62,9 @@
       connectedAt: cleanText(source.connectedAt, 64) || null,
       lastVerifiedAt: cleanText(source.lastVerifiedAt, 64) || null,
       message: connected
-        ? "Your player-authorised War Dragons connection is active."
+        ? source.connectionMode === "owner"
+          ? "Your secure owner War Dragons connection is active."
+          : "Your player-authorised War Dragons connection is active."
         : readyToAuthorise
           ? "Onyx is ready for your War Dragons authorisation."
           : "War Dragons multi-player API review is pending."

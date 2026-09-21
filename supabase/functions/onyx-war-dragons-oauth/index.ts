@@ -210,6 +210,17 @@ function multiPlayerConfigured() {
     Boolean(secretKey());
 }
 
+function ownerFallbackConfigured(userId: string) {
+  const ownerUserId = Deno.env.get("WAR_DRAGONS_OWNER_USER_ID") || "";
+  return Boolean(
+    userId &&
+    ownerUserId &&
+    userId === ownerUserId &&
+    Deno.env.get("WAR_DRAGONS_API_KEY") &&
+    Deno.env.get("WAR_DRAGONS_CLIENT_SECRET"),
+  );
+}
+
 async function connectionFor(userId: string) {
   const query = new URLSearchParams({
     select: "player_id,scopes,connected_at,last_verified_at",
@@ -241,13 +252,20 @@ async function handleStatus(origin: string | null, userId: string) {
     });
   }
   const configured = multiPlayerConfigured();
+  const ownerFallback = ownerFallbackConfigured(userId);
+  const connected = Boolean(connection) || ownerFallback;
   return json(origin, 200, {
     ok: true,
-    connected: Boolean(connection),
+    connected,
     readyToAuthorise: configured,
-    reviewStatus: configured ? "ready" : "pending_review",
+    reviewStatus: connected || configured ? "ready" : "pending_review",
+    connectionMode: connection ? "player" : ownerFallback ? "owner" : null,
     playerId: connection?.player_id || null,
-    scopes: Array.isArray(connection?.scopes) ? connection.scopes : [],
+    scopes: Array.isArray(connection?.scopes)
+      ? connection.scopes
+      : ownerFallback
+        ? REQUESTED_SCOPES
+        : [],
     connectedAt: connection?.connected_at || null,
     lastVerifiedAt: connection?.last_verified_at || null,
   });
