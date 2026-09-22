@@ -384,7 +384,10 @@
           fleets: Number.isInteger(record?.fleetCount) ? record.fleetCount : null,
           apr: Number.isInteger(record?.apr) ? record.apr : null,
           atlasRank: Number.isInteger(record?.atlasRank) ? record.atlasRank : null,
-          gloryPercent: Number.isFinite(Number(record?.gloryPercent))
+          gloryPercent: record?.gloryPercent !== null &&
+            record?.gloryPercent !== undefined &&
+            record?.gloryPercent !== "" &&
+            Number.isFinite(Number(record.gloryPercent))
             ? Math.max(0, Math.min(100, Math.round(Number(record.gloryPercent))))
             : null,
           gloryObservedAt: epochIso(record?.gloryObservedAt),
@@ -404,7 +407,10 @@
               type: String(primarch?.type || ""),
               tier: Number.isInteger(primarch?.tier) ? primarch.tier : null,
               level: Number.isInteger(primarch?.level) ? primarch.level : null,
-              troops: Number.isFinite(Number(primarch?.troops))
+              troops: primarch?.troops !== null &&
+                primarch?.troops !== undefined &&
+                primarch?.troops !== "" &&
+                Number.isFinite(Number(primarch.troops))
                 ? Math.max(0, Number(primarch.troops))
                 : null,
               playerName: String(primarch?.playerName || ""),

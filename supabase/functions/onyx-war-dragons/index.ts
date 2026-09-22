@@ -5,6 +5,7 @@ const DEFAULT_ALLOWED_ORIGINS = [
   "https://candi1505.github.io",
 ];
 const WAR_DRAGONS_ORIGIN = "https://api-dot-pgdragonsong.appspot.com";
+const LEGACY_WAR_DRAGONS_ORIGIN = "https://970-dot-pgdragonsong.appspot.com";
 const REQUEST_TIMEOUT_MS = 12_000;
 const MAX_UPSTREAM_BYTES = 25 * 1024 * 1024;
 const MAX_CASTLES_PER_REQUEST = 100;
@@ -322,12 +323,13 @@ async function upstreamJson(
   apiKey: string,
   clientSecret: string,
   query: URLSearchParams = new URLSearchParams(),
+  origin = WAR_DRAGONS_ORIGIN,
 ) {
   const timestamp = Math.floor(Date.now() / 1000).toString();
   const signature = await sha256Hex(`${clientSecret}:${apiKey}:${timestamp}`);
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-  const url = new URL(path, WAR_DRAGONS_ORIGIN);
+  const url = new URL(path, origin);
   query.forEach((value, key) => url.searchParams.set(key, value));
 
   try {
@@ -405,16 +407,11 @@ function sanitiseMacro(
     });
   });
 
-  const profile = profilePayload && typeof profilePayload === "object"
-    ? profilePayload as JsonRecord
-    : null;
+  const profile = extractProfile(profilePayload);
   const playerTeam = safeTeamName(profile?.guild_name);
-  const profileTeamRank = integer(profile?.team_rank);
-  const playerApr = profileTeamRank !== null && profileTeamRank > 0
-    ? profileTeamRank
-    : playerTeam
-      ? teamMap.get(playerTeam)?.apr ?? null
-      : null;
+  const playerApr = playerTeam
+    ? teamMap.get(playerTeam)?.apr ?? null
+    : null;
 
   return {
     records,
@@ -429,6 +426,23 @@ function sanitiseMacro(
       finite((teamPayload as JsonRecord)?.update_ts) || 0,
     ) || null,
   };
+}
+
+function extractProfile(payload: unknown): JsonRecord | null {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) return null;
+  const source = payload as JsonRecord;
+  const directCandidates = [source, source.profile, source.player, source.data];
+  for (const candidate of directCandidates) {
+    if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) continue;
+    const record = candidate as JsonRecord;
+    if (safeTeamName(record.guild_name) || safeTeamName(record.name)) return record;
+  }
+  for (const candidate of Object.values(source).slice(0, 100)) {
+    if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) continue;
+    const record = candidate as JsonRecord;
+    if (safeTeamName(record.guild_name) || safeTeamName(record.name)) return record;
+  }
+  return null;
 }
 
 function sanitiseFleetTroops(value: JsonRecord) {
@@ -479,13 +493,22 @@ function collectCriticalPlayerIds(payload: unknown, castleIds: string[]) {
 
 function sanitisePlayerNames(payload: unknown, playerIds: string[]) {
   const names = new Map<string, string>();
-  if (!payload || typeof payload !== "object" || Array.isArray(payload)) return names;
+  if (!payload || typeof payload !== "object") return names;
   const source = payload as JsonRecord;
-  const records = source.profiles && typeof source.profiles === "object" && !Array.isArray(source.profiles)
-    ? source.profiles as JsonRecord
-    : source;
+  const nested = source.profiles ?? source.players ?? source.data;
+  const records = nested && typeof nested === "object" ? nested : source;
+  if (Array.isArray(records)) {
+    records.slice(0, 1000).forEach(raw => {
+      if (!raw || typeof raw !== "object") return;
+      const record = raw as JsonRecord;
+      const id = String(record.pgid ?? record.player_id ?? record.id ?? "");
+      const name = safeTeamName(record.name);
+      if (playerIds.includes(id) && name) names.set(id, name);
+    });
+    return names;
+  }
   playerIds.forEach(playerId => {
-    const raw = records[playerId];
+    const raw = (records as JsonRecord)[playerId];
     if (!raw || typeof raw !== "object") return;
     const name = safeTeamName((raw as JsonRecord).name);
     if (name) names.set(playerId, name);
@@ -827,6 +850,18 @@ async function handleAtlasCastleBatch(
         new URLSearchParams({ ids: JSON.stringify(playerIds) }),
       );
       if (profiles.ok) playerNames = sanitisePlayerNames(profiles.data, playerIds);
+      if (!playerNames.size) {
+        const legacyProfiles = await upstreamJson(
+          "/player/profile",
+          apiKey,
+          clientSecret,
+          new URLSearchParams({ ids: JSON.stringify(playerIds) }),
+          LEGACY_WAR_DRAGONS_ORIGIN,
+        );
+        if (legacyProfiles.ok) {
+          playerNames = sanitisePlayerNames(legacyProfiles.data, playerIds);
+        }
+      }
     } catch {
       // Profile enrichment is optional. A failed name lookup must never hide
       // the verified castle, shield, troop or Primarch response.
