@@ -52,6 +52,8 @@
 
   let playerId = "signed-out";
   let snapshot = null;
+  let clearScanPending = false;
+  let clearingScan = false;
   let filteredRecords = [];
   let observedDownFallbackCount = 0;
   let renderLimit = PAGE_SIZE;
@@ -519,9 +521,70 @@
     status.dataset.state = state;
   }
 
+
+  function resetScanSnapshot(value) {
+    if (!value) return value;
+    return {
+      ...value,
+      lastLiveAt: null,
+      atlas: { ...value.atlas, gloryObservedAt: null },
+      records: value.records.map(record => ({
+        ...record,
+        checked: false,
+        criticalObservedAt: null,
+        guards: null,
+        fleetCount: null,
+        primarchs: [],
+        officialFort: null,
+        shield: { state: "unknown", observedAt: null, endAt: null },
+        gloryPercent: null,
+        gloryObservedAt: null
+      }))
+    };
+  }
+
+  async function finishClearScan() {
+    clearingScan = true;
+    clearScanPending = false;
+    renderApiState();
+    snapshot = resetScanSnapshot(snapshot);
+    syncAtlasCommandSnapshot(snapshot);
+    if (host?.isConnected) applyFilters({ persist: false });
+    try {
+      if (snapshot) await cacheSnapshot(snapshot);
+      setImportStatus("Scan cleared · 0 live checked. Tap Scan live to start again.");
+    } catch {
+      setImportStatus("Results cleared on screen, but could not clear the saved scan. Try Clear scan again before refreshing.", true);
+    } finally {
+      clearingScan = false;
+      renderApiState();
+    }
+  }
+
+  async function clearScan() {
+    if (clearingScan || clearScanPending) return;
+    if (liveScanning) {
+      clearScanPending = true;
+      cancelLiveScan = true;
+      setApiStatus("Stopping scan to clear results", "working");
+      renderApiState();
+      return;
+    }
+    await finishClearScan();
+  }
+
   function renderApiState() {
     const button = get("atlasLiveButton");
     if (!button) return;
+    const clearButton = get("atlasClearScan");
+    if (clearButton) {
+      clearButton.disabled = clearingScan || clearScanPending;
+      clearButton.textContent = clearScanPending ? "Stopping to clear…" : clearingScan ? "Clearing…" : "Clear scan";
+    }
+    if (clearingScan || clearScanPending) {
+      button.disabled = true;
+      return;
+    }
 
     if (liveScanning) {
       button.disabled = false;
@@ -1034,6 +1097,7 @@
         try {
           setApiStatus(`Loading castle details · ${received} returned`, "working");
           const details = await WarDragons.atlasInfo(batch);
+          if (clearScanPending) return "";
           snapshot = Core.mergeOfficialInfo(snapshot, details);
           received += (details.records || []).filter(record => record.available).length;
           syncAtlasCommandSnapshot(snapshot);
@@ -1156,7 +1220,7 @@
   }
 
   async function refreshOfficialAtlas() {
-    if (!WarDragons || liveScanning) return;
+    if (!WarDragons || liveScanning || clearingScan || clearScanPending) return;
     liveScanning = true;
     cancelLiveScan = false;
     renderApiState();
@@ -1185,6 +1249,7 @@
 
       try {
         const macro = await WarDragons.atlasMacro(identity);
+        if (clearScanPending) return;
         const sameMap = snapshot &&
           Number(snapshot.atlas?.kingdomId) === identity.kingdomId &&
           String(snapshot.atlas?.realmName || "") === identity.realmName;
@@ -1244,6 +1309,7 @@
           .slice(offset, offset + LIVE_BATCH_SIZE)
           .map(record => record.coordinate);
         const live = await requestCriticalBatch(batch);
+        if (clearScanPending) break;
         snapshot = Core.mergeOfficialCritical(snapshot, live);
         processed += batch.length;
         setApiStatus(`Live ${formatNumber(processed)}/${formatNumber(candidates.length)}`, "working");
@@ -1276,11 +1342,13 @@
     } finally {
       liveScanning = false;
       cancelLiveScan = false;
+      if (clearScanPending) await finishClearScan();
       renderApiState();
     }
   }
 
   async function handleLiveButton() {
+    if (clearingScan || clearScanPending) return;
     if (liveScanning) {
       cancelLiveScan = true;
       setApiStatus("Stopping scan", "working");
@@ -1350,6 +1418,7 @@
         <div class="atlas-command-actions">
           <span id="atlasApiStatus" class="onyx-status-chip atlas-api-status" data-state="pending" aria-live="polite">Checking API</span>
           <button id="atlasLiveButton" type="button" class="button atlas-live-button" disabled>Scan live</button>
+          <button id="atlasClearScan" type="button" class="button secondary-button">Clear scan</button>
         </div>
       </div>
 
@@ -1429,6 +1498,7 @@
   }
 
   function bindEvents() {
+    get("atlasClearScan")?.addEventListener("click", clearScan);
     get("atlasSaveAttackingTeam")?.addEventListener("click", () => saveAttackingTeam());
     get("atlasClearAttackingTeam")?.addEventListener("click", () => saveAttackingTeam(true));
     host?.querySelectorAll(
@@ -1522,6 +1592,7 @@
     selectBalancedLiveBatch,
     castleDetailBatches,
     castleNameTargets,
+    resetScanSnapshot,
     withAttackingTeam
   });
 })(window, document);
