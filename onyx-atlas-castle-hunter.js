@@ -1119,12 +1119,41 @@
     }
   }
 
+
+  function renderNameLookupResult() {
+    const output = get("atlasNameLookupResult");
+    if (!output) return;
+    let message = "";
+    try { message = playerId === "signed-out" ? "" : window.localStorage.getItem("onyxAtlasNameResultV1:" + playerId) || ""; } catch {}
+    output.textContent = message;
+    output.hidden = !message;
+  }
+
+  function saveNameLookupResult(message) {
+    try {
+      if (playerId !== "signed-out") window.localStorage.setItem("onyxAtlasNameResultV1:" + playerId, message);
+    } catch {}
+    const output = get("atlasNameLookupResult");
+    if (output) { output.textContent = message; output.hidden = false; }
+  }
+
+  function nameFailureSummary(error, received, requested) {
+    const code = String(error?.code || "request_failed").replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 80);
+    const status = Number(error?.status);
+    return "Name lookup stopped: " + received + " names loaded from " + requested +
+      " requested. Error: " + code + (Number.isInteger(status) && status > 0 ? " (HTTP " + status + ")" : "") +
+      ". Existing scan results are saved.";
+  }
+
   async function loadCastleDetails(records) {
     const batches = castleDetailBatches(records);
     let received = 0;
     let missingNames = 0;
+    let requested = 0;
+    let unavailable = 0;
     for (const batch of batches) {
       if (cancelLiveScan) break;
+      requested += batch.length;
       for (let attempt = 0; attempt < 4; attempt += 1) {
         if (cancelLiveScan) break;
         try {
@@ -1137,12 +1166,15 @@
           ).map(record => record.coordinate));
           received += named.size;
           missingNames += batch.filter(id => !named.has(id)).length;
+          const available = new Set((details.records || []).filter(record => record.available).map(record => record.coordinate));
+          unavailable += batch.filter(id => !available.has(id)).length;
           syncAtlasCommandSnapshot(snapshot);
           applyFilters({ persist: false });
           await cacheSnapshot(snapshot).catch(() => undefined);
           break;
         } catch (error) {
           if (!retryableNameError(error) || attempt === 3) {
+            saveNameLookupResult(nameFailureSummary(error, received, requested));
             return ` · ${received} names loaded; lookup paused (${error?.code || "request failed"}). Tap Retry missing names`;
           }
           const seconds = Math.ceil(Math.min(61000, Math.max(1000, Number(error.retryAfterMs) || 61000)) / 1000);
@@ -1153,6 +1185,9 @@
         }
       }
     }
+    saveNameLookupResult((cancelLiveScan ? "Name lookup cancelled: " : "Name lookup finished: ") +
+      received + " names loaded from " + requested + " requested. " +
+      (missingNames - unavailable) + " returned without a name; " + unavailable + " castles unavailable.");
     return ` · ${received} names loaded${missingNames ? ` · ${missingNames} names not supplied by the API; tap Retry missing names` : ""}`;
   }
 
@@ -1467,6 +1502,7 @@
           <div><span>Live checked</span><strong id="atlasCheckedCount">0</strong></div>
           <div><span>Matches</span><strong id="atlasMatchCount">0</strong></div>
         </div>
+        <p id="atlasNameLookupResult" class="atlas-import-status" role="status" aria-live="polite" hidden></p>
         <p id="atlasImportStatus" class="atlas-import-status" role="status" aria-live="polite">Waiting for the official Atlas map</p>
         <p id="atlasSourceDates" class="atlas-import-status"></p>
         <fieldset class="atlas-shield-context">
@@ -1582,6 +1618,7 @@
     const nextPlayerId = await resolvePlayerId();
     if (generation !== mountGeneration || !host?.isConnected) return;
     playerId = nextPlayerId;
+    renderNameLookupResult();
     get("atlasAttackingTeam").value = readAttackingTeam();
     await syncShieldContextFromCloud();
     if (generation !== mountGeneration || !host?.isConnected) return;
@@ -1633,6 +1670,7 @@
     castleNameTargets,
     resetScanSnapshot,
     retryableNameError,
+    nameFailureSummary,
     withAttackingTeam
   });
 })(window, document);
