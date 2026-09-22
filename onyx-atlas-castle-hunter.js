@@ -576,6 +576,8 @@
   function renderApiState() {
     const button = get("atlasLiveButton");
     if (!button) return;
+    const retryButton = get("atlasRetryNames");
+    if (retryButton) retryButton.disabled = liveScanning || clearingScan || clearScanPending || !snapshot || !apiState.connected;
     const clearButton = get("atlasClearScan");
     if (clearButton) {
       clearButton.disabled = clearingScan || clearScanPending;
@@ -1087,9 +1089,40 @@
     return [...new Map(targets.map(record => [record.coordinate, record])).values()];
   }
 
+  function retryableNameError(error) {
+    return ["info-rate-limited", "rate-limited"].includes(error?.code) ||
+      Number(error?.status) === 429 || Number(error?.status) >= 500;
+  }
+
+  async function retryMissingNames() {
+    if (!WarDragons || liveScanning || clearingScan || clearScanPending || !snapshot) return;
+    const missing = snapshot.records.filter(record => record.source === "official" &&
+      (!String(record.name || "").trim() || record.name === record.coordinate));
+    if (!missing.length) { setImportStatus("All indexed castles already have names."); return; }
+    // Prioritise the vulnerable board and keep each retry a bounded operation.
+    const targets = castleNameTargets(snapshot, missing).filter(record =>
+      !String(record.name || "").trim() || record.name === record.coordinate
+    ).slice(0, MAX_LIVE_SCAN_CASTLES);
+    liveScanning = true;
+    cancelLiveScan = false;
+    renderApiState();
+    try {
+      const note = await loadCastleDetails(targets);
+      setImportStatus(cancelLiveScan ? "Name lookup stopped" : "Name lookup finished" + note);
+    } catch (error) {
+      setImportStatus(error?.message || "Name lookup failed; try again.", true);
+    } finally {
+      liveScanning = false;
+      cancelLiveScan = false;
+      if (clearScanPending) await finishClearScan();
+      renderApiState();
+    }
+  }
+
   async function loadCastleDetails(records) {
     const batches = castleDetailBatches(records);
     let received = 0;
+    let missingNames = 0;
     for (const batch of batches) {
       if (cancelLiveScan) break;
       for (let attempt = 0; attempt < 4; attempt += 1) {
@@ -1099,14 +1132,18 @@
           const details = await WarDragons.atlasInfo(batch);
           if (clearScanPending) return "";
           snapshot = Core.mergeOfficialInfo(snapshot, details);
-          received += (details.records || []).filter(record => record.available).length;
+          const named = new Set((details.records || []).filter(record =>
+            record.available && String(record.name || "").trim() && record.name !== record.coordinate
+          ).map(record => record.coordinate));
+          received += named.size;
+          missingNames += batch.filter(id => !named.has(id)).length;
           syncAtlasCommandSnapshot(snapshot);
           applyFilters({ persist: false });
           await cacheSnapshot(snapshot).catch(() => undefined);
           break;
         } catch (error) {
-          if (error?.code !== "info-rate-limited" || attempt === 3) {
-            return ` · castle details incomplete (${received} returned); scan again to retry`;
+          if (!retryableNameError(error) || attempt === 3) {
+            return ` · ${received} names loaded; lookup paused (${error?.code || "request failed"}). Tap Retry missing names`;
           }
           const seconds = Math.ceil(Math.min(61000, Math.max(1000, Number(error.retryAfterMs) || 61000)) / 1000);
           for (let remaining = seconds; remaining > 0 && !cancelLiveScan; remaining -= 1) {
@@ -1116,7 +1153,7 @@
         }
       }
     }
-    return ` · ${received} castle details returned`;
+    return ` · ${received} names loaded${missingNames ? ` · ${missingNames} names not supplied by the API; tap Retry missing names` : ""}`;
   }
 
   function atlasIdentity() {
@@ -1419,6 +1456,7 @@
           <span id="atlasApiStatus" class="onyx-status-chip atlas-api-status" data-state="pending" aria-live="polite">Checking API</span>
           <button id="atlasLiveButton" type="button" class="button atlas-live-button" disabled>Scan live</button>
           <button id="atlasClearScan" type="button" class="button secondary-button">Clear scan</button>
+          <button id="atlasRetryNames" type="button" class="button secondary-button">Retry missing names</button>
         </div>
       </div>
 
@@ -1498,6 +1536,7 @@
   }
 
   function bindEvents() {
+    get("atlasRetryNames")?.addEventListener("click", retryMissingNames);
     get("atlasClearScan")?.addEventListener("click", clearScan);
     get("atlasSaveAttackingTeam")?.addEventListener("click", () => saveAttackingTeam());
     get("atlasClearAttackingTeam")?.addEventListener("click", () => saveAttackingTeam(true));
@@ -1593,6 +1632,7 @@
     castleDetailBatches,
     castleNameTargets,
     resetScanSnapshot,
+    retryableNameError,
     withAttackingTeam
   });
 })(window, document);

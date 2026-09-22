@@ -323,7 +323,8 @@
         payload?.message || error.message || "Onyx could not reach the secure Atlas bridge."
       );
       failure.code = payload?.code || "function_error";
-      failure.retryAfterMs = Number(payload?.retryAfterMs) || 0;
+      failure.status = Number(error.context?.status) || 0;
+      failure.retryAfterMs = Number(payload?.retryAfterMs) || (Number(error.context?.headers?.get?.("retry-after")) * 1000) || 0;
       throw failure;
     }
     if (!data?.ok || data.resource !== resource) {
