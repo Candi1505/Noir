@@ -11,13 +11,13 @@ const hunterCss = fs.readFileSync("onyx-atlas-castle-hunter.css", "utf8");
 const hunterCore = fs.readFileSync("onyx-atlas-castle-hunter-core.js", "utf8");
 const hunterWorker = fs.readFileSync("onyx-atlas-har-worker.js", "utf8");
 
-assert.match(html, /onyx-atlas-command\.css\?v=20260921-team-lookup-2/);
-assert.match(html, /onyx-atlas-command\.js\?v=20260921-team-lookup-2/);
+assert.match(html, /onyx-atlas-command\.css\?v=20260922-castle-intel-1/);
+assert.match(html, /onyx-atlas-command\.js\?v=20260922-castle-intel-1/);
 assert.match(html, /onyx-war-dragons-auth\.js\?v=20260921-owner-api-1/);
 assert.match(html, /onyx-atlas-castle-hunter\.css\?v=20260922-shield-context-1/);
 assert.match(html, /onyx-atlas-castle-hunter-core\.js\?v=20260922-shield-context-1/);
 assert.match(html, /database\.js\?v=20260922-atlas-account-sync-1/);
-assert.match(html, /onyx-atlas-castle-hunter\.js\?v=20260922-atlas-account-sync-2/);
+assert.match(html, /onyx-atlas-castle-hunter\.js\?v=20260922-castle-intel-1/);
 assert.match(hunterSource, /!apiState\.connected && !apiState\.readyToAuthorise/);
 assert.ok(
   html.indexOf("onyx-atlas-command.js") < html.indexOf("onyx-command.js"),
@@ -209,6 +209,12 @@ command.setLiveSnapshot({
       level: 7,
       troops: "123456",
       fleets: 9,
+      apr: 873,
+      atlasRank: 130,
+      fortLevel: 12,
+      shieldShipsUntilTrigger: 170000,
+      observedAt: "2026-08-28T10:14:00.000Z",
+      mapCoordinates: "X:3360 Y:2340",
       shieldState: "cooldown",
       cooldownEndsAt: "2026-08-28T11:15:00.000Z",
       attackable: false,
@@ -225,6 +231,11 @@ assert.equal(live.castles.length, 2);
 assert.equal(live.castles[0].id, "ATLAS-one");
 assert.equal(live.castles[0].name, "Night Gate");
 assert.equal(live.castles[0].troops, 123456);
+assert.equal(live.castles[0].apr, 873);
+assert.equal(live.castles[0].atlasRank, 130);
+assert.equal(live.castles[0].fortLevel, 12);
+assert.equal(live.castles[0].shieldShipsUntilTrigger, 170000);
+assert.equal(live.castles[0].mapCoordinates, "X:3360 Y:2340");
 assert.equal(live.castles[0].shieldState, "cooldown");
 assert.equal(live.castles[0].source, "War Dragons API");
 assert.equal(live.castles[1].shieldState, "unknown");

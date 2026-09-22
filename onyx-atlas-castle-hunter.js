@@ -381,6 +381,16 @@
               ? Number(guards)
               : null,
           fleets: Number.isInteger(record?.fleetCount) ? record.fleetCount : null,
+          apr: Number.isInteger(record?.apr) ? record.apr : null,
+          atlasRank: Number.isInteger(record?.atlasRank) ? record.atlasRank : null,
+          fortLevel: Number.isInteger(record?.officialFort?.level)
+            ? record.officialFort.level
+            : null,
+          shieldShipsUntilTrigger: Number.isFinite(Number(record?.shield?.shipsUntilTrigger))
+            ? Math.max(0, Math.ceil(Number(record.shield.shipsUntilTrigger)))
+            : null,
+          observedAt: epochIso(record?.criticalObservedAt),
+          mapCoordinates: Core.formatMapPosition(record?.mapPosition) || null,
           shieldState,
           shieldEndsAt: ["dropping", "shielded"].includes(shieldState) ? shieldEnd : null,
           cooldownEndsAt: shieldState === "cooldown" ? shieldEnd : null,
@@ -622,7 +632,9 @@
       createMetric("APR", record.apr === null ? "—" : formatNumber(record.apr)),
       createMetric("Glory", record.glory === "confirmed100" ? "100%" : record.glory === "needsData" ? "Check defender" : "—"),
       createMetric("Shield", shield.label, shield.state),
-      createMetric("Guards", record.checked ? (record.guards === null ? "Unknown" : formatNumber(record.guards)) : "Not checked")
+      createMetric("Guards", record.checked ? (record.guards === null ? "Unknown" : formatNumber(record.guards)) : "Not checked"),
+      createMetric("Fort", Number.isInteger(record?.officialFort?.level) ? `Level ${record.officialFort.level}` : "Not supplied"),
+      createMetric("Visible fleets", record.checked && Number.isInteger(record.fleetCount) ? formatNumber(record.fleetCount) : "Not checked")
     );
 
     const footer = document.createElement("footer");
@@ -631,7 +643,10 @@
       ? ` · ${record.connectedRegions.join(", ")}`
       : "";
     const mapCoordinates = Core.formatMapPosition(record.mapPosition);
-    location.textContent = `${record.regionName || record.regionId || "Atlas"}${connected} · ${mapCoordinates ? `API ${mapCoordinates} · game position unverified` : "API coordinates unavailable — scan live to refresh"}`;
+    const checkedAge = record.checked && Number(record.criticalObservedAt) > 0
+      ? ` · checked ${formatElapsed(Math.max(0, nowEpoch - Number(record.criticalObservedAt)))} ago`
+      : "";
+    location.textContent = `${record.regionName || record.regionId || "Atlas"}${connected} · ${mapCoordinates ? `API ${mapCoordinates} · game position unverified` : "API coordinates unavailable — scan live to refresh"}${checkedAge}`;
     const copy = document.createElement("button");
     copy.type = "button";
     copy.className = "atlas-copy-button";

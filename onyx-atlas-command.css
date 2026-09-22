@@ -1347,6 +1347,9 @@
 .oac-live-castle-card dd { margin: 5px 0 0; color: #d6d5dc; font-size: .84rem; font-weight: 800; }
 .oac-live-castle-card > footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 0 17px 16px; color: #737681; font-size: .56rem; }
 .oac-live-castle-card > footer b { color: #8e909a; font-weight: 750; }
+.oac-live-castle-card > footer span { min-width: 0; line-height: 1.45; }
+.oac-live-castle-card > footer button { flex: 0 0 auto; min-height: 32px; padding: 0 11px; border: 1px solid rgba(103, 184, 220, .28); border-radius: 9px; background: rgba(42, 83, 108, .16); color: #9bc8e0; font: inherit; font-weight: 800; }
+.oac-live-castle-caveat { margin: -7px 17px 16px; color: #686b76; font-size: .55rem; text-align: right; }
 
 .oac-live-filter-empty { min-height: 250px; }
 .oac-live-filter-empty > .oac-icon { width: 38px; height: 38px; color: #7d5b9a; }

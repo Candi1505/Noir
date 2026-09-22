@@ -180,6 +180,12 @@
       level: cleanNumber(source.level, 999),
       troops: cleanNumber(source.troops),
       fleets: cleanNumber(source.fleets, 99999),
+      apr: cleanNumber(source.apr),
+      atlasRank: cleanNumber(source.atlasRank),
+      fortLevel: cleanNumber(source.fortLevel, 999),
+      shieldShipsUntilTrigger: cleanNumber(source.shieldShipsUntilTrigger),
+      observedAt: cleanText(source.observedAt, 64) || null,
+      mapCoordinates: cleanText(source.mapCoordinates, 64) || null,
       shieldState,
       shieldEndsAt: cleanText(source.shieldEndsAt, 64) || null,
       cooldownEndsAt: cleanText(source.cooldownEndsAt, 64) || null,
@@ -529,10 +535,13 @@
           : "Captured shield state; end time was not supplied.";
     }
     if (castle?.shieldState === "vulnerable") {
+      const trigger = castle.shieldShipsUntilTrigger === null
+        ? ""
+        : ` · ${formatNumber(castle.shieldShipsUntilTrigger)} stationed troops to trigger`;
       return official && castle.attackable
         ? "Officially reported unshielded and attackable."
         : official
-          ? "Officially reported unshielded; attackability was not confirmed."
+          ? `Officially reported unshielded; attackability was not confirmed.${trigger}`
           : "Captured as unshielded; attackability was not confirmed.";
     }
     return official
@@ -819,8 +828,14 @@
                 <dl>
                   <div><dt>Stationed troops</dt><dd>${formatNumber(castle.troops)}</dd></div>
                   <div><dt>Visible fleets</dt><dd>${formatNumber(castle.fleets)}</dd></div>
+                  <div><dt>Fort building</dt><dd>${castle.fortLevel === null ? "Not supplied" : `Level ${formatNumber(castle.fortLevel)}`}</dd></div>
+                  <div><dt>APR</dt><dd>${castle.apr === null ? "Not supplied" : formatNumber(castle.apr)}</dd></div>
                 </dl>
-                <footer><span>${escapeHtml(castle.source)}</span><b>${castle.attackable ? "Attackable confirmed" : "No attackability claim"}</b></footer>
+                <footer>
+                  <span>${escapeHtml(castle.source)}${castle.observedAt ? ` · checked ${escapeHtml(formatLiveTime(castle.observedAt))}` : ""}${castle.mapCoordinates ? ` · API ${escapeHtml(castle.mapCoordinates)}` : ""}</span>
+                  ${castle.mapCoordinates ? `<button type="button" data-oac-copy-coordinate="${escapeHtml(castle.mapCoordinates)}">Copy X/Y</button>` : `<b>${castle.attackable ? "Attackable confirmed" : "No attackability claim"}</b>`}
+                </footer>
+                ${castle.mapCoordinates ? `<p class="oac-live-castle-caveat">Game position unverified · ${castle.attackable ? "Attackable confirmed" : "No attackability claim"}</p>` : ""}
               </article>`).join("")}</div>`
             : `<section class="oac-live-filter-empty">${icon("shield")}<h3>No verified matches in this group</h3><p>${formatNumber(liveCounts().unknown)} castles have unknown shield states. Choose Unknown to see them, or check a narrowed group in Hunter.</p></section>`}
       ${castles.length > visibleCastles.length
@@ -1152,6 +1167,18 @@
           ? button.dataset.oacLiveFilter
           : "vulnerable";
         render({ focusSelector: `[data-oac-live-filter="${liveFilter}"]` });
+      });
+    });
+    overlay.querySelectorAll("[data-oac-copy-coordinate]").forEach(button => {
+      button.addEventListener("click", async () => {
+        const value = button.dataset.oacCopyCoordinate || "";
+        if (!value) return;
+        try {
+          await window.navigator.clipboard.writeText(value);
+          button.textContent = "Copied";
+        } catch (_error) {
+          button.textContent = "Copy failed";
+        }
       });
     });
     overlay.querySelectorAll("[data-oac-connect]").forEach(button => {
