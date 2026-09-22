@@ -916,6 +916,9 @@
     const button = get("atlasTeamLookup");
     const output = get("atlasTeamResult");
     const teamName = String(get("atlasTeamName")?.value || "").trim();
+    const directoryTeam = snapshot?.teams?.find(team =>
+      String(team?.name || "").toLocaleLowerCase("en-AU") === teamName.toLocaleLowerCase("en-AU")
+    ) || null;
     if (!teamName || !WarDragons?.atlasTeam || button.disabled) return;
     if (Date.now() < teamLookupAfter) {
       output.textContent = `Team lookup available in ${Math.ceil((teamLookupAfter - Date.now()) / 1000)}s.`;
@@ -924,6 +927,11 @@
     button.disabled = true;
     teamLookupAfter = Date.now() + 61000;
     output.textContent = `Checking ${teamName} directly…`;
+    if (directoryTeam) {
+      const search = get("atlasSearch");
+      if (search) search.value = directoryTeam.name;
+      applyFilters();
+    }
     try {
       const result = await WarDragons.atlasTeam({ ...atlasIdentity(), teamName });
       const team = result.teams?.[0];
@@ -936,7 +944,9 @@
         ? `${team.name} returned by the team API. Target list narrowed to that team · tap Scan live to check its castles.`
         : `The team API returned no matching entry for ${teamName} on ${result.realmName}, kingdom ${result.kingdomId}. This does not establish that the team is absent from your game map.`;
     } catch (error) {
-      output.textContent = `Team lookup failed: ${error.message || "official source unavailable"}`;
+      output.textContent = directoryTeam
+        ? `${directoryTeam.name} matched the loaded team directory and the target list is narrowed · tap Scan live. Direct team lookup is temporarily unavailable.`
+        : `Team lookup failed: ${error.message || "official source unavailable"}`;
     } finally {
       button.disabled = false;
     }

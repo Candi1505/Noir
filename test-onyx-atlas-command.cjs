@@ -17,7 +17,7 @@ assert.match(html, /onyx-war-dragons-auth\.js\?v=20260921-owner-api-1/);
 assert.match(html, /onyx-atlas-castle-hunter\.css\?v=20260922-shield-context-1/);
 assert.match(html, /onyx-atlas-castle-hunter-core\.js\?v=20260922-shield-context-1/);
 assert.match(html, /database\.js\?v=20260922-atlas-account-sync-1/);
-assert.match(html, /onyx-atlas-castle-hunter\.js\?v=20260922-atlas-account-sync-1/);
+assert.match(html, /onyx-atlas-castle-hunter\.js\?v=20260922-atlas-account-sync-2/);
 assert.match(hunterSource, /!apiState\.connected && !apiState\.readyToAuthorise/);
 assert.ok(
   html.indexOf("onyx-atlas-command.js") < html.indexOf("onyx-command.js"),
@@ -47,6 +47,7 @@ assert.match(hunterSource, /loadOnyxAtlasShieldContext/);
 assert.match(hunterSource, /saveOnyxAtlasShieldContext/);
 assert.match(hunterSource, /\{ \.\.\.filters, shield: "any" \}/);
 assert.match(hunterSource, /Target list narrowed to that team/);
+assert.match(hunterSource, /matched the loaded team directory/);
 assert.match(hunterSource, /This group has not been live-checked yet/);
 assert.match(hunterSource, /SHIELD_CONTEXT_TTL_SECONDS = 6 \* 60 \* 60/);
 assert.match(hunterSource, /to trigger/);
