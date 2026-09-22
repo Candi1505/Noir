@@ -11,13 +11,13 @@ const hunterCss = fs.readFileSync("onyx-atlas-castle-hunter.css", "utf8");
 const hunterCore = fs.readFileSync("onyx-atlas-castle-hunter-core.js", "utf8");
 const hunterWorker = fs.readFileSync("onyx-atlas-har-worker.js", "utf8");
 
-assert.match(html, /onyx-atlas-command\.css\?v=20260922-castle-intel-1/);
-assert.match(html, /onyx-atlas-command\.js\?v=20260922-castle-intel-2/);
+assert.match(html, /onyx-atlas-command\.css\?v=20260922-castle-search-glory-1/);
+assert.match(html, /onyx-atlas-command\.js\?v=20260922-castle-search-glory-1/);
 assert.match(html, /onyx-war-dragons-auth\.js\?v=20260921-owner-api-1/);
 assert.match(html, /onyx-atlas-castle-hunter\.css\?v=20260922-shield-context-1/);
 assert.match(html, /onyx-atlas-castle-hunter-core\.js\?v=20260922-shield-context-1/);
 assert.match(html, /database\.js\?v=20260922-atlas-account-sync-1/);
-assert.match(html, /onyx-atlas-castle-hunter\.js\?v=20260922-castle-intel-1/);
+assert.match(html, /onyx-atlas-castle-hunter\.js\?v=20260922-castle-search-glory-1/);
 assert.match(hunterSource, /!apiState\.connected && !apiState\.readyToAuthorise/);
 assert.ok(
   html.indexOf("onyx-atlas-command.js") < html.indexOf("onyx-command.js"),
@@ -120,7 +120,7 @@ sandbox.window = sandbox;
 vm.createContext(sandbox);
 const testableSource = source.replace(
   "window.OnyxAtlasCommand = Object.freeze({",
-  "window.OnyxAtlasCommand = Object.freeze({ renderLiveCastles, renderLiveOverview, renderLivePreview, setTestFilter: value => { liveFilter = value; },"
+  "window.OnyxAtlasCommand = Object.freeze({ renderLiveCastles, renderLiveOverview, renderLivePreview, setTestQuery: value => { liveQuery = value; liveLimit = 20; }, moreTestResults: () => { liveLimit += 20; }, setTestFilter: value => { liveFilter = value; },"
 );
 vm.runInContext(testableSource, sandbox);
 
@@ -256,9 +256,9 @@ assert.equal(largeSummary.castleCount, 50000);
 assert.equal(command.getLiveState().castles.length, 50000);
 
 const renderedLargeSnapshot = command.renderLiveCastles();
-assert.equal((renderedLargeSnapshot.match(/id="oacLiveCastle\d+"/g) || []).length, 200);
-assert.match(renderedLargeSnapshot, /Showing first 200 of 50,000\. Use the filters to narrow the board\./);
-assert.doesNotMatch(renderedLargeSnapshot, /Castle 00200/);
+assert.equal((renderedLargeSnapshot.match(/id="oacLiveCastle\d+"/g) || []).length, 20);
+assert.match(renderedLargeSnapshot, /Showing 20 of 50000 matching castles/);
+assert.doesNotMatch(renderedLargeSnapshot, /Castle 00020/);
 
 command.setLiveSnapshot({ source: "War Dragons API", castles: [
   {name: "Unknown Keep", shieldState: "unknown", source: "War Dragons API"},
@@ -277,3 +277,29 @@ command.setTestFilter("shielded");
 assert.match(command.renderLivePreview(), /Bubble Keep/);
 assert.doesNotMatch(command.renderLivePreview(), /Open Keep/);
 console.log("Onyx Atlas Command regression checks passed.");
+
+assert.equal(command.estimateGlory({ enemy: "", own: 1000, percent: 100 }), null);
+assert.equal(command.estimateGlory({ enemy: 1000, own: 1000, percent: 101 }), null);
+assert.equal(command.estimateGlory({ enemy: -1, own: 1000, percent: 100 }), null);
+assert.equal(command.estimateGlory({ enemy: 1.5, own: 1000, percent: 100 }), null);
+assert.equal(command.estimateGlory({ enemy: 1000, own: 1000, percent: 100 }).low, 750);
+assert.equal(command.estimateGlory({ enemy: 1000, own: 1000, percent: 100 }).high, 750);
+assert.equal(command.estimateGlory({ enemy: 10000, own: 1000, percent: 50 }).low, 750);
+assert.equal(command.estimateGlory({ enemy: 10000, own: 1000, percent: 50 }).high, 2500);
+assert.equal(command.estimateGlory({ enemy: 0, own: 1000, percent: 100 }).high, 0);
+command.setLiveSnapshot({castles: Array.from({length: 45}, (_,i) => ({name: `Target ${String(i).padStart(2,"0")}`, owner: i === 0 ? "ChosenTeam" : "OtherTeam", region: "A130", id: `22-A130-${i}`, shieldState: "vulnerable"}))});
+command.setTestFilter("vulnerable");
+command.setTestQuery("");
+assert.equal((command.renderLivePreview().match(/<article /g) || []).length, 20);
+command.moreTestResults();
+assert.equal((command.renderLivePreview().match(/<article /g) || []).length, 40);
+command.moreTestResults();
+assert.equal((command.renderLivePreview().match(/<article /g) || []).length, 45);
+assert.doesNotMatch(command.renderLivePreview(), /data-oac-show-more/);
+command.setTestQuery("chosenteam");
+assert.match(command.renderLivePreview(), /Target 00/);
+assert.doesNotMatch(command.renderLivePreview(), /Target 01/);
+command.setTestQuery("22-A130-44");
+assert.match(command.renderLivePreview(), /Target 44/);
+command.setTestQuery("missing-name");
+assert.doesNotMatch(command.renderLivePreview(), /<article /);

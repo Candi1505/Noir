@@ -386,7 +386,7 @@
           fortLevel: Number.isInteger(record?.officialFort?.level)
             ? record.officialFort.level
             : null,
-          shieldShipsUntilTrigger: Number.isFinite(Number(record?.shield?.shipsUntilTrigger))
+          shieldShipsUntilTrigger: record?.shield?.shipsUntilTrigger != null && Number.isFinite(Number(record.shield.shipsUntilTrigger))
             ? Math.max(0, Math.ceil(Number(record.shield.shipsUntilTrigger)))
             : null,
           observedAt: epochIso(record?.criticalObservedAt),
@@ -653,7 +653,12 @@
     copy.dataset.atlasCopy = mapCoordinates;
     copy.textContent = "Copy API X/Y";
     copy.disabled = !mapCoordinates;
-    footer.append(location, copy);
+    const calculator = document.createElement("button");
+    calculator.type = "button";
+    calculator.className = "atlas-copy-button";
+    calculator.textContent = "Calculate glory";
+    calculator.addEventListener("click", () => window.OnyxAtlasCommand?.openGloryCalculator?.(record.name || record.coordinate));
+    footer.append(location, copy, calculator);
 
     card.append(heading, metrics, footer);
     return card;

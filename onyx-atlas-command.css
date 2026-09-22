@@ -1430,3 +1430,16 @@
   .oac-overlay *::before,
   .oac-overlay *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
 }
+
+.oac-search, .oac-glory { margin: 14px 0; padding: 16px; border: 1px solid #353344; border-radius: 14px; color: #d6d5dc; }
+.oac-search label, .oac-glory label { display: grid; gap: 6px; font-size: .8rem; }
+.oac-search > div { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.oac-search input { flex: 1 1 180px; min-width: 0; }
+.oac-search input, .oac-glory input { box-sizing: border-box; width: 100%; padding: 12px; border: 1px solid #455265; border-radius: 9px; background: #0b1118; color: #e1e6ef; font-size: 16px; }
+.oac-search button, .oac-glory button, .oac-more { min-height: 44px; padding: 10px 16px; border: 1px solid #74603b; border-radius: 10px; color: #ebce83; background: #231f20; cursor: pointer; }
+.oac-glory form { display: grid; gap: 12px; }
+.oac-glory summary { cursor: pointer; color: #ebce83; font-weight: 700; }
+.oac-glory p { font-size: .78rem; line-height: 1.5; color: #a5a6b3; }
+.oac-glory a { color: #9dc5e4; }
+.oac-glory output { display: block; padding-top: 16px; font-weight: 700; }
+.oac-live-castle-card > .oac-more { margin: 0 17px 16px; }

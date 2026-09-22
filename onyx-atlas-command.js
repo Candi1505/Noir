@@ -67,6 +67,10 @@
   let activeTab = "overview";
   let liveFilter = "vulnerable";
   let liveCastles = [];
+  let liveQuery = "";
+  let liveLimit = 20;
+  let gloryTarget = "";
+  let gloryInputs = { enemy: "", own: "", percent: "" };
   let liveFetchedAt = null;
   let liveSource = "War Dragons API";
   let liveConnection = Object.freeze({
@@ -561,7 +565,39 @@
     const castles = liveFilter === "all"
       ? [...liveCastles]
       : liveCastles.filter(castle => castle.shieldState === liveFilter);
-    return castles.sort((left, right) => left.name.localeCompare(right.name));
+    return castles.filter(castle => [castle.name, castle.owner, castle.region, castle.id, castle.mapCoordinates].some(value => String(value || "").toLowerCase().includes(liveQuery.toLowerCase().trim()))).sort((left, right) => left.name.localeCompare(right.name));
+  }
+
+  function estimateGlory(values) {
+    const numbers = [values.enemy, values.own, values.percent];
+    if (numbers.some(value => value === "" || value === null || value === undefined)) return null;
+    const [enemy, own, percent] = numbers.map(Number);
+    if (![enemy, own, percent].every(Number.isFinite) || enemy < 0 || own < 0 || percent < 0 || percent > 100 || !Number.isInteger(enemy) || !Number.isInteger(own)) return null;
+    // Official help page header uses 5; its worked examples use 1.5.
+    // Preserve that uncertainty rather than silently choosing one rule.
+    return { low: Math.floor(Math.min(enemy * .75, own * 1.5) * percent / 100), high: Math.floor(Math.min(enemy * .75, own * 5) * percent / 100) };
+  }
+
+  function renderGloryCalculator() {
+    const estimate = estimateGlory(gloryInputs);
+    return `<details class="oac-glory" ${gloryTarget ? "open" : ""}>
+      <summary>Glory calculator${gloryTarget ? ` · ${escapeHtml(gloryTarget)}` : ""}</summary>
+      <p>Estimate a battle using expected troop losses and the target glory percentage shown in-game. Castle guards and APR alone cannot determine your payout.</p>
+      <form id="oacGloryForm">
+        ${[["enemy", "Enemy troops killed", "1", ""], ["own", "Your troops killed", "1", ""], ["percent", "Target glory percentage", "0.1", 'max="100"']].map(([key,label,step,max]) => `<label>${label}<input name="${key}" type="number" min="0" step="${step}" ${max} required inputmode="decimal" value="${escapeHtml(gloryInputs[key])}"></label>`).join("")}
+        <button type="submit">Calculate glory</button>
+      </form>
+      <output id="oacGloryResult" aria-live="polite">${estimate ? `Estimated base glory: ${formatNumber(estimate.low)}${estimate.low !== estimate.high ? `–${formatNumber(estimate.high)}` : ""}` : "Enter all three values to calculate"}</output>
+      <p>The <a href="https://pocketgems-support.helpshift.com/hc/en/3-war-dragons/faq/686-glory-calculations/" target="_blank" rel="noopener">official guide</a> uses different loss multipliers in its formula and examples, so this shows their range. For Primarch troop battles. Excludes bonuses, castle-guard-specific modifiers and extra defence glory; actual results may differ.</p>
+    </details>`;
+  }
+
+  function renderLiveSearch() {
+    return `<form id="oacLiveSearch" class="oac-search"><label for="oacCastleQuery">Search this castle group</label><div><input id="oacCastleQuery" type="search" value="${escapeHtml(liveQuery)}" placeholder="Castle, team, region, ID or X/Y"><button type="submit">Search</button><button type="button" data-oac-clear-search>Clear</button></div></form>`;
+  }
+
+  function renderLiveMore(total) {
+    return `<p class="oac-evidence-note">Showing ${Math.min(liveLimit, total)} of ${total} matching castles</p>${total > liveLimit ? '<button class="oac-more" type="button" data-oac-show-more>Show 20 more</button>' : ""}`;
   }
 
   function renderLiveFilterRail() {
@@ -607,14 +643,16 @@
     if (!liveCastles.length) {
       return renderLiveLockedState();
     }
-    const castles = filteredLiveCastles().slice(0, 4);
+    const matches = filteredLiveCastles();
+    const castles = matches.slice(0, liveLimit);
+    if (!castles.length && liveQuery.trim()) return `<p class="oac-evidence-note">No castles match your search in this group. Clear the search or choose another group.</p>`;
     if (!castles.length) return `<p class="oac-evidence-note">No verified matches in this group. ${formatNumber(liveCounts().unknown)} castles have unknown shield states.</p>`;
     return `<section class="oac-live-preview">
       ${castles.map(castle => `<article class="${escapeHtml(castle.shieldState)}">
         ${icon(castle.shieldState === "cooldown" || castle.shieldState === "dropping" ? "clock" : "shield")}
         <div><small>${escapeHtml(liveShieldLabel(castle))} · ${escapeHtml(castle.source)}</small><strong>${escapeHtml(castle.name)}</strong><span>${escapeHtml(castle.owner || "Owner not supplied")}</span></div>
       </article>`).join("")}
-    </section>`;
+    </section>${renderLiveMore(matches.length)}`;
   }
 
   function renderNetwork(state) {
@@ -630,6 +668,8 @@
           <span>${liveCastles.length} source-labelled</span>
         </div>
         ${renderLiveFilterRail()}
+        ${renderLiveSearch()}
+        ${renderGloryCalculator()}
         ${renderLivePreview()}
       </section>`;
     }
@@ -798,7 +838,7 @@
 
   function renderLiveCastles() {
     const castles = filteredLiveCastles();
-    const visibleCastles = castles.slice(0, 200);
+    const visibleCastles = castles.slice(0, liveLimit);
     const fetched = liveFetchedAt
       ? `Snapshot timestamp ${formatLiveTime(liveFetchedAt)} · not a whole-map shield check`
       : "No verified castle response received yet";
@@ -812,6 +852,8 @@
         <button type="button" data-oac-tab="hunter">Check shields in Hunter</button>
       </section>
       ${renderLiveFilterRail()}
+      ${renderLiveSearch()}
+      ${renderGloryCalculator()}
       ${!liveCastles.length
           ? renderLiveLockedState()
           : castles.length
@@ -831,8 +873,9 @@
                   <div><dt>Fort building</dt><dd>${castle.fortLevel === null ? "Not supplied" : `Level ${formatNumber(castle.fortLevel)}`}</dd></div>
                   <div><dt>APR</dt><dd>${castle.apr === null ? "Not supplied" : formatNumber(castle.apr)}</dd></div>
                   <div><dt>Atlas rank</dt><dd>${castle.atlasRank === null ? "Not supplied" : formatNumber(castle.atlasRank)}</dd></div>
-                  <div><dt>Shield trigger</dt><dd>${castle.shieldShipsUntilTrigger === null ? "Not supplied" : `${formatNumber(castle.shieldShipsUntilTrigger)} troops`}</dd></div>
+                  <div><dt>Troops remaining to trigger</dt><dd>${castle.shieldShipsUntilTrigger === null ? "Not supplied" : `${formatNumber(castle.shieldShipsUntilTrigger)} troops`}</dd></div>
                 </dl>
+                <button class="oac-more" type="button" data-oac-glory-target="${escapeHtml(castle.name)}">Estimate battle glory</button>
                 <footer>
                   <span>${escapeHtml(castle.source)}${castle.observedAt ? ` · checked ${escapeHtml(formatLiveTime(castle.observedAt))}` : ""}${castle.mapCoordinates ? ` · API ${escapeHtml(castle.mapCoordinates)}` : ""}</span>
                   ${castle.mapCoordinates ? `<button type="button" data-oac-copy-coordinate="${escapeHtml(castle.mapCoordinates)}">Copy X/Y</button>` : `<b>${castle.attackable ? "Attackable confirmed" : "No attackability claim"}</b>`}
@@ -840,9 +883,7 @@
                 ${castle.mapCoordinates ? `<p class="oac-live-castle-caveat">Game position unverified · ${castle.attackable ? "Attackable confirmed" : "No attackability claim"}</p>` : ""}
               </article>`).join("")}</div>`
             : `<section class="oac-live-filter-empty">${icon("shield")}<h3>No verified matches in this group</h3><p>${formatNumber(liveCounts().unknown)} castles have unknown shield states. Choose Unknown to see them, or check a narrowed group in Hunter.</p></section>`}
-      ${castles.length > visibleCastles.length
-        ? `<p class="oac-evidence-note">Showing first ${formatNumber(visibleCastles.length)} of ${formatNumber(castles.length)}. Use the filters to narrow the board.</p>`
-        : ""}
+      ${renderLiveMore(castles.length)}
       <p class="oac-evidence-note">Shield labels reflect the named source. Missing timing and attackability remain missing; Onyx does not manufacture either.</p>
       ${renderConnectionCard()}
     </div>`;
@@ -1131,6 +1172,34 @@
   }
 
   function bindOverlay(overlay) {
+    overlay.querySelector("#oacLiveSearch")?.addEventListener("submit", event => {
+      event.preventDefault();
+      liveQuery = overlay.querySelector("#oacCastleQuery").value;
+      liveLimit = 20;
+      render({ focusSelector: "#oacCastleQuery" });
+    });
+    overlay.querySelector("[data-oac-clear-search]")?.addEventListener("click", () => {
+      liveQuery = ""; liveLimit = 20; render({ focusSelector: "#oacCastleQuery" });
+    });
+    overlay.querySelector("[data-oac-show-more]")?.addEventListener("click", () => {
+      liveLimit += 20; render();
+    });
+    overlay.querySelectorAll("[data-oac-glory-target]").forEach(button => button.addEventListener("click", () => {
+      gloryTarget = button.dataset.oacGloryTarget;
+      gloryInputs = { enemy: "", own: "", percent: "" };
+      render({ focusSelector: '#oacGloryForm input' });
+    }));
+    overlay.querySelector("#oacGloryForm")?.addEventListener("input", event => {
+      if (Object.hasOwn(gloryInputs, event.target.name)) gloryInputs[event.target.name] = event.target.value;
+      overlay.querySelector("#oacGloryResult").textContent = "Values changed · calculate to update";
+    });
+    overlay.querySelector("#oacGloryForm")?.addEventListener("submit", event => {
+      event.preventDefault();
+      const estimate = estimateGlory(gloryInputs);
+      overlay.querySelector("#oacGloryResult").textContent = estimate
+        ? `Estimated base glory: ${formatNumber(estimate.low)}${estimate.low !== estimate.high ? `–${formatNumber(estimate.high)}` : ""}`
+        : "Enter valid troop counts and a glory percentage from 0 to 100";
+    });
     overlay.querySelector("#oacClose")?.addEventListener("click", close);
     overlay.querySelectorAll("[data-oac-mode]").forEach(button => {
       button.addEventListener("click", () => {
@@ -1165,6 +1234,7 @@
     });
     overlay.querySelectorAll("[data-oac-live-filter]").forEach(button => {
       button.addEventListener("click", () => {
+        liveLimit = 20;
         liveFilter = VALID_LIVE_FILTERS.has(button.dataset.oacLiveFilter)
           ? button.dataset.oacLiveFilter
           : "vulnerable";
@@ -1305,6 +1375,8 @@
     const currentUser = userId();
     if (openedForUser !== currentUser) {
       openedForUser = currentUser;
+      liveQuery = ""; liveLimit = 20; gloryTarget = "";
+      gloryInputs = { enemy: "", own: "", percent: "" };
       readLocal();
     }
     activeTab = VALID_TABS.has(tab) ? tab : "overview";
@@ -1338,6 +1410,8 @@
     getManualState: () => clone(manualDraft),
     getLiveState: () => clone({ castles: liveCastles, fetchedAt: liveFetchedAt, source: liveSource }),
     setLiveSnapshot,
+    estimateGlory,
+    openGloryCalculator: name => { gloryTarget = String(name || ""); gloryInputs = { enemy: "", own: "", percent: "" }; open("castles"); document.querySelector?.("#oacGloryForm input")?.focus?.(); },
     normaliseLiveSnapshot,
     normaliseManualState,
     deriveAlerts,
