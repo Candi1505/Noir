@@ -830,6 +830,8 @@
                   <div><dt>Visible fleets</dt><dd>${formatNumber(castle.fleets)}</dd></div>
                   <div><dt>Fort building</dt><dd>${castle.fortLevel === null ? "Not supplied" : `Level ${formatNumber(castle.fortLevel)}`}</dd></div>
                   <div><dt>APR</dt><dd>${castle.apr === null ? "Not supplied" : formatNumber(castle.apr)}</dd></div>
+                  <div><dt>Atlas rank</dt><dd>${castle.atlasRank === null ? "Not supplied" : formatNumber(castle.atlasRank)}</dd></div>
+                  <div><dt>Shield trigger</dt><dd>${castle.shieldShipsUntilTrigger === null ? "Not supplied" : `${formatNumber(castle.shieldShipsUntilTrigger)} troops`}</dd></div>
                 </dl>
                 <footer>
                   <span>${escapeHtml(castle.source)}${castle.observedAt ? ` · checked ${escapeHtml(formatLiveTime(castle.observedAt))}` : ""}${castle.mapCoordinates ? ` · API ${escapeHtml(castle.mapCoordinates)}` : ""}</span>

@@ -12,7 +12,7 @@ const hunterCore = fs.readFileSync("onyx-atlas-castle-hunter-core.js", "utf8");
 const hunterWorker = fs.readFileSync("onyx-atlas-har-worker.js", "utf8");
 
 assert.match(html, /onyx-atlas-command\.css\?v=20260922-castle-intel-1/);
-assert.match(html, /onyx-atlas-command\.js\?v=20260922-castle-intel-1/);
+assert.match(html, /onyx-atlas-command\.js\?v=20260922-castle-intel-2/);
 assert.match(html, /onyx-war-dragons-auth\.js\?v=20260921-owner-api-1/);
 assert.match(html, /onyx-atlas-castle-hunter\.css\?v=20260922-shield-context-1/);
 assert.match(html, /onyx-atlas-castle-hunter-core\.js\?v=20260922-shield-context-1/);
