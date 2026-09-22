@@ -608,8 +608,11 @@
     ) {
       return {
         percent: Math.round(livePercent),
-        source: `Live Atlas ranks · checked ${formatLiveTime(castle.gloryObservedAt)}`
+        source: `${castle.glorySource || "Estimated from live Atlas ranks"} · checked ${formatLiveTime(castle.gloryObservedAt)}`
       };
+    }
+    if (castle.glorySource?.startsWith("Estimate for ")) {
+      return { percent: null, source: castle.gloryUnavailableReason || "Refresh the selected team’s live APR in Hunter" };
     }
     const key = storageKey("onyxCastleGloryV1");
     if (key) {
@@ -638,7 +641,7 @@
   function renderCastleGlory(castle, compact = false) {
     const glory = castleGlory(castle);
     const status = glory.percent === 100 ? "full" : glory.percent === null ? "unknown" : "reduced";
-    return `<div class="oac-target-glory ${status}"><strong>${glory.percent === null ? "Glory unknown" : `${glory.percent}% glory`}</strong>${compact ? "" : `<small>${escapeHtml(glory.source)}</small>`}</div>`;
+    return `<div class="oac-target-glory ${status}"><strong>${glory.percent === null ? "Glory unknown" : `${glory.percent}% glory`}</strong>${compact && !castle.glorySource?.startsWith("Estimate for ") ? "" : `<small>${escapeHtml(glory.source)}</small>`}</div>`;
   }
 
   function renderGloryEntry(castle) {

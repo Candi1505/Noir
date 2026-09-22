@@ -83,6 +83,63 @@
     }
   }
 
+
+  function readAttackingTeam() {
+    if (playerId === "signed-out") return "";
+    try { return String(window.localStorage.getItem("onyxAtlasAttackingTeamV1:" + playerId) || "").trim().slice(0, 100); }
+    catch { return ""; }
+  }
+
+  // A selected team changes the estimate only, never the connected identity.
+  function withAttackingTeam(value, team = readAttackingTeam(), nowEpoch = Date.now() / 1000) {
+    if (!team || !value || value.atlas?.topologySource !== "official-metadata") return value;
+    const records = value.records || [];
+    const matches = records.filter(record => record.source === "official" &&
+      String(record.ownerTeam || "").trim().toLowerCase() === team.toLowerCase());
+    const ranks = [...new Set(matches.map(record => record.apr)
+      .filter(rank => Number.isInteger(rank) && rank > 0))];
+    const observedAt = Number(value.atlas.gloryObservedAt);
+    const fresh = observedAt > 0 && observedAt <= nowEpoch + 60 && nowEpoch - observedAt < 600;
+    const apr = fresh && ranks.length === 1 ? ranks[0] : null;
+    const name = matches[0]?.ownerTeam || team;
+    return {
+      ...value,
+      atlas: { ...value.atlas, attackingTeam: name, attackingApr: apr },
+      records: records.map(record => record.source !== "official" ? record : ({
+        ...record,
+        gloryPercent: Core.calculateCastleGloryPercent(record.rawLevel, null, apr, record.apr),
+        gloryObservedAt: fresh ? observedAt : null,
+        glorySource: "Estimate for " + name + " · live APR " + (apr ?? "unavailable")
+      }))
+    };
+  }
+
+  function renderAttackingTeam() {
+    const effective = withAttackingTeam(snapshot);
+    const selected = readAttackingTeam();
+    const status = get("atlasAttackingTeamStatus");
+    if (status) status.textContent = selected
+      ? effective?.atlas?.attackingApr > 0
+        ? "Estimating for " + effective.atlas.attackingTeam + " · live APR " + effective.atlas.attackingApr + ". Expires after 10 minutes; Scan live to refresh."
+        : "Selected: " + selected + ". Live APR unavailable or expired; Scan live to refresh."
+      : "Glory estimates use the connected account’s team. Choose your attacking team if you play on another account.";
+  }
+
+  function saveAttackingTeam(clear = false) {
+    if (playerId === "signed-out") return;
+    const team = clear ? "" : String(get("atlasAttackingTeam")?.value || "").trim().slice(0, 100);
+    try {
+      if (team) window.localStorage.setItem("onyxAtlasAttackingTeamV1:" + playerId, team);
+      else window.localStorage.removeItem("onyxAtlasAttackingTeamV1:" + playerId);
+    } catch {
+      get("atlasAttackingTeamStatus").textContent = "Could not save the attacking team on this device.";
+      return;
+    }
+    get("atlasAttackingTeam").value = team;
+    syncAtlasCommandSnapshot(snapshot);
+    applyFilters({ persist: false });
+  }
+
   function filterStorageKey() {
     return `${FILTER_KEY_PREFIX}:${playerId}`;
   }
@@ -354,6 +411,7 @@
   }
 
   function toCommandSnapshot(value, nowEpoch = Date.now() / 1000) {
+    value = withAttackingTeam(value, readAttackingTeam(), nowEpoch);
     const records = Array.isArray(value?.records) ? value.records : [];
     const officialCount = records.filter(
       record => record?.source === "official"
@@ -391,9 +449,9 @@
             ? Math.max(0, Math.min(100, Math.round(Number(record.gloryPercent))))
             : null,
           gloryObservedAt: epochIso(record?.gloryObservedAt),
-          glorySource: "Calculated from live Atlas ranks",
-          gloryUnavailableReason: !(Number(value?.atlas?.playerApr) > 0)
-            ? "Your live team APR is unavailable"
+          glorySource: record.glorySource || "Estimated from live Atlas ranks",
+          gloryUnavailableReason: !(Number(value?.atlas?.attackingTeam ? value.atlas.attackingApr : value?.atlas?.playerApr) > 0)
+            ? "Attacking team APR unavailable — choose your team in Hunter and Scan live"
             : !(Number(record?.apr) > 0)
               ? "Target team APR is unavailable"
               : "Refresh the live glory calculation",
@@ -663,6 +721,7 @@
       level: record.tier,
       source: record.source === "official" ? "War Dragons API" : "Atlas capture",
       gloryPercent: record.gloryPercent,
+      glorySource: record.glorySource,
       gloryObservedAt: epochIso(record.gloryObservedAt)
     });
     if (glory?.percent === 100) badges.append(createBadge("100%", "glory"));
@@ -774,6 +833,7 @@
   }
 
   function renderSnapshotSummary() {
+    renderAttackingTeam();
     const summary = snapshot?.summary || {};
     const nowEpoch = Date.now() / 1000;
     const freshChecked = (snapshot?.records || []).filter(record =>
@@ -806,7 +866,7 @@
   function applyFilters({ persist = true } = {}) {
     const filters = readFilters();
     const nowEpoch = Date.now() / 1000;
-    const records = snapshot?.records || [];
+    const records = withAttackingTeam(snapshot)?.records || [];
     const result = Core.filterCastles(records, filters, nowEpoch);
     const error = get("atlasFilterError");
     error.textContent = result.error;
@@ -1285,6 +1345,15 @@
         <p id="atlasImportStatus" class="atlas-import-status" role="status" aria-live="polite">Waiting for the official Atlas map</p>
         <p id="atlasSourceDates" class="atlas-import-status"></p>
         <fieldset class="atlas-shield-context">
+          <legend>Attacking team · glory estimates</legend>
+          <div class="atlas-filter-grid">
+            <label class="atlas-filter-wide" for="atlasAttackingTeam"><span>Exact attacking team name</span><input id="atlasAttackingTeam" type="text" maxlength="100" placeholder="SeveredReality" autocomplete="off"></label>
+            <button id="atlasSaveAttackingTeam" type="button" class="button secondary-button">Use this team</button>
+            <button id="atlasClearAttackingTeam" type="button" class="button secondary-button">Use connected team</button>
+          </div>
+          <p id="atlasAttackingTeamStatus" class="atlas-import-status" role="status"></p>
+        </fieldset>
+        <fieldset class="atlas-shield-context">
           <legend>Current PvP shield context</legend>
           <label for="atlasPvpShieldsDown">
             <input id="atlasPvpShieldsDown" type="checkbox">
@@ -1342,6 +1411,8 @@
   }
 
   function bindEvents() {
+    get("atlasSaveAttackingTeam")?.addEventListener("click", () => saveAttackingTeam());
+    get("atlasClearAttackingTeam")?.addEventListener("click", () => saveAttackingTeam(true));
     host?.querySelectorAll(
       "[data-atlas-tier], #atlasSearch, #atlasAprMin, #atlasAprMax, #atlasGloryFilter, #atlasShieldFilter, #atlasGateFilter, #atlasSort"
     ).forEach(control => {
@@ -1384,6 +1455,7 @@
     const nextPlayerId = await resolvePlayerId();
     if (generation !== mountGeneration || !host?.isConnected) return;
     playerId = nextPlayerId;
+    get("atlasAttackingTeam").value = readAttackingTeam();
     await syncShieldContextFromCloud();
     if (generation !== mountGeneration || !host?.isConnected) return;
     syncShieldContextControl();
@@ -1430,6 +1502,7 @@
     unmount,
     toCommandSnapshot,
     selectBalancedLiveBatch,
-    castleDetailBatches
+    castleDetailBatches,
+    withAttackingTeam
   });
 })(window, document);
