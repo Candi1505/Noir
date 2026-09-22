@@ -26,4 +26,9 @@ check(hunter.toCommandSnapshot(merged,now).castles[0].name==="Recovered Keep","N
 const rows=Array.from({length:251},(_,i)=>({...next,coordinate:"22-A55-"+i}));
 check(hunter.castleDetailBatches(rows,now).map(b=>b.length).join(",")==="25,25,25,25,25,25,25,25,25,25,1","Keep API batch limit");
 
+check(hunter.castleDetailBatches([{...updated,infoObservedAt:now-86400*30}],now).length===0,"Reuse saved names beyond the old hourly expiry");
+check(hunter.castleDetailBatches([{...updated,infoObservedAt:null}],now).length===0,"Imported real names do not consume lookup budget");
+const scanSource=read("onyx-atlas-castle-hunter.js").split("async function refreshOfficialAtlas")[1];
+check(scanSource.indexOf("await requestCriticalBatch") < scanSource.indexOf("await loadCastleDetails"),"Fresh critical checks precede name requests");
+
 console.log("Vulnerable castle name regression checks passed.");

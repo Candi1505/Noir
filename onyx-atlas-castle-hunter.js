@@ -1069,8 +1069,9 @@
   }
 
   function castleDetailBatches(records, nowEpoch = Date.now() / 1000) {
-    const targets = records.filter(record => !String(record.name || "").trim() || record.name === record.coordinate || !record.infoObservedAt ||
-      nowEpoch - record.infoObservedAt > 3600);
+    // Names are a saved directory, not live shield/troop observations.
+    // Spend the slow lookup budget on unresolved castles; keep their original timestamps.
+    const targets = records.filter(record => !String(record.name || "").trim() || record.name === record.coordinate);
     const batches = [];
     for (let offset = 0; offset < targets.length; offset += 25) {
       batches.push(targets.slice(offset, offset + 25).map(record => record.coordinate));
@@ -1373,13 +1374,7 @@
         return;
       }
 
-      // Names for the existing vulnerable board should not wait behind new scans.
-      const existingNames = castleNameTargets(snapshot);
-      if (castleDetailBatches(existingNames).length && !cancelLiveScan) {
-        await loadCastleDetails(existingNames);
-      }
-      if (cancelLiveScan) return;
-
+      // Refresh time-sensitive troops and shields before slow name enrichment.
       let candidates = liveScanCandidates();
       if (!candidates.length) {
         setImportStatus("No known matches. Select Any shield state or Not checked / stale to discover new results.");
