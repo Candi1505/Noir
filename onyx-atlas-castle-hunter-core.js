@@ -649,7 +649,7 @@
         regionName: regionId,
         gateType: "none",
         connectedRegions: [],
-        glory: "needsData",
+        glory: classifyGlory(rawLevel, 2),
         shield: unknownShield(),
         guards: null,
         fleetCount: null,
@@ -697,7 +697,7 @@
     payload.records.slice(0, 50000).forEach(value => {
       if (isCanonicalCoordinate(value?.coordinate)) updates.set(value.coordinate, value);
     });
-    const gloryMaximum = integer(snapshot.atlas?.gloryMaxCastleLevel);
+    const gloryMaximum = integer(snapshot.atlas?.gloryMaxCastleLevel) ?? 2;
     const records = snapshot.records.map(record => {
       const update = updates.get(record.coordinate);
       if (!update) return record;

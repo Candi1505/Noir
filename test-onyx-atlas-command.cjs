@@ -11,13 +11,13 @@ const hunterCss = fs.readFileSync("onyx-atlas-castle-hunter.css", "utf8");
 const hunterCore = fs.readFileSync("onyx-atlas-castle-hunter-core.js", "utf8");
 const hunterWorker = fs.readFileSync("onyx-atlas-har-worker.js", "utf8");
 
-assert.match(html, /onyx-atlas-command\.css\?v=20260922-castle-search-glory-1/);
-assert.match(html, /onyx-atlas-command\.js\?v=20260922-castle-search-glory-1/);
+assert.match(html, /onyx-atlas-command\.css\?v=20260922-target-glory-1/);
+assert.match(html, /onyx-atlas-command\.js\?v=20260922-target-glory-1/);
 assert.match(html, /onyx-war-dragons-auth\.js\?v=20260921-owner-api-1/);
 assert.match(html, /onyx-atlas-castle-hunter\.css\?v=20260922-shield-context-1/);
-assert.match(html, /onyx-atlas-castle-hunter-core\.js\?v=20260922-shield-context-1/);
+assert.match(html, /onyx-atlas-castle-hunter-core\.js\?v=20260922-target-glory-1/);
 assert.match(html, /database\.js\?v=20260922-atlas-account-sync-1/);
-assert.match(html, /onyx-atlas-castle-hunter\.js\?v=20260922-castle-search-glory-1/);
+assert.match(html, /onyx-atlas-castle-hunter\.js\?v=20260922-target-glory-1/);
 assert.match(hunterSource, /!apiState\.connected && !apiState\.readyToAuthorise/);
 assert.ok(
   html.indexOf("onyx-atlas-command.js") < html.indexOf("onyx-command.js"),
@@ -53,7 +53,7 @@ assert.match(hunterSource, /SHIELD_CONTEXT_TTL_SECONDS = 6 \* 60 \* 60/);
 assert.match(hunterSource, /to trigger/);
 assert.match(hunterSource, /LIVE_BATCH_SIZE = 25/);
 assert.match(hunterWorker, /Only an allowlisted/);
-assert.match(hunterWorker, /onyx-atlas-castle-hunter-core\.js\?v=20260922-shield-context-1/);
+assert.match(hunterWorker, /onyx-atlas-castle-hunter-core\.js\?v=20260922-target-glory-1/);
 assert.doesNotMatch(hunterSource, /WAR_DRAGONS_(?:API_KEY|CLIENT_SECRET)|client_secret/i);
 assert.match(source, /FICTIONAL DEMO INTELLIGENCE/);
 assert.match(source, /No player or team data is shown/);
@@ -120,7 +120,7 @@ sandbox.window = sandbox;
 vm.createContext(sandbox);
 const testableSource = source.replace(
   "window.OnyxAtlasCommand = Object.freeze({",
-  "window.OnyxAtlasCommand = Object.freeze({ renderLiveCastles, renderLiveOverview, renderLivePreview, setTestQuery: value => { liveQuery = value; liveLimit = 20; }, moreTestResults: () => { liveLimit += 20; }, setTestFilter: value => { liveFilter = value; },"
+  "window.OnyxAtlasCommand = Object.freeze({ renderLiveCastles, renderLiveOverview, renderLivePreview, saveCastleGlory, setTestGloryFilter: value => { liveGloryFilter = value; }, setTestQuery: value => { liveQuery = value; liveLimit = 20; }, moreTestResults: () => { liveLimit += 20; }, setTestFilter: value => { liveFilter = value; },"
 );
 vm.runInContext(testableSource, sandbox);
 
@@ -278,15 +278,6 @@ assert.match(command.renderLivePreview(), /Bubble Keep/);
 assert.doesNotMatch(command.renderLivePreview(), /Open Keep/);
 console.log("Onyx Atlas Command regression checks passed.");
 
-assert.equal(command.estimateGlory({ enemy: "", own: 1000, percent: 100 }), null);
-assert.equal(command.estimateGlory({ enemy: 1000, own: 1000, percent: 101 }), null);
-assert.equal(command.estimateGlory({ enemy: -1, own: 1000, percent: 100 }), null);
-assert.equal(command.estimateGlory({ enemy: 1.5, own: 1000, percent: 100 }), null);
-assert.equal(command.estimateGlory({ enemy: 1000, own: 1000, percent: 100 }).low, 750);
-assert.equal(command.estimateGlory({ enemy: 1000, own: 1000, percent: 100 }).high, 750);
-assert.equal(command.estimateGlory({ enemy: 10000, own: 1000, percent: 50 }).low, 750);
-assert.equal(command.estimateGlory({ enemy: 10000, own: 1000, percent: 50 }).high, 2500);
-assert.equal(command.estimateGlory({ enemy: 0, own: 1000, percent: 100 }).high, 0);
 command.setLiveSnapshot({castles: Array.from({length: 45}, (_,i) => ({name: `Target ${String(i).padStart(2,"0")}`, owner: i === 0 ? "ChosenTeam" : "OtherTeam", region: "A130", id: `22-A130-${i}`, shieldState: "vulnerable"}))});
 command.setTestFilter("vulnerable");
 command.setTestQuery("");
@@ -303,3 +294,27 @@ command.setTestQuery("22-A130-44");
 assert.match(command.renderLivePreview(), /Target 44/);
 command.setTestQuery("missing-name");
 assert.doesNotMatch(command.renderLivePreview(), /<article /);
+
+assert.equal(command.castleGlory({level: 5}).percent, 100);
+assert.equal(command.castleGlory({level: 4}).percent, 100);
+assert.equal(command.castleGlory({level: 3}).percent, null);
+assert.equal(command.castleGlory({level: 2}).percent, null);
+sandbox.OnyxCommandCore = { getCurrentUserId: () => "player-one" };
+const van = {id: "22-A100-1", name: "Van", owner: "nightKnights", level: 2};
+assert.equal(command.saveCastleGlory(van, "68"), true);
+assert.equal(command.castleGlory(van).percent, 68);
+assert.equal(command.saveCastleGlory(van, ""), false);
+assert.equal(command.saveCastleGlory(van, "101"), false);
+assert.equal(command.castleGlory({...van, owner: "OtherTeam"}).percent, null);
+assert.equal(command.castleGlory(van, Date.now() + 25 * 3600000).percent, null);
+sandbox.OnyxCommandCore = { getCurrentUserId: () => "player-two" };
+assert.equal(command.castleGlory(van).percent, null);
+sandbox.OnyxCommandCore = { getCurrentUserId: () => "player-one" };
+command.setTestQuery("");
+command.setTestFilter("vulnerable");
+command.setLiveSnapshot({castles: [{...van, shieldState: "vulnerable"}, {id: "r",name:"Resolute",owner:"Loners101",level:5,shieldState:"vulnerable"}]});
+assert.match(command.renderLivePreview(), /100% glory/);
+assert.match(command.renderLivePreview(), /68% glory/);
+assert.ok(command.renderLivePreview().indexOf("Resolute") < command.renderLivePreview().indexOf("Van"));
+command.setTestGloryFilter("full");
+assert.doesNotMatch(command.renderLivePreview(), /68% glory/);

@@ -159,6 +159,7 @@
       atlas,
       records: value.records.map(record => ({
         ...record,
+        glory: Core.classifyGlory(record.rawLevel, 2),
         shield: record.officialFort
           ? Core.computeOfficialShieldState(record, {
               observedAt: Number(record.criticalObservedAt) || nowEpoch,
@@ -626,11 +627,12 @@
     heading.append(identity, badges);
 
     const shield = shieldPresentation(record, nowEpoch);
+    const glory = window.OnyxAtlasCommand?.castleGlory?.({ id: record.coordinate, owner: record.ownerTeam, level: record.tier });
     const metrics = document.createElement("div");
     metrics.className = "atlas-card-metrics";
     metrics.append(
       createMetric("APR", record.apr === null ? "—" : formatNumber(record.apr)),
-      createMetric("Glory", record.glory === "confirmed100" ? "100%" : record.glory === "needsData" ? "Check defender" : "—"),
+      createMetric("Castle glory", glory?.percent != null ? `${glory.percent}%` : record.glory === "confirmed100" ? "100%" : "Check in-game"),
       createMetric("Shield", shield.label, shield.state),
       createMetric("Guards", record.checked ? (record.guards === null ? "Unknown" : formatNumber(record.guards)) : "Not checked"),
       createMetric("Fort", Number.isInteger(record?.officialFort?.level) ? `Level ${record.officialFort.level}` : "Not supplied"),
@@ -656,8 +658,8 @@
     const calculator = document.createElement("button");
     calculator.type = "button";
     calculator.className = "atlas-copy-button";
-    calculator.textContent = "Calculate glory";
-    calculator.addEventListener("click", () => window.OnyxAtlasCommand?.openGloryCalculator?.(record.name || record.coordinate));
+    calculator.textContent = "View castle glory";
+    calculator.addEventListener("click", () => window.OnyxAtlasCommand?.openGloryTarget?.(record.coordinate));
     footer.append(location, copy, calculator);
 
     card.append(heading, metrics, footer);
@@ -867,7 +869,7 @@
     const progressBar = get("atlasImportProgress");
     progressBar.value = 1;
     progressBar.textContent = "1%";
-    activeWorker = new Worker("onyx-atlas-har-worker.js?v=20260922-shield-context-1");
+    activeWorker = new Worker("onyx-atlas-har-worker.js?v=20260922-target-glory-1");
 
     activeWorker.addEventListener("message", async event => {
       if (event.data?.type === "progress") {
