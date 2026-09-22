@@ -12,7 +12,7 @@ const hunterCore = fs.readFileSync("onyx-atlas-castle-hunter-core.js", "utf8");
 const hunterWorker = fs.readFileSync("onyx-atlas-har-worker.js", "utf8");
 
 assert.match(html, /onyx-atlas-command\.css\?v=20260922-live-glory-1/);
-assert.match(html, /onyx-atlas-command\.js\?v=20260922-primarch-owners-1/);
+assert.match(html, /onyx-atlas-command\.js\?v=20260922-target-view-1/);
 assert.match(html, /onyx-war-dragons-auth\.js\?v=20260921-owner-api-1/);
 assert.match(html, /onyx-atlas-castle-hunter\.css\?v=20260922-shield-context-1/);
 assert.match(html, /onyx-atlas-castle-hunter-core\.js\?v=20260922-primarch-owners-1/);
@@ -59,6 +59,7 @@ assert.match(hunterWorker, /onyx-atlas-castle-hunter-core\.js\?v=20260922-live-g
 assert.doesNotMatch(hunterSource, /WAR_DRAGONS_(?:API_KEY|CLIENT_SECRET)|client_secret/i);
 assert.match(source, /FICTIONAL DEMO INTELLIGENCE/);
 assert.match(source, /No player or team data is shown/);
+assert.match(source, /activeMode === "live" && activeTab === "overview"/);
 assert.match(source, /PRIVATE MANUAL SNAPSHOT/);
 assert.match(source, /Nothing is connected/);
 assert.match(source, /does not infer an opponent’s plans/);

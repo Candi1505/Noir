@@ -1293,6 +1293,12 @@
     overlay.querySelectorAll("[data-oac-tab]").forEach(button => {
       button.addEventListener("click", () => {
         activeTab = VALID_TABS.has(button.dataset.oacTab) ? button.dataset.oacTab : "overview";
+        if (activeMode === "live" && activeTab === "overview") {
+          liveFilter = "vulnerable";
+          liveQuery = "";
+          liveGloryFilter = "any";
+          liveLimit = 20;
+        }
         render({ focusSelector: `[data-oac-tab="${activeTab}"]` });
       });
     });
@@ -1458,6 +1464,12 @@
       readLocal();
     }
     activeTab = VALID_TABS.has(tab) ? tab : "overview";
+    if (activeMode === "live" && activeTab === "overview") {
+      liveFilter = "vulnerable";
+      liveQuery = "";
+      liveGloryFilter = "any";
+      liveLimit = 20;
+    }
     if (activeMode !== "manual" && activeTab === "entry") activeTab = "overview";
     lastFocused = document.activeElement;
     notice = "";

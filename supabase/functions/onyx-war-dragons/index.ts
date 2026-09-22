@@ -453,7 +453,51 @@ function sanitiseFleetTroops(value: JsonRecord) {
   return found ? total : null;
 }
 
-function sanitisePrimarch(value: JsonRecord, playerRefs: Map<string, string>) {
+function fleetPlayerKey(value: JsonRecord) {
+  const fleetId = typeof value.id === "string" ? value.id : "";
+  return fleetId.match(/^([a-f0-9]{16,64})-[0-9]+$/i)?.[1] || "";
+}
+
+function collectCriticalPlayerIds(payload: unknown, castleIds: string[]) {
+  if (!payload || typeof payload !== "object") return [];
+  const source = payload as JsonRecord;
+  const ids = new Set<string>();
+  castleIds.forEach(coordinate => {
+    const raw = source[coordinate];
+    if (!raw || typeof raw !== "object") return;
+    const fleets = Array.isArray((raw as JsonRecord).fleets)
+      ? (raw as JsonRecord).fleets as unknown[]
+      : [];
+    fleets.slice(0, 1000).forEach(rawFleet => {
+      if (!rawFleet || typeof rawFleet !== "object") return;
+      const key = fleetPlayerKey(rawFleet as JsonRecord);
+      if (key && ids.size < 100) ids.add(key);
+    });
+  });
+  return [...ids];
+}
+
+function sanitisePlayerNames(payload: unknown, playerIds: string[]) {
+  const names = new Map<string, string>();
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) return names;
+  const source = payload as JsonRecord;
+  const records = source.profiles && typeof source.profiles === "object" && !Array.isArray(source.profiles)
+    ? source.profiles as JsonRecord
+    : source;
+  playerIds.forEach(playerId => {
+    const raw = records[playerId];
+    if (!raw || typeof raw !== "object") return;
+    const name = safeTeamName((raw as JsonRecord).name);
+    if (name) names.set(playerId, name);
+  });
+  return names;
+}
+
+function sanitisePrimarch(
+  value: JsonRecord,
+  playerRefs: Map<string, string>,
+  playerNames: Map<string, string>,
+) {
   const match = String(value.dtype || "").match(/^(rusher|destroyer|taunter|sieger)([1-5])$/);
   if (!match) return null;
   const level = integer(value.level);
@@ -461,12 +505,11 @@ function sanitisePrimarch(value: JsonRecord, playerRefs: Map<string, string>) {
   const player = value.player && typeof value.player === "object"
     ? value.player as JsonRecord
     : null;
-  const playerName = safeTeamName(
+  const playerKey = fleetPlayerKey(value);
+  const playerName = playerNames.get(playerKey) || safeTeamName(
     value.player_name ?? value.owner_player_name ?? value.owner_name ??
       value.playerName ?? player?.name,
   );
-  const fleetId = typeof value.id === "string" ? value.id : "";
-  const playerKey = fleetId.match(/^([a-f0-9]{16,64})-[0-9]+$/i)?.[1] || "";
   let playerRef: string | null = null;
   if (playerKey) {
     if (!playerRefs.has(playerKey)) {
@@ -500,7 +543,12 @@ function sanitiseFort(value: unknown) {
   };
 }
 
-function sanitiseCritical(payload: unknown, castleIds: string[], observedAt: number) {
+function sanitiseCritical(
+  payload: unknown,
+  castleIds: string[],
+  observedAt: number,
+  playerNames: Map<string, string> = new Map(),
+) {
   if (!payload || typeof payload !== "object") throw new Error("invalid-critical-response");
   const source = payload as JsonRecord;
   const playerRefs = new Map<string, string>();
@@ -528,7 +576,7 @@ function sanitiseCritical(payload: unknown, castleIds: string[], observedAt: num
     if (sawGarrison) guards = guardTotal;
     const primarchs = fleets.slice(0, 1000).flatMap(rawFleet => {
       if (!rawFleet || typeof rawFleet !== "object") return [];
-      const primarch = sanitisePrimarch(rawFleet as JsonRecord, playerRefs);
+      const primarch = sanitisePrimarch(rawFleet as JsonRecord, playerRefs, playerNames);
       return primarch ? [primarch] : [];
     }).slice(0, 100);
     return {
@@ -768,10 +816,26 @@ async function handleAtlasCastleBatch(
     infoCache.set(infoCacheKey, { value: data, expiresAt: Date.now() + 60000 });
     return { ok: true as const, data };
   }
+  const playerIds = collectCriticalPlayerIds(upstream.data, castleIds);
+  let playerNames = new Map<string, string>();
+  if (playerIds.length) {
+    try {
+      const profiles = await upstreamJson(
+        "/api/v1/player/public/profile",
+        apiKey,
+        clientSecret,
+        new URLSearchParams({ ids: JSON.stringify(playerIds) }),
+      );
+      if (profiles.ok) playerNames = sanitisePlayerNames(profiles.data, playerIds);
+    } catch {
+      // Profile enrichment is optional. A failed name lookup must never hide
+      // the verified castle, shield, troop or Primarch response.
+    }
+  }
   return {
     ok: true as const,
     data: {
-      records: sanitiseCritical(upstream.data, castleIds, observedAt),
+      records: sanitiseCritical(upstream.data, castleIds, observedAt, playerNames),
       observedAt,
     },
   };
