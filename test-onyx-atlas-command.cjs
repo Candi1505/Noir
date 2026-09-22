@@ -11,13 +11,13 @@ const hunterCss = fs.readFileSync("onyx-atlas-castle-hunter.css", "utf8");
 const hunterCore = fs.readFileSync("onyx-atlas-castle-hunter-core.js", "utf8");
 const hunterWorker = fs.readFileSync("onyx-atlas-har-worker.js", "utf8");
 
-assert.match(html, /onyx-atlas-command\.css\?v=20260922-target-glory-1/);
-assert.match(html, /onyx-atlas-command\.js\?v=20260922-target-glory-1/);
+assert.match(html, /onyx-atlas-command\.css\?v=20260922-live-glory-1/);
+assert.match(html, /onyx-atlas-command\.js\?v=20260922-live-glory-1/);
 assert.match(html, /onyx-war-dragons-auth\.js\?v=20260921-owner-api-1/);
 assert.match(html, /onyx-atlas-castle-hunter\.css\?v=20260922-shield-context-1/);
-assert.match(html, /onyx-atlas-castle-hunter-core\.js\?v=20260922-target-glory-1/);
+assert.match(html, /onyx-atlas-castle-hunter-core\.js\?v=20260922-live-glory-1/);
 assert.match(html, /database\.js\?v=20260922-atlas-account-sync-1/);
-assert.match(html, /onyx-atlas-castle-hunter\.js\?v=20260922-target-glory-1/);
+assert.match(html, /onyx-atlas-castle-hunter\.js\?v=20260922-live-glory-1/);
 assert.match(hunterSource, /!apiState\.connected && !apiState\.readyToAuthorise/);
 assert.ok(
   html.indexOf("onyx-atlas-command.js") < html.indexOf("onyx-command.js"),
@@ -53,7 +53,7 @@ assert.match(hunterSource, /SHIELD_CONTEXT_TTL_SECONDS = 6 \* 60 \* 60/);
 assert.match(hunterSource, /to trigger/);
 assert.match(hunterSource, /LIVE_BATCH_SIZE = 25/);
 assert.match(hunterWorker, /Only an allowlisted/);
-assert.match(hunterWorker, /onyx-atlas-castle-hunter-core\.js\?v=20260922-target-glory-1/);
+assert.match(hunterWorker, /onyx-atlas-castle-hunter-core\.js\?v=20260922-live-glory-1/);
 assert.doesNotMatch(hunterSource, /WAR_DRAGONS_(?:API_KEY|CLIENT_SECRET)|client_secret/i);
 assert.match(source, /FICTIONAL DEMO INTELLIGENCE/);
 assert.match(source, /No player or team data is shown/);
@@ -211,9 +211,13 @@ command.setLiveSnapshot({
       fleets: 9,
       apr: 873,
       atlasRank: 130,
+      gloryPercent: 68,
+      gloryObservedAt: new Date().toISOString(),
+      glorySource: "Calculated from live Atlas ranks",
       fortLevel: 12,
       shieldShipsUntilTrigger: 170000,
       observedAt: "2026-08-28T10:14:00.000Z",
+      primarchs: [{ type: "Taunter", tier: 4, level: 14, troops: 6444, teamName: "nightKnights", rawId: "drop" }],
       mapCoordinates: "X:3360 Y:2340",
       shieldState: "cooldown",
       cooldownEndsAt: "2026-08-28T11:15:00.000Z",
@@ -233,6 +237,9 @@ assert.equal(live.castles[0].name, "Night Gate");
 assert.equal(live.castles[0].troops, 123456);
 assert.equal(live.castles[0].apr, 873);
 assert.equal(live.castles[0].atlasRank, 130);
+assert.equal(live.castles[0].gloryPercent, 68);
+assert.equal(live.castles[0].primarchs[0].type, "Taunter");
+assert.equal("rawId" in live.castles[0].primarchs[0], false);
 assert.equal(live.castles[0].fortLevel, 12);
 assert.equal(live.castles[0].shieldShipsUntilTrigger, 170000);
 assert.equal(live.castles[0].mapCoordinates, "X:3360 Y:2340");
@@ -299,6 +306,13 @@ assert.equal(command.castleGlory({level: 5}).percent, 100);
 assert.equal(command.castleGlory({level: 4}).percent, 100);
 assert.equal(command.castleGlory({level: 3}).percent, null);
 assert.equal(command.castleGlory({level: 2}).percent, null);
+const liveVan = {
+  id: "22-A2575-2", name: "Van", owner: "nightKnights", level: 2,
+  source: "War Dragons API", gloryPercent: 68, gloryObservedAt: new Date().toISOString()
+};
+assert.equal(command.castleGlory(liveVan).percent, 68);
+assert.match(command.castleGlory(liveVan).source, /Live Atlas ranks/);
+assert.equal(command.castleGlory(liveVan, Date.now() + 11 * 60000).percent, null);
 sandbox.OnyxCommandCore = { getCurrentUserId: () => "player-one" };
 const van = {id: "22-A100-1", name: "Van", owner: "nightKnights", level: 2};
 assert.equal(command.saveCastleGlory(van, "68"), true);

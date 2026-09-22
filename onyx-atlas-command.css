@@ -1452,4 +1452,14 @@
 .oac-target-glory small { color: #a1adba; font-size: .7rem; }
 .oac-live-preview .oac-target-glory { margin: 8px 0 0; }
 .oac-live-castle-card > .oac-glory { margin: 0 17px 16px; }
+.oac-primarchs { margin: 0 17px 16px; border: 1px solid rgba(103, 184, 220, .16); border-radius: 12px; background: rgba(5, 10, 15, .5); color: #9bc8e0; }
+.oac-primarchs summary { min-height: 42px; padding: 12px 14px; cursor: pointer; font-size: .7rem; font-weight: 850; }
+.oac-primarchs > div { display: grid; gap: 7px; padding: 0 10px 10px; }
+.oac-primarchs article { padding: 10px; border: 1px solid rgba(190, 193, 206, .08); border-radius: 9px; background: rgba(3, 4, 7, .48); }
+.oac-primarchs article strong, .oac-primarchs article span, .oac-primarchs article small { display: block; }
+.oac-primarchs article strong { color: #e0dfe4; font-size: .72rem; }
+.oac-primarchs article span { margin-top: 4px; color: #a7a8b1; font-size: .62rem; }
+.oac-primarchs article small { margin-top: 3px; color: #747681; font-size: .57rem; }
+.oac-primarchs.stale { border-color: rgba(223, 183, 85, .2); color: #dfb755; }
+.oac-primarchs.stale p { margin: 0; padding: 0 14px 12px; color: #858691; font-size: .62rem; line-height: 1.45; }
 .oac-search select { margin-top: 6px; padding: 12px; background: #0b1118; color: #d6d5dc; border: 1px solid #455265; border-radius: 9px; font-size: 16px; }

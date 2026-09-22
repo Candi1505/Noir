@@ -175,6 +175,21 @@
     const shieldState = LIVE_SHIELD_STATES.has(source.shieldState)
       ? source.shieldState
       : "unknown";
+    const primarchs = (Array.isArray(source.primarchs) ? source.primarchs : [])
+      .slice(0, 100)
+      .flatMap(raw => {
+        const type = cleanText(raw?.type, 20);
+        const tier = cleanNumber(raw?.tier, 5);
+        if (!["Rusher", "Destroyer", "Taunter", "Sieger"].includes(type) || tier === null || tier < 1) return [];
+        return [{
+          type,
+          tier,
+          level: cleanNumber(raw?.level, 100),
+          troops: cleanNumber(raw?.troops),
+          teamName: cleanText(raw?.teamName, 70),
+          allianceName: cleanText(raw?.allianceName, 70)
+        }];
+      });
     return {
       id: cleanId(source.id, `official-castle-${index + 1}`),
       name,
@@ -185,9 +200,13 @@
       fleets: cleanNumber(source.fleets, 99999),
       apr: cleanNumber(source.apr),
       atlasRank: cleanNumber(source.atlasRank),
+      gloryPercent: cleanNumber(source.gloryPercent, 100),
+      gloryObservedAt: cleanText(source.gloryObservedAt, 64) || null,
+      glorySource: cleanText(source.glorySource, 80) || null,
       fortLevel: cleanNumber(source.fortLevel, 999),
       shieldShipsUntilTrigger: cleanNumber(source.shieldShipsUntilTrigger),
       observedAt: cleanText(source.observedAt, 64) || null,
+      primarchs,
       mapCoordinates: cleanText(source.mapCoordinates, 64) || null,
       shieldState,
       shieldEndsAt: cleanText(source.shieldEndsAt, 64) || null,
@@ -573,6 +592,19 @@
   function castleGlory(castle, now = Date.now()) {
     // Pocket Gems: level 4 and 5 castles bypass level/team glory scaling.
     if ([4, 5].includes(castle.level)) return { percent: 100, source: "Level 4–5 castle rule" };
+    const livePercent = castle.gloryPercent === null ? NaN : Number(castle.gloryPercent);
+    const liveCheckedAt = Date.parse(castle.gloryObservedAt || "");
+    if (
+      castle.source === "War Dragons API" &&
+      Number.isFinite(livePercent) && livePercent >= 0 && livePercent <= 100 &&
+      Number.isFinite(liveCheckedAt) && liveCheckedAt <= now + 60000 &&
+      now - liveCheckedAt < 10 * 60 * 1000
+    ) {
+      return {
+        percent: Math.round(livePercent),
+        source: `Live Atlas ranks · checked ${formatLiveTime(castle.gloryObservedAt)}`
+      };
+    }
     const key = storageKey("onyxCastleGloryV1");
     if (key) {
       try {
@@ -606,6 +638,7 @@
   function renderGloryEntry(castle) {
     if ([4, 5].includes(castle.level)) return "";
     const glory = castleGlory(castle);
+    if (glory.source.startsWith("Live Atlas ranks")) return "";
     return `<details class="oac-glory"><summary>Record in-game glory %</summary>
       <p>Enter the percentage beside Attack for this castle. Saved for your profile on this device for 24 hours; recheck after changing teams or targets.</p>
       <form data-oac-glory-entry="${escapeHtml(castle.id)}"><label>Glory percentage<input name="percent" type="number" min="0" max="100" step="0.1" required inputmode="decimal" value="${glory.percent ?? ""}"></label><button type="submit">Save percentage</button></form>
@@ -613,7 +646,18 @@
   }
 
   function renderGloryGuide() {
-    return `<p class="oac-evidence-note">Glory % is the pre-attack reward rate. Level 4–5: 100% under the <a href="https://pocketgems-support.helpshift.com/hc/en/3-war-dragons/faq/686-glory-calculations/" target="_blank" rel="noopener">Pocket Gems rule</a>. Lower levels need your in-game target percentage. Unknown does not mean 0%.</p>`;
+    return `<p class="oac-evidence-note">Glory % is the pre-attack reward rate. Level 4–5: 100% under the <a href="https://pocketgems-support.helpshift.com/hc/en/3-war-dragons/faq/686-glory-calculations/" target="_blank" rel="noopener">Pocket Gems rule</a>. Lower-level percentages are calculated from freshly loaded Atlas team-power ranks and expire after 10 minutes. Unknown does not mean 0%.</p>`;
+  }
+
+  function renderPrimarchIntel(castle) {
+    if (!castle.primarchs.length) return "";
+    const checkedAt = Date.parse(castle.observedAt || "");
+    const fresh = Number.isFinite(checkedAt) && checkedAt <= Date.now() + 60000 &&
+      Date.now() - checkedAt < 10 * 60 * 1000;
+    if (!fresh) {
+      return `<details class="oac-primarchs stale"><summary>Who’s here · scan expired</summary><p>Run a live scan to refresh the primarchs and troop stacks at this castle.</p></details>`;
+    }
+    return `<details class="oac-primarchs"><summary>Who’s here · ${castle.primarchs.length} primarch${castle.primarchs.length === 1 ? "" : "s"}</summary><div>${castle.primarchs.map(primarch => `<article><strong>T${formatNumber(primarch.tier)} ${escapeHtml(primarch.type)}</strong><span>${primarch.level === null ? "Level not supplied" : `Level ${formatNumber(primarch.level)}`} · ${primarch.troops === null ? "Troops not supplied" : `${formatNumber(primarch.troops)} troops`}</span>${primarch.teamName ? `<small>${escapeHtml(primarch.teamName)}${primarch.allianceName ? ` · ${escapeHtml(primarch.allianceName)}` : ""}</small>` : ""}</article>`).join("")}</div></details>`;
   }
 
   function renderLiveSearch() {
@@ -900,6 +944,7 @@
                   <div><dt>Atlas rank</dt><dd>${castle.atlasRank === null ? "Not supplied" : formatNumber(castle.atlasRank)}</dd></div>
                   <div><dt>Troops remaining to trigger</dt><dd>${castle.shieldShipsUntilTrigger === null ? "Not supplied" : `${formatNumber(castle.shieldShipsUntilTrigger)} troops`}</dd></div>
                 </dl>
+                ${renderPrimarchIntel(castle)}
                 ${renderGloryEntry(castle)}
                 <footer>
                   <span>${escapeHtml(castle.source)}${castle.observedAt ? ` · checked ${escapeHtml(formatLiveTime(castle.observedAt))}` : ""}${castle.mapCoordinates ? ` · API ${escapeHtml(castle.mapCoordinates)}` : ""}</span>

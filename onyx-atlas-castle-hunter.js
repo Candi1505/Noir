@@ -384,6 +384,13 @@
           fleets: Number.isInteger(record?.fleetCount) ? record.fleetCount : null,
           apr: Number.isInteger(record?.apr) ? record.apr : null,
           atlasRank: Number.isInteger(record?.atlasRank) ? record.atlasRank : null,
+          gloryPercent: Number.isFinite(Number(record?.gloryPercent))
+            ? Math.max(0, Math.min(100, Math.round(Number(record.gloryPercent))))
+            : null,
+          gloryObservedAt: epochIso(record?.gloryObservedAt),
+          glorySource: Number(record?.rawLevel) > 2
+            ? "Level 4–5 castle rule"
+            : "Calculated from live Atlas ranks",
           fortLevel: Number.isInteger(record?.officialFort?.level)
             ? record.officialFort.level
             : null,
@@ -391,6 +398,18 @@
             ? Math.max(0, Math.ceil(Number(record.shield.shipsUntilTrigger)))
             : null,
           observedAt: epochIso(record?.criticalObservedAt),
+          primarchs: Array.isArray(record?.primarchs)
+            ? record.primarchs.slice(0, 100).map(primarch => ({
+              type: String(primarch?.type || ""),
+              tier: Number.isInteger(primarch?.tier) ? primarch.tier : null,
+              level: Number.isInteger(primarch?.level) ? primarch.level : null,
+              troops: Number.isFinite(Number(primarch?.troops))
+                ? Math.max(0, Number(primarch.troops))
+                : null,
+              teamName: String(primarch?.teamName || ""),
+              allianceName: String(primarch?.allianceName || "")
+            }))
+            : [],
           mapCoordinates: Core.formatMapPosition(record?.mapPosition) || null,
           shieldState,
           shieldEndsAt: ["dropping", "shielded"].includes(shieldState) ? shieldEnd : null,

@@ -5,6 +5,25 @@ await import(new URL("./onyx-atlas-castle-hunter-core.js", import.meta.url));
 
 const Core = globalThis.OnyxAtlasCore;
 
+test("calculates lower-castle glory from live Atlas power ranks", () => {
+  assert.equal(Core.calculateCastleGloryPercent(1, 2, 17, 102), 68);
+  assert.equal(Core.calculateCastleGloryPercent(1, 2, 17, 8), 100);
+  assert.equal(Core.calculateCastleGloryPercent(4, 2, null, null), 100);
+  assert.equal(Core.calculateCastleGloryPercent(1, 2, null, 102), null);
+});
+
+test("official catalogue carries player rank into per-castle glory", () => {
+  const snapshot = Core.createOfficialSnapshot({
+    observedAt: 2000,
+    playerTeam: "SeveredReality",
+    playerApr: 17,
+    records: [{ coordinate: "22-A2575-2", rawLevel: 1, ownerTeam: "nightKnights", apr: 102 }]
+  }, { kingdomId: 22, realmName: "Celestial_Haven" });
+  assert.equal(snapshot.records[0].gloryPercent, 68);
+  assert.equal(snapshot.records[0].gloryObservedAt, 2000);
+  assert.equal(snapshot.atlas.playerTeam, "SeveredReality");
+});
+
 test("castle and team catalogue timestamps retain independent source ages", () => {
   const payload = { updatedAt: 2000, castleUpdatedAt: 1000, teamUpdatedAt: 2000,
     records: [{ coordinate: "1-A130-1", rawLevel: 4 }] };
@@ -110,6 +129,21 @@ test("official details enrich names without inventing shields or losing guards",
   assert.equal(merged.records[0].guards, 250);
   assert.deepEqual(merged.records[0].shield, original.records[0].shield);
   assert.equal(original.records[0].name, "Synthetic Keep");
+});
+
+test("live critical details retain only sanitised primarch intelligence", () => {
+  const original = { records: [castle()], atlas: {} };
+  const merged = Core.mergeOfficialCritical(original, { observedAt: 1000, records: [{
+    coordinate: "42-A1-1", available: true, observedAt: 1000, fleetCount: 2,
+    primarchs: [
+      { type: "Taunter", tier: 4, level: 14, troops: 6444, teamName: "nightKnights" },
+      { type: "private-id", tier: 9, level: 999, troops: -1 }
+    ]
+  }] });
+  assert.deepEqual(merged.records[0].primarchs, [{
+    type: "Taunter", tier: 4, level: 14, troops: 6444,
+    teamName: "nightKnights", allianceName: null
+  }]);
 });
 
 test("missing shield toggle is unknown, never disabled", () => {

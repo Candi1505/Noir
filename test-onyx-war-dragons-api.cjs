@@ -12,7 +12,7 @@ assert.match(html, /id="onyxWdApiTest"/);
 assert.match(html, /id="onyxWdShapeOutput"/);
 assert.match(html, /id="onyxWdProfilePanel"/);
 assert.match(html, /id="onyxWdApplyProfile"/);
-assert.match(html, /onyx-war-dragons-api\.js\?v=20260922-kingdom-discovery-1/);
+assert.match(html, /onyx-war-dragons-api\.js\?v=20260922-live-glory-1/);
 assert.match(html, /onyx-war-dragons-auth\.js\?v=20260921-owner-api-1/);
 assert.match(html, /onyx-command\.css\?v=20260828-audit-2/);
 assert.match(css, /\.onyx-api-link/);

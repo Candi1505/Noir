@@ -356,7 +356,12 @@ async function upstreamJson(
   }
 }
 
-function sanitiseMacro(castlePayload: unknown, teamPayload: unknown, kingdomId: number) {
+function sanitiseMacro(
+  castlePayload: unknown,
+  teamPayload: unknown,
+  kingdomId: number,
+  profilePayload: unknown = null,
+) {
   const castles = (castlePayload as JsonRecord)?.castles;
   const teams = (teamPayload as JsonRecord)?.teams;
   if (!castles || typeof castles !== "object" || !teams || typeof teams !== "object") {
@@ -400,15 +405,66 @@ function sanitiseMacro(castlePayload: unknown, teamPayload: unknown, kingdomId: 
     });
   });
 
+  const profile = profilePayload && typeof profilePayload === "object"
+    ? profilePayload as JsonRecord
+    : null;
+  const playerTeam = safeTeamName(profile?.guild_name);
+  const profileTeamRank = integer(profile?.team_rank);
+  const playerApr = profileTeamRank !== null && profileTeamRank > 0
+    ? profileTeamRank
+    : playerTeam
+      ? teamMap.get(playerTeam)?.apr ?? null
+      : null;
+
   return {
     records,
     teams: Array.from(teamMap, ([name, team]) => ({ name, capitalId: team.capitalId })),
+    playerTeam,
+    playerApr,
+    observedAt: Date.now() / 1000,
     castleUpdatedAt: finite((castlePayload as JsonRecord)?.update_ts),
     teamUpdatedAt: finite((teamPayload as JsonRecord)?.update_ts),
     updatedAt: Math.max(
       finite((castlePayload as JsonRecord)?.update_ts) || 0,
       finite((teamPayload as JsonRecord)?.update_ts) || 0,
     ) || null,
+  };
+}
+
+function sanitiseFleetTroops(value: JsonRecord) {
+  const direct = finite(value.total_troops);
+  if (direct !== null && direct >= 0) return direct;
+  const escorts = value.escorts && typeof value.escorts === "object"
+    ? Object.values(value.escorts as JsonRecord)
+    : [];
+  let total = 0;
+  let found = false;
+  escorts.slice(0, 1000).forEach(rawEscort => {
+    if (!rawEscort || typeof rawEscort !== "object") return;
+    const ships = (rawEscort as JsonRecord).ships;
+    if (!ships || typeof ships !== "object") return;
+    Object.values(ships as JsonRecord).slice(0, 100).forEach(rawCount => {
+      const count = finite(rawCount);
+      if (count === null || count < 0) return;
+      found = true;
+      total += count;
+    });
+  });
+  return found ? total : null;
+}
+
+function sanitisePrimarch(value: JsonRecord) {
+  const match = String(value.dtype || "").match(/^(rusher|destroyer|taunter|sieger)([1-5])$/);
+  if (!match) return null;
+  const level = integer(value.level);
+  const troops = sanitiseFleetTroops(value);
+  return {
+    type: `${match[1][0].toUpperCase()}${match[1].slice(1)}`,
+    tier: Number(match[2]),
+    level: level !== null && level >= 0 ? level : null,
+    troops,
+    teamName: safeTeamName(value.team_name),
+    allianceName: safeTeamName(value.alliance_name),
   };
 }
 
@@ -443,12 +499,17 @@ function sanitiseCritical(payload: unknown, castleIds: string[], observedAt: num
       if (!rawFleet || typeof rawFleet !== "object") return;
       const fleet = rawFleet as JsonRecord;
       if (fleet.dtype !== "garrison") return;
-      const troops = finite(fleet.total_troops);
+      const troops = sanitiseFleetTroops(fleet);
       if (troops === null || troops < 0) return;
       sawGarrison = true;
       guardTotal += troops;
     });
     if (sawGarrison) guards = guardTotal;
+    const primarchs = fleets.slice(0, 1000).flatMap(rawFleet => {
+      if (!rawFleet || typeof rawFleet !== "object") return [];
+      const primarch = sanitisePrimarch(rawFleet as JsonRecord);
+      return primarch ? [primarch] : [];
+    }).slice(0, 100);
     return {
       coordinate,
       available: true,
@@ -457,6 +518,7 @@ function sanitiseCritical(payload: unknown, castleIds: string[], observedAt: num
       fort: sanitiseFort(value.fort),
       guards,
       fleetCount: fleets.length,
+      primarchs,
     };
   });
 }
@@ -566,7 +628,7 @@ async function handleAtlasMacro(
     k_id: String(kingdomId),
     realm_name: realmName,
   });
-  const [castles, teams] = await Promise.all([
+  const [castles, teams, profile] = await Promise.all([
     upstreamJson(
       "/api/v1/atlas/castles/metadata/macro",
       apiKey,
@@ -579,6 +641,11 @@ async function handleAtlasMacro(
       clientSecret,
       query,
     ),
+    upstreamJson(
+      "/api/v1/player/public/my_profile",
+      apiKey,
+      clientSecret,
+    ),
   ]);
   if (!castles.ok || !teams.ok) {
     return {
@@ -587,7 +654,12 @@ async function handleAtlasMacro(
       code: "atlas-macro-unavailable",
     };
   }
-  const value = sanitiseMacro(castles.data, teams.data, kingdomId) as unknown as JsonRecord;
+  const value = sanitiseMacro(
+    castles.data,
+    teams.data,
+    kingdomId,
+    profile.ok ? profile.data : null,
+  ) as unknown as JsonRecord;
   macroCache.set(cacheKey, { expiresAt: Date.now() + MACRO_CACHE_MS, value });
   trimMacroCache();
   return { ok: true as const, data: value, cached: false };

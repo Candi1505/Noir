@@ -273,6 +273,53 @@
     return rawLevel > maximum ? "confirmed100" : "needsData";
   }
 
+  // Atlas combines the live attacker/defender team-power ranks equally with
+  // the castle-garrison level component. The parameters below are taken from
+  // the captured current Atlas client configuration. The combined value is
+  // rounded for the percentage display; callers still label it as calculated.
+  function calculateCastleGloryPercent(
+    rawCastleLevel,
+    maxCastleLevel,
+    attackerApr,
+    defenderApr
+  ) {
+    const rawLevel = integer(rawCastleLevel);
+    const maximum = integer(maxCastleLevel);
+    if (rawLevel === null || maximum === null) return null;
+    if (rawLevel > maximum) return 100;
+    const attacker = integer(attackerApr);
+    const defender = integer(defenderApr);
+    if (attacker === null || defender === null || attacker <= 0 || defender <= 0) {
+      return null;
+    }
+    const bracket = Math.max(15, attacker * 0.02);
+    const denominator = bracket * Math.min(3, Math.max(1, attacker * 0.02));
+    const exponent = Math.max(0, defender - attacker - bracket) / denominator;
+    const teamMultiplier = Math.pow(0.8, exponent);
+    return Math.max(0, Math.min(100, Math.round(100 * (0.5 + 0.5 * teamMultiplier))));
+  }
+
+  function normalisePrimarchs(value) {
+    if (!Array.isArray(value)) return [];
+    return value.slice(0, 100).flatMap(raw => {
+      const type = typeof raw?.type === "string" &&
+        ["Rusher", "Destroyer", "Taunter", "Sieger"].includes(raw.type)
+        ? raw.type : "";
+      const tier = integer(raw?.tier);
+      if (!type || tier === null || tier < 1 || tier > 5) return [];
+      const level = integer(raw?.level);
+      const troops = finiteNumber(raw?.troops);
+      return [{
+        type,
+        tier,
+        level: level !== null && level >= 0 ? level : null,
+        troops: troops !== null && troops >= 0 ? troops : null,
+        teamName: typeof raw?.teamName === "string" ? raw.teamName.slice(0, 120) : null,
+        allianceName: typeof raw?.allianceName === "string" ? raw.allianceName.slice(0, 120) : null
+      }];
+    });
+  }
+
   function unknownShield() {
     return {
       state: "unknown",
@@ -622,6 +669,8 @@
       : "";
     if (kingdomId === null || kingdomId < 1 || !realmName) return null;
 
+    const playerApr = integer(payload.playerApr);
+    const gloryObservedAt = finiteNumber(payload.observedAt) ?? Date.now() / 1000;
     const records = payload.records.slice(0, 50000).flatMap(value => {
       const coordinate = String(value?.coordinate || "");
       const rawLevel = integer(value?.rawLevel);
@@ -650,9 +699,12 @@
         gateType: "none",
         connectedRegions: [],
         glory: classifyGlory(rawLevel, 2),
+        gloryPercent: calculateCastleGloryPercent(rawLevel, 2, playerApr, value.apr),
+        gloryObservedAt,
         shield: unknownShield(),
         guards: null,
         fleetCount: null,
+        primarchs: [],
         checked: false,
         dataConflict: false,
         source: "official"
@@ -673,6 +725,9 @@
         realmName,
         shieldConfig: null,
         gloryMaxCastleLevel: null,
+        playerTeam: typeof payload.playerTeam === "string" ? payload.playerTeam : null,
+        playerApr,
+        gloryObservedAt,
         majorEvent: null,
         configObservedAt: updatedAt,
         topologySource: "official-metadata"
@@ -698,6 +753,8 @@
       if (isCanonicalCoordinate(value?.coordinate)) updates.set(value.coordinate, value);
     });
     const gloryMaximum = integer(snapshot.atlas?.gloryMaxCastleLevel) ?? 2;
+    const playerApr = integer(payload.playerApr) ?? integer(snapshot.atlas?.playerApr);
+    const gloryObservedAt = finiteNumber(payload.observedAt) ?? Date.now() / 1000;
     const records = snapshot.records.map(record => {
       const update = updates.get(record.coordinate);
       if (!update) return record;
@@ -715,7 +772,11 @@
         atlasRank: integer(update.atlasRank),
         glory: Number.isInteger(nextRawLevel)
           ? classifyGlory(nextRawLevel, gloryMaximum)
-          : record.glory
+          : record.glory,
+        gloryPercent: Number.isInteger(nextRawLevel)
+          ? calculateCastleGloryPercent(nextRawLevel, gloryMaximum, playerApr, update.apr)
+          : record.gloryPercent,
+        gloryObservedAt
       };
     });
     return {
@@ -724,6 +785,14 @@
       teams: Array.isArray(payload.teams) ? payload.teams : [],
       castleUpdatedAt: finiteNumber(payload.castleUpdatedAt),
       teamUpdatedAt: finiteNumber(payload.teamUpdatedAt),
+      atlas: {
+        ...snapshot.atlas,
+        playerTeam: typeof payload.playerTeam === "string"
+          ? payload.playerTeam
+          : snapshot.atlas?.playerTeam || null,
+        playerApr,
+        gloryObservedAt
+      },
       records
     };
   }
@@ -755,6 +824,7 @@
         fleetCount: fleetCount !== null && fleetCount >= 0
           ? fleetCount
           : record.fleetCount,
+        primarchs: normalisePrimarchs(update.primarchs),
         officialFort: update.fort && typeof update.fort === "object"
           ? update.fort
           : record.officialFort || null,
@@ -819,6 +889,7 @@
     validateFilters,
     deriveGateTypes,
     classifyGlory,
+    calculateCastleGloryPercent,
     computeShieldState,
     computeOfficialShieldState,
     effectiveShieldState,
