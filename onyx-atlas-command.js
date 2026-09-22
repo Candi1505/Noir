@@ -206,6 +206,7 @@
       gloryPercent: cleanNumber(source.gloryPercent, 100),
       gloryObservedAt: cleanText(source.gloryObservedAt, 64) || null,
       glorySource: cleanText(source.glorySource, 80) || null,
+      gloryUnavailableReason: cleanText(source.gloryUnavailableReason, 100) || null,
       fortLevel: cleanNumber(source.fortLevel, 999),
       shieldArmed: source.shieldArmed === true,
       shieldShipsUntilTrigger: cleanNumber(source.shieldShipsUntilTrigger),
@@ -621,7 +622,7 @@
         }
       } catch (_) { /* An invalid observation is unknown. */ }
     }
-    return { percent: null, source: "Check this target in-game" };
+    return { percent: null, source: castle.gloryUnavailableReason || "Check this target in-game" };
   }
 
   function saveCastleGlory(castle, value) {

@@ -663,6 +663,18 @@
     return result;
   }
 
+  function resolvePlayerApr(payload) {
+    const supplied = integer(payload?.playerApr);
+    if (supplied !== null && supplied > 0) return supplied;
+    const team = String(payload?.playerTeam || "").trim().toLowerCase();
+    if (!team) return null;
+    const ranks = new Set((payload.records || [])
+      .filter(record => String(record.ownerTeam || "").trim().toLowerCase() === team)
+      .map(record => integer(record.apr))
+      .filter(rank => rank !== null && rank > 0));
+    return ranks.size === 1 ? [...ranks][0] : null;
+  }
+
   function createOfficialSnapshot(payload, identity = {}) {
     if (!Array.isArray(payload?.records)) return null;
     const kingdomId = integer(identity.kingdomId);
@@ -671,7 +683,7 @@
       : "";
     if (kingdomId === null || kingdomId < 1 || !realmName) return null;
 
-    const playerApr = integer(payload.playerApr);
+    const playerApr = resolvePlayerApr(payload);
     const gloryObservedAt = finiteNumber(payload.observedAt) ?? Date.now() / 1000;
     const records = payload.records.slice(0, 50000).flatMap(value => {
       const coordinate = String(value?.coordinate || "");
@@ -755,7 +767,7 @@
       if (isCanonicalCoordinate(value?.coordinate)) updates.set(value.coordinate, value);
     });
     const gloryMaximum = integer(snapshot.atlas?.gloryMaxCastleLevel) ?? 2;
-    const playerApr = integer(payload.playerApr) ?? integer(snapshot.atlas?.playerApr);
+    const playerApr = resolvePlayerApr(payload);
     const gloryObservedAt = finiteNumber(payload.observedAt) ?? Date.now() / 1000;
     const records = snapshot.records.map(record => {
       const update = updates.get(record.coordinate);

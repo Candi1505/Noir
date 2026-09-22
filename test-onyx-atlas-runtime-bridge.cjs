@@ -123,6 +123,14 @@ const expanded = sandbox.OnyxAtlasCastleHunter.selectBalancedLiveBatch(
 assert.equal(expanded.length, 250);
 
 const now = 10_000;
+const details = sandbox.OnyxAtlasCastleHunter.castleDetailBatches(
+  Array.from({ length: 250 }, (_, i) => ({ coordinate: `42-A1-${i}`, name: "" })), 10000
+);
+assert.deepEqual(Array.from(details, batch => batch.length), [100, 100, 50]);
+assert.equal(new Set(details.flat()).size, 250);
+assert.equal(sandbox.OnyxAtlasCastleHunter.castleDetailBatches([
+  {coordinate: "42-A1-1", name: "Named", infoObservedAt: 9999}
+], 10000).length, 0);
 const snapshot = JSON.parse(JSON.stringify(sandbox.OnyxAtlasCastleHunter.toCommandSnapshot({
   schemaVersion: 2,
   capturedAt: 9_000,

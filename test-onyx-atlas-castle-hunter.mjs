@@ -25,6 +25,17 @@ test("official catalogue carries player rank into per-castle glory", () => {
   assert.equal(snapshot.atlas.playerTeam, "SeveredReality");
 });
 
+test("live own-team matching resolves APR without reusing stale attacker ranks", () => {
+  const identity = {kingdomId: 22, realmName: "Celestial_Haven"};
+  const payload = {playerTeam: " OwnTeam ", playerApr: null, observedAt: 2000,
+    records: [{coordinate: "22-A1-0", rawLevel: 1, ownerTeam: "ownteam", apr: 17}]};
+  const snapshot = Core.createOfficialSnapshot(payload, identity);
+  assert.equal(snapshot.atlas.playerApr, 17);
+  const refreshed = Core.mergeOfficialMacro(snapshot, {...payload, playerTeam: null});
+  assert.equal(refreshed.atlas.playerApr, null);
+  assert.equal(refreshed.records[0].gloryPercent, null);
+});
+
 test("castle and team catalogue timestamps retain independent source ages", () => {
   const payload = { updatedAt: 2000, castleUpdatedAt: 1000, teamUpdatedAt: 2000,
     records: [{ coordinate: "1-A130-1", rawLevel: 4 }] };

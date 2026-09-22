@@ -392,6 +392,11 @@
             : null,
           gloryObservedAt: epochIso(record?.gloryObservedAt),
           glorySource: "Calculated from live Atlas ranks",
+          gloryUnavailableReason: !(Number(value?.atlas?.playerApr) > 0)
+            ? "Your live team APR is unavailable"
+            : !(Number(record?.apr) > 0)
+              ? "Target team APR is unavailable"
+              : "Refresh the live glory calculation",
           fortLevel: Number.isInteger(record?.officialFort?.level)
             ? record.officialFort.level
             : null,
@@ -938,6 +943,47 @@
     return new Promise(resolve => window.setTimeout(resolve, milliseconds));
   }
 
+  function castleDetailBatches(records, nowEpoch = Date.now() / 1000) {
+    const targets = records.filter(record => !record.name || !record.infoObservedAt ||
+      nowEpoch - record.infoObservedAt > 3600);
+    const batches = [];
+    for (let offset = 0; offset < targets.length; offset += 100) {
+      batches.push(targets.slice(offset, offset + 100).map(record => record.coordinate));
+    }
+    return batches;
+  }
+
+  async function loadCastleDetails(records) {
+    const batches = castleDetailBatches(records);
+    let received = 0;
+    for (const batch of batches) {
+      if (cancelLiveScan) break;
+      for (let attempt = 0; attempt < 4; attempt += 1) {
+        if (cancelLiveScan) break;
+        try {
+          setApiStatus(`Loading castle details · ${received} returned`, "working");
+          const details = await WarDragons.atlasInfo(batch);
+          snapshot = Core.mergeOfficialInfo(snapshot, details);
+          received += (details.records || []).filter(record => record.available).length;
+          syncAtlasCommandSnapshot(snapshot);
+          applyFilters({ persist: false });
+          await cacheSnapshot(snapshot).catch(() => undefined);
+          break;
+        } catch (error) {
+          if (error?.code !== "info-rate-limited" || attempt === 3) {
+            return ` · castle details incomplete (${received} returned); scan again to retry`;
+          }
+          const seconds = Math.ceil(Math.min(61000, Math.max(1000, Number(error.retryAfterMs) || 61000)) / 1000);
+          for (let remaining = seconds; remaining > 0 && !cancelLiveScan; remaining -= 1) {
+            setApiStatus(`Castle names queued · retry in ${remaining}s · Stop to cancel`, "working");
+            await wait(1000);
+          }
+        }
+      }
+    }
+    return ` · ${received} castle details returned`;
+  }
+
   function atlasIdentity() {
     return {
       kingdomId: Number(snapshot?.atlas?.kingdomId) || inferredKingdomId(snapshot) || DEFAULT_KINGDOM_ID,
@@ -1112,22 +1158,6 @@
       }
 
       let infoNote = "";
-      const infoTargets = candidates.filter(record => !record.infoObservedAt || Date.now() / 1000 - record.infoObservedAt > 3600).slice(0, 25);
-      if (infoTargets.length) {
-        try {
-          setApiStatus("Loading castle names", "working");
-          const details = await WarDragons.atlasInfo(infoTargets.map(record => record.coordinate));
-          snapshot = Core.mergeOfficialInfo(snapshot, details);
-          await cacheSnapshot(snapshot).catch(() => undefined);
-          syncAtlasCommandSnapshot(snapshot);
-          applyFilters({ persist: false });
-          if (candidates.length > infoTargets.length) infoNote = " · names loaded for this detail batch";
-        } catch (error) {
-          infoNote = error?.code === "info-rate-limited"
-            ? ` · name lookup available in ${Math.ceil(error.retryAfterMs / 1000)}s`
-            : " · castle details unavailable";
-        }
-      }
       let processed = 0;
       for (let offset = 0; offset < candidates.length; offset += LIVE_BATCH_SIZE) {
         if (cancelLiveScan) break;
@@ -1151,6 +1181,7 @@
         }
       }
 
+      if (!cancelLiveScan) infoNote = await loadCastleDetails(candidates);
       await cacheSnapshot(snapshot).catch(() => undefined);
       syncAtlasCommandSnapshot(snapshot);
       setImportStatus(
@@ -1398,6 +1429,7 @@
     mount,
     unmount,
     toCommandSnapshot,
-    selectBalancedLiveBatch
+    selectBalancedLiveBatch,
+    castleDetailBatches
   });
 })(window, document);

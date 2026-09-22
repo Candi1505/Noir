@@ -12,12 +12,12 @@ const hunterCore = fs.readFileSync("onyx-atlas-castle-hunter-core.js", "utf8");
 const hunterWorker = fs.readFileSync("onyx-atlas-har-worker.js", "utf8");
 
 assert.match(html, /onyx-atlas-command\.css\?v=20260922-live-glory-1/);
-assert.match(html, /onyx-atlas-command\.js\?v=20260922-live-glory-only-1/);
+assert.match(html, /onyx-atlas-command\.js\?v=20260922-name-queue-1/);
 assert.match(html, /onyx-war-dragons-auth\.js\?v=20260921-owner-api-1/);
 assert.match(html, /onyx-atlas-castle-hunter\.css\?v=20260922-shield-context-1/);
-assert.match(html, /onyx-atlas-castle-hunter-core\.js\?v=20260922-live-glory-only-1/);
+assert.match(html, /onyx-atlas-castle-hunter-core\.js\?v=20260922-name-queue-1/);
 assert.match(html, /database\.js\?v=20260922-atlas-account-sync-1/);
-assert.match(html, /onyx-atlas-castle-hunter\.js\?v=20260922-scan-250-1/);
+assert.match(html, /onyx-atlas-castle-hunter\.js\?v=20260922-name-queue-1/);
 assert.match(hunterSource, /!apiState\.connected && !apiState\.readyToAuthorise/);
 assert.ok(
   html.indexOf("onyx-atlas-command.js") < html.indexOf("onyx-command.js"),
