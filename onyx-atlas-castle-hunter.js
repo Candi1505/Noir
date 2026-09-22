@@ -1004,13 +1004,24 @@
   }
 
   function castleDetailBatches(records, nowEpoch = Date.now() / 1000) {
-    const targets = records.filter(record => !record.name || !record.infoObservedAt ||
+    const targets = records.filter(record => !String(record.name || "").trim() || record.name === record.coordinate || !record.infoObservedAt ||
       nowEpoch - record.infoObservedAt > 3600);
     const batches = [];
     for (let offset = 0; offset < targets.length; offset += 100) {
       batches.push(targets.slice(offset, offset + 100).map(record => record.coordinate));
     }
     return batches;
+  }
+
+
+  function castleNameTargets(value, candidates = [], nowEpoch = Date.now() / 1000) {
+    const records = Array.isArray(value?.records) ? value.records : [];
+    const current = new Map(records.map(record => [record.coordinate, record]));
+    const vulnerable = records.filter(record => record.source === "official" &&
+      commandShieldState(record, nowEpoch) === "vulnerable");
+    // Repair earlier vulnerable results even when scan balancing selects other castles.
+    const targets = [...vulnerable, ...candidates.map(record => current.get(record.coordinate) || record)];
+    return [...new Map(targets.map(record => [record.coordinate, record])).values()];
   }
 
   async function loadCastleDetails(records) {
@@ -1203,6 +1214,13 @@
         return;
       }
 
+      // Names for the existing vulnerable board should not wait behind new scans.
+      const existingNames = castleNameTargets(snapshot);
+      if (castleDetailBatches(existingNames).length && !cancelLiveScan) {
+        await loadCastleDetails(existingNames);
+      }
+      if (cancelLiveScan) return;
+
       let candidates = liveScanCandidates();
       if (!candidates.length) {
         setImportStatus("No known matches. Select Any shield state or Not checked / stale to discover new results.");
@@ -1241,7 +1259,7 @@
         }
       }
 
-      if (!cancelLiveScan) infoNote = await loadCastleDetails(candidates);
+      if (!cancelLiveScan) infoNote = await loadCastleDetails(castleNameTargets(snapshot, candidates));
       await cacheSnapshot(snapshot).catch(() => undefined);
       syncAtlasCommandSnapshot(snapshot);
       setImportStatus(
@@ -1503,6 +1521,7 @@
     toCommandSnapshot,
     selectBalancedLiveBatch,
     castleDetailBatches,
+    castleNameTargets,
     withAttackingTeam
   });
 })(window, document);
