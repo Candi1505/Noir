@@ -12,6 +12,8 @@
   const DATABASE_VERSION = 1;
   const SNAPSHOT_STORE = "snapshots";
   const FILTER_KEY_PREFIX = "onyxAtlasFiltersV1";
+  const SHIELD_CONTEXT_KEY_PREFIX = "onyxAtlasShieldContextV1";
+  const SHIELD_CONTEXT_TTL_SECONDS = 6 * 60 * 60;
   const PAGE_SIZE = 50;
   const LIVE_BATCH_SIZE = 25;
   const LIVE_BATCH_INTERVAL_MS = 1100;
@@ -83,6 +85,89 @@
 
   function filterStorageKey() {
     return `${FILTER_KEY_PREFIX}:${playerId}`;
+  }
+
+  function shieldContextStorageKey() {
+    return `${SHIELD_CONTEXT_KEY_PREFIX}:${playerId}`;
+  }
+
+  function readShieldContext(nowEpoch = Date.now() / 1000) {
+    if (playerId === "signed-out") return null;
+    try {
+      const value = JSON.parse(window.localStorage.getItem(shieldContextStorageKey()) || "null");
+      const confirmedAt = Number(value?.confirmedAt);
+      const expiresAt = Number(value?.expiresAt);
+      if (
+        value?.mode !== "pvp-down" ||
+        !Number.isFinite(confirmedAt) ||
+        !Number.isFinite(expiresAt) ||
+        expiresAt <= nowEpoch
+      ) return null;
+      return { mode: "pvp-down", confirmedAt, expiresAt, source: "player-confirmed" };
+    } catch {
+      return null;
+    }
+  }
+
+  function applyOfficialShieldContext(value, nowEpoch = Date.now() / 1000) {
+    if (value?.atlas?.topologySource !== "official-metadata") return value;
+    const shieldContext = readShieldContext(nowEpoch);
+    const atlas = {
+      ...value.atlas,
+      shieldConfig: shieldContext ? LEGACY_ATLAS_CONFIG.shieldConfig : null,
+      majorEvent: shieldContext ? false : null,
+      shieldContext
+    };
+    return {
+      ...value,
+      atlas,
+      records: value.records.map(record => ({
+        ...record,
+        shield: record.officialFort
+          ? Core.computeOfficialShieldState(record, {
+              observedAt: Number(record.criticalObservedAt) || nowEpoch,
+              rawLevel: record.rawLevel,
+              fort: record.officialFort
+            }, atlas, Number(record.criticalObservedAt) || nowEpoch)
+          : Core.computeOfficialShieldState(record, null, atlas, nowEpoch)
+      }))
+    };
+  }
+
+  function syncShieldContextControl() {
+    const checkbox = get("atlasPvpShieldsDown");
+    const status = get("atlasShieldContextStatus");
+    const context = readShieldContext();
+    if (checkbox) checkbox.checked = Boolean(context);
+    if (status) {
+      status.textContent = context
+        ? `Player-confirmed · expires ${new Date(context.expiresAt * 1000).toLocaleTimeString("en-AU", { hour: "numeric", minute: "2-digit" })}`
+        : "Unverified · Onyx will keep live shield vulnerability unknown.";
+    }
+  }
+
+  async function setPvpShieldContext(enabled) {
+    if (playerId === "signed-out") return;
+    if (enabled) {
+      const confirmedAt = Date.now() / 1000;
+      window.localStorage.setItem(shieldContextStorageKey(), JSON.stringify({
+        mode: "pvp-down",
+        confirmedAt,
+        expiresAt: confirmedAt + SHIELD_CONTEXT_TTL_SECONDS
+      }));
+    } else {
+      window.localStorage.removeItem(shieldContextStorageKey());
+    }
+    if (snapshot?.atlas?.topologySource === "official-metadata") {
+      snapshot = applyOfficialShieldContext(snapshot);
+      await cacheSnapshot(snapshot).catch(() => undefined);
+      syncAtlasCommandSnapshot(snapshot);
+      applyFilters({ persist: false });
+    }
+    syncShieldContextControl();
+    setImportStatus(enabled
+      ? "PvP shields down confirmed for 6 hours · scan live to refresh each castle"
+      : "PvP shield context cleared · live vulnerability is unknown");
   }
 
   function openDatabase() {
@@ -381,7 +466,13 @@
       const age = formatElapsed(nowEpoch - Number(record.shield?.observedAt || 0));
       return { label: `Observed ${originalShieldLabel(record.shield?.state)} · ${age} ago`, state: "stale" };
     }
-    if (effective === "down") return { label: "Shield down", state: "down" };
+    if (effective === "down") {
+      const untilTrigger = Number(record.shield?.shipsUntilTrigger);
+      return {
+        label: `Shield down${Number.isFinite(untilTrigger) ? ` · ${formatNumber(Math.ceil(untilTrigger))} to trigger` : ""}`,
+        state: "down"
+      };
+    }
     if (effective === "cooldown") return { label: `Cooldown${remaining ? ` · ${remaining}` : ""}`, state: "cooldown" };
     if (effective === "active") return { label: `Shielded${remaining ? ` · ${remaining}` : ""}`, state: "active" };
     if (effective === "event") return { label: "Event shield", state: "active" };
@@ -572,8 +663,9 @@
         const iso = epochIso(value);
         return iso ? new Date(iso).toLocaleString("en-AU") : "not supplied";
       };
+      const shieldContext = readShieldContext(nowEpoch);
       sourceDates.textContent = snapshot?.atlas?.topologySource === "official-metadata"
-        ? `API map: ${snapshot.atlas.realmName}, kingdom ${snapshot.atlas.kingdomId}. Castle catalogue updated: ${formatSourceDate(snapshot.castleUpdatedAt)}. Team catalogue updated: ${formatSourceDate(snapshot.teamUpdatedAt)}. Map match and event protection remain unverified.`
+        ? `API map: ${snapshot.atlas.realmName}, kingdom ${snapshot.atlas.kingdomId}. Castle catalogue updated: ${formatSourceDate(snapshot.castleUpdatedAt)}. Team catalogue updated: ${formatSourceDate(snapshot.teamUpdatedAt)}. Map match remains unverified. ${shieldContext ? "PvP shields down is player-confirmed." : "PvP shield context is unverified."}`
         : "";
       const query = String(get("atlasSearch")?.value || "").trim().toLocaleLowerCase("en-AU");
       if (query && snapshot?.atlas?.topologySource === "official-metadata" && Array.isArray(snapshot.teams)) {
@@ -653,7 +745,7 @@
 
   async function activateSnapshot(value, { save = false } = {}) {
     if (!isValidSnapshot(value)) throw new Error("The derived Atlas snapshot failed validation.");
-    const prepared = upgradeLegacySnapshot(value);
+    const prepared = applyOfficialShieldContext(upgradeLegacySnapshot(value));
     snapshot = prepared;
     if (save || prepared !== value) {
       try {
@@ -689,7 +781,7 @@
     const progressBar = get("atlasImportProgress");
     progressBar.value = 1;
     progressBar.textContent = "1%";
-    activeWorker = new Worker("onyx-atlas-har-worker.js?v=20260921-official-map-1");
+    activeWorker = new Worker("onyx-atlas-har-worker.js?v=20260922-shield-context-1");
 
     activeWorker.addEventListener("message", async event => {
       if (event.data?.type === "progress") {
@@ -994,6 +1086,14 @@
         </div>
         <p id="atlasImportStatus" class="atlas-import-status" role="status" aria-live="polite">No Atlas capture loaded</p>
         <p id="atlasSourceDates" class="atlas-import-status"></p>
+        <fieldset class="atlas-shield-context">
+          <legend>Current PvP shield context</legend>
+          <label for="atlasPvpShieldsDown">
+            <input id="atlasPvpShieldsDown" type="checkbox">
+            <span><strong>PvP shields are down</strong><small>Use the live fort data to calculate troops remaining until each shield triggers.</small></span>
+          </label>
+          <p id="atlasShieldContextStatus" class="atlas-import-status">Unverified · Onyx will keep live shield vulnerability unknown.</p>
+        </fieldset>
         <div class="atlas-filter-grid">
           <label class="atlas-filter-wide" for="atlasTeamName"><span>Exact team name</span>
             <input id="atlasTeamName" type="text" maxlength="120" autocomplete="off" placeholder="SeveredReality">
@@ -1063,6 +1163,9 @@
     });
     get("atlasTeamLookup")?.addEventListener("click", checkOfficialTeam);
     get("atlasLiveButton")?.addEventListener("click", handleLiveButton);
+    get("atlasPvpShieldsDown")?.addEventListener("change", event => {
+      setPvpShieldContext(event.currentTarget.checked);
+    });
     get("atlasResults")?.addEventListener("click", event => {
       const observedDown = event.target.closest("[data-atlas-show-observed-down]");
       if (observedDown) {
@@ -1081,8 +1184,10 @@
     const nextPlayerId = await resolvePlayerId();
     if (generation !== mountGeneration || !host?.isConnected) return;
     playerId = nextPlayerId;
+    syncShieldContextControl();
     applyFiltersToControls(loadFilters());
     if (loadedPlayerId === playerId && snapshot) {
+      snapshot = applyOfficialShieldContext(snapshot);
       applyFilters({ persist: false });
       await initialiseOfficialApi();
       return;

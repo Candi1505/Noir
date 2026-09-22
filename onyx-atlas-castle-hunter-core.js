@@ -542,9 +542,13 @@
       endAt: null,
       shipsUntilTrigger: null
     };
-    // The official metadata does not establish whether event protection is active.
-    // A fort toggle or timestamp alone cannot establish current vulnerability.
-    if (atlas?.topologySource === "official-metadata") return result;
+    // Official metadata does not establish whether event protection is active.
+    // Only calculate vulnerability when the player has explicitly confirmed
+    // that PvP shields are down and that confirmation is still current.
+    const shieldContextExpiresAt = finiteNumber(atlas?.shieldContext?.expiresAt);
+    const confirmedPvpDown = atlas?.shieldContext?.mode === "pvp-down" &&
+      shieldContextExpiresAt !== null && shieldContextExpiresAt > observedAt;
+    if (atlas?.topologySource === "official-metadata" && !confirmedPvpDown) return result;
     if (fort.shieldTurnedOn === false) {
       result.state = "disabled";
       return result;
@@ -751,6 +755,9 @@
         fleetCount: fleetCount !== null && fleetCount >= 0
           ? fleetCount
           : record.fleetCount,
+        officialFort: update.fort && typeof update.fort === "object"
+          ? update.fort
+          : record.officialFort || null,
         shield: computeOfficialShieldState(
           record,
           update,
@@ -820,7 +827,6 @@
     createOfficialSnapshot,
     mergeOfficialMacro,
     mergeOfficialCritical,
-    mergeOfficialInfo,
     mergeOfficialInfo
   });
 })(typeof globalThis !== "undefined" ? globalThis : window);

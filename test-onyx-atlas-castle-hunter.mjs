@@ -354,6 +354,37 @@ test("derives official live down, cooldown and active states from allowlisted fo
   assert.equal(Core.computeOfficialShieldState(record, live, atlas, 10000).state, "active");
 });
 
+test("requires fresh player confirmation before calculating official PvP vulnerability", () => {
+  const record = castle({ rawLevel: 4, material: "stone" });
+  const live = {
+    observedAt: 10000,
+    fort: {
+      level: 12,
+      upgradeEpoch: 0,
+      shieldTurnedOn: true,
+      shieldTimeTs: -50000,
+      shieldShipsLost: 0
+    }
+  };
+  const atlas = {
+    topologySource: "official-metadata",
+    majorEvent: null,
+    shieldConfig: {
+      cdHr: 3,
+      hr: 24,
+      trigger: { start: 50000, perLvl: 10000 }
+    }
+  };
+
+  assert.equal(Core.computeOfficialShieldState(record, live, atlas, 10000).state, "unknown");
+  atlas.shieldContext = { mode: "pvp-down", expiresAt: 31600 };
+  const confirmed = Core.computeOfficialShieldState(record, live, atlas, 10000);
+  assert.equal(confirmed.state, "down");
+  assert.equal(confirmed.shipsUntilTrigger, 170000);
+  atlas.shieldContext.expiresAt = 9999;
+  assert.equal(Core.computeOfficialShieldState(record, live, atlas, 10000).state, "unknown");
+});
+
 test("merges only canonical official critical records and timestamps them fresh", () => {
   const snapshot = {
     schemaVersion: 2,
@@ -393,6 +424,7 @@ test("merges only canonical official critical records and timestamps them fresh"
   assert.equal(merged.records.length, 1);
   assert.equal(merged.records[0].ownerTeam, "Live Team");
   assert.equal(merged.records[0].guards, 12345);
+  assert.equal(merged.records[0].officialFort.level, 5);
   assert.equal(merged.records[0].fleetCount, 4);
   assert.equal(merged.records[0].shield.state, "down");
   assert.equal(Core.effectiveShieldState(merged.records[0].shield, 10000), "down");

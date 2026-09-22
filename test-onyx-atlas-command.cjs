@@ -14,9 +14,9 @@ const hunterWorker = fs.readFileSync("onyx-atlas-har-worker.js", "utf8");
 assert.match(html, /onyx-atlas-command\.css\?v=20260921-team-lookup-2/);
 assert.match(html, /onyx-atlas-command\.js\?v=20260921-team-lookup-2/);
 assert.match(html, /onyx-war-dragons-auth\.js\?v=20260921-owner-api-1/);
-assert.match(html, /onyx-atlas-castle-hunter\.css\?v=20260828-audit-2/);
-assert.match(html, /onyx-atlas-castle-hunter-core\.js\?v=20260922-kingdom-discovery-1/);
-assert.match(html, /onyx-atlas-castle-hunter\.js\?v=20260922-kingdom-discovery-1/);
+assert.match(html, /onyx-atlas-castle-hunter\.css\?v=20260922-shield-context-1/);
+assert.match(html, /onyx-atlas-castle-hunter-core\.js\?v=20260922-shield-context-1/);
+assert.match(html, /onyx-atlas-castle-hunter\.js\?v=20260922-shield-context-1/);
 assert.match(hunterSource, /!apiState\.connected && !apiState\.readyToAuthorise/);
 assert.ok(
   html.indexOf("onyx-atlas-command.js") < html.indexOf("onyx-command.js"),
@@ -40,9 +40,12 @@ assert.match(hunterSource, /APR minimum/);
 assert.match(hunterSource, /Critical gates/);
 assert.match(hunterSource, /data-atlas-tier checked/);
 assert.match(hunterSource, /Copy API X\/Y/);
+assert.match(hunterSource, /PvP shields are down/);
+assert.match(hunterSource, /SHIELD_CONTEXT_TTL_SECONDS = 6 \* 60 \* 60/);
+assert.match(hunterSource, /to trigger/);
 assert.match(hunterSource, /LIVE_BATCH_SIZE = 25/);
 assert.match(hunterWorker, /Only an allowlisted/);
-assert.match(hunterWorker, /onyx-atlas-castle-hunter-core\.js\?v=20260922-kingdom-discovery-1/);
+assert.match(hunterWorker, /onyx-atlas-castle-hunter-core\.js\?v=20260922-shield-context-1/);
 assert.doesNotMatch(hunterSource, /WAR_DRAGONS_(?:API_KEY|CLIENT_SECRET)|client_secret/i);
 assert.match(source, /FICTIONAL DEMO INTELLIGENCE/);
 assert.match(source, /No player or team data is shown/);
