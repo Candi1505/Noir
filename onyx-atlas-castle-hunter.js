@@ -394,6 +394,7 @@
           fortLevel: Number.isInteger(record?.officialFort?.level)
             ? record.officialFort.level
             : null,
+          shieldArmed: record?.officialFort?.shieldTurnedOn === true,
           shieldShipsUntilTrigger: record?.shield?.shipsUntilTrigger != null && Number.isFinite(Number(record.shield.shipsUntilTrigger))
             ? Math.max(0, Math.ceil(Number(record.shield.shipsUntilTrigger)))
             : null,

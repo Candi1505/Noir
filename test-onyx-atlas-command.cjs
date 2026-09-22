@@ -12,12 +12,12 @@ const hunterCore = fs.readFileSync("onyx-atlas-castle-hunter-core.js", "utf8");
 const hunterWorker = fs.readFileSync("onyx-atlas-har-worker.js", "utf8");
 
 assert.match(html, /onyx-atlas-command\.css\?v=20260922-live-glory-1/);
-assert.match(html, /onyx-atlas-command\.js\?v=20260922-live-glory-1/);
+assert.match(html, /onyx-atlas-command\.js\?v=20260922-shield-armed-1/);
 assert.match(html, /onyx-war-dragons-auth\.js\?v=20260921-owner-api-1/);
 assert.match(html, /onyx-atlas-castle-hunter\.css\?v=20260922-shield-context-1/);
 assert.match(html, /onyx-atlas-castle-hunter-core\.js\?v=20260922-live-glory-1/);
 assert.match(html, /database\.js\?v=20260922-atlas-account-sync-1/);
-assert.match(html, /onyx-atlas-castle-hunter\.js\?v=20260922-balanced-tiers-1/);
+assert.match(html, /onyx-atlas-castle-hunter\.js\?v=20260922-shield-armed-1/);
 assert.match(hunterSource, /!apiState\.connected && !apiState\.readyToAuthorise/);
 assert.ok(
   html.indexOf("onyx-atlas-command.js") < html.indexOf("onyx-command.js"),
@@ -216,6 +216,7 @@ command.setLiveSnapshot({
       glorySource: "Calculated from live Atlas ranks",
       fortLevel: 12,
       shieldShipsUntilTrigger: 170000,
+      shieldArmed: true,
       observedAt: "2026-08-28T10:14:00.000Z",
       primarchs: [{ type: "Taunter", tier: 4, level: 14, troops: 6444, teamName: "nightKnights", rawId: "drop" }],
       mapCoordinates: "X:3360 Y:2340",
@@ -242,6 +243,7 @@ assert.equal(live.castles[0].primarchs[0].type, "Taunter");
 assert.equal("rawId" in live.castles[0].primarchs[0], false);
 assert.equal(live.castles[0].fortLevel, 12);
 assert.equal(live.castles[0].shieldShipsUntilTrigger, 170000);
+assert.equal(live.castles[0].shieldArmed, true);
 assert.equal(live.castles[0].mapCoordinates, "X:3360 Y:2340");
 assert.equal(live.castles[0].shieldState, "cooldown");
 assert.equal(live.castles[0].source, "War Dragons API");
@@ -283,6 +285,15 @@ command.setLiveSnapshot({ castles: [
 command.setTestFilter("shielded");
 assert.match(command.renderLivePreview(), /Bubble Keep/);
 assert.doesNotMatch(command.renderLivePreview(), /Open Keep/);
+command.setLiveSnapshot({ castles: [
+  {name: "Armed Open Keep", shieldState: "vulnerable", shieldArmed: true},
+  {name: "Disarmed Open Keep", shieldState: "vulnerable", shieldArmed: false}
+] });
+assert.match(command.renderLiveCastles(), /Shield armed/);
+assert.match(command.renderLiveOverview(), /SHIELD ARMED/);
+command.setTestFilter("armed");
+assert.match(command.renderLivePreview(), /Armed Open Keep/);
+assert.doesNotMatch(command.renderLivePreview(), /Disarmed Open Keep/);
 console.log("Onyx Atlas Command regression checks passed.");
 
 command.setLiveSnapshot({castles: Array.from({length: 45}, (_,i) => ({name: `Target ${String(i).padStart(2,"0")}`, owner: i === 0 ? "ChosenTeam" : "OtherTeam", region: "A130", id: `22-A130-${i}`, shieldState: "vulnerable"}))});

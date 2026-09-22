@@ -6,7 +6,7 @@
   const MODE_PREFIX = "onyxAtlasModeV1";
   const VALID_MODES = new Set(["live", "demo", "manual"]);
   const VALID_TABS = new Set(["overview", "hunter", "battles", "castles", "team", "entry"]);
-  const VALID_LIVE_FILTERS = new Set(["vulnerable", "cooldown", "dropping", "shielded", "unknown", "all"]);
+  const VALID_LIVE_FILTERS = new Set(["vulnerable", "cooldown", "dropping", "shielded", "armed", "unknown", "all"]);
   const LIVE_SHIELD_STATES = new Set(["vulnerable", "cooldown", "dropping", "shielded", "unknown"]);
   const MEMBER_STATUSES = new Set(["ready", "watch", "support"]);
   const CASTLE_STATUSES = new Set(["clear", "watch", "contested"]);
@@ -204,6 +204,7 @@
       gloryObservedAt: cleanText(source.gloryObservedAt, 64) || null,
       glorySource: cleanText(source.glorySource, 80) || null,
       fortLevel: cleanNumber(source.fortLevel, 999),
+      shieldArmed: source.shieldArmed === true,
       shieldShipsUntilTrigger: cleanNumber(source.shieldShipsUntilTrigger),
       observedAt: cleanText(source.observedAt, 64) || null,
       primarchs,
@@ -574,15 +575,18 @@
   function liveCounts() {
     return liveCastles.reduce((counts, castle) => {
       counts.all += 1;
+      if (castle.shieldArmed) counts.armed += 1;
       if (Object.hasOwn(counts, castle.shieldState)) counts[castle.shieldState] += 1;
       return counts;
-    }, { vulnerable: 0, cooldown: 0, dropping: 0, shielded: 0, unknown: 0, all: 0 });
+    }, { vulnerable: 0, cooldown: 0, dropping: 0, shielded: 0, armed: 0, unknown: 0, all: 0 });
   }
 
   function filteredLiveCastles() {
     const castles = liveFilter === "all"
       ? [...liveCastles]
-      : liveCastles.filter(castle => castle.shieldState === liveFilter);
+      : liveFilter === "armed"
+        ? liveCastles.filter(castle => castle.shieldArmed)
+        : liveCastles.filter(castle => castle.shieldState === liveFilter);
     const matches = castles.filter(castle => [castle.name, castle.owner, castle.region, castle.id, castle.mapCoordinates].some(value => String(value || "").toLowerCase().includes(liveQuery.toLowerCase().trim())));
     const glory = new Map(matches.map(castle => [castle, castleGlory(castle).percent]));
     return matches.filter(castle => liveGloryFilter === "any" || (liveGloryFilter === "full" ? glory.get(castle) === 100 : glory.get(castle) !== null && glory.get(castle) < 100))
@@ -675,6 +679,7 @@
       ["cooldown", "Cooldown", counts.cooldown],
       ["dropping", "Dropping soon", counts.dropping],
       ["shielded", "Shielded", counts.shielded],
+      ["armed", "Shield armed", counts.armed],
       ["unknown", "Unknown", counts.unknown],
       ["all", "All castles", counts.all]
     ];
@@ -843,6 +848,7 @@
         ${metricCard("SHIELD COOLDOWN", counts.all === counts.unknown ? "—" : formatNumber(counts.cooldown), "Among classified castles", "clock")}
         ${metricCard("DROPPING SOON", counts.all === counts.unknown ? "—" : formatNumber(counts.dropping), "Among classified castles", "clock")}
         ${metricCard("SHIELDED", counts.all === counts.unknown ? "—" : formatNumber(counts.shielded), "Among classified castles", "shield")}
+        ${metricCard("SHIELD ARMED", counts.all === counts.unknown ? "—" : formatNumber(counts.armed), "Enabled on live-checked forts", "shield")}
       </section>
       <p class="oac-evidence-note">Catalogue entries do not confirm shields. Open Hunter, narrow your targets and scan live. Missing shield rules or event protection remain unknown.</p>
       <button type="button" data-oac-tab="hunter">Open Hunter to check shields</button>
