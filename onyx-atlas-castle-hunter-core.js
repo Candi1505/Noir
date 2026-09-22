@@ -268,9 +268,8 @@
 
   function classifyGlory(rawCastleLevel, maxCastleLevel) {
     const rawLevel = integer(rawCastleLevel);
-    const maximum = integer(maxCastleLevel);
-    if (rawLevel === null || maximum === null) return "unknown";
-    return rawLevel > maximum ? "confirmed100" : "needsData";
+    if (rawLevel === null) return "unknown";
+    return "needsData";
   }
 
   // Atlas combines the live attacker/defender team-power ranks equally with
@@ -284,9 +283,7 @@
     defenderApr
   ) {
     const rawLevel = integer(rawCastleLevel);
-    const maximum = integer(maxCastleLevel);
-    if (rawLevel === null || maximum === null) return null;
-    if (rawLevel > maximum) return 100;
+    if (rawLevel === null) return null;
     const attacker = integer(attackerApr);
     const defender = integer(defenderApr);
     if (attacker === null || defender === null || attacker <= 0 || defender <= 0) {
@@ -524,14 +521,12 @@
       if (sort === "shield") {
         return (
           shieldOpportunityRank(left, nowEpoch) - shieldOpportunityRank(right, nowEpoch) ||
-          Number(right.glory === "confirmed100") - Number(left.glory === "confirmed100") ||
           right.tier - left.tier ||
           compareCoordinate(left, right)
         );
       }
 
       return (
-        Number(right.glory === "confirmed100") - Number(left.glory === "confirmed100") ||
         shieldOpportunityRank(left, nowEpoch) - shieldOpportunityRank(right, nowEpoch) ||
         right.tier - left.tier ||
         compareCoordinate(left, right)
@@ -553,7 +548,11 @@
       const apr = finiteNumber(record.apr);
       if (filters.aprMin !== null && (apr === null || apr < filters.aprMin)) return false;
       if (filters.aprMax !== null && (apr === null || apr > filters.aprMax)) return false;
-      if (filters.glory !== "any" && record.glory !== filters.glory) return false;
+      const gloryPercent = record.gloryPercent === null || record.gloryPercent === undefined
+        ? null
+        : finiteNumber(record.gloryPercent);
+      if (filters.glory === "confirmed100" && gloryPercent !== 100) return false;
+      if (filters.glory === "needsData" && gloryPercent !== null) return false;
       if (!matchesShield(record, filters.shield, nowEpoch)) return false;
       if (!matchesGate(record, filters.gate)) return false;
 

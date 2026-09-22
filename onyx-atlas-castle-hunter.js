@@ -391,9 +391,7 @@
             ? Math.max(0, Math.min(100, Math.round(Number(record.gloryPercent))))
             : null,
           gloryObservedAt: epochIso(record?.gloryObservedAt),
-          glorySource: Number(record?.rawLevel) > 2
-            ? "Level 4–5 castle rule"
-            : "Calculated from live Atlas ranks",
+          glorySource: "Calculated from live Atlas ranks",
           fortLevel: Number.isInteger(record?.officialFort?.level)
             ? record.officialFort.level
             : null,
@@ -649,18 +647,25 @@
     const badges = document.createElement("div");
     badges.className = "atlas-card-badges";
     badges.append(createBadge(`T${record.tier}`, "tier"));
-    if (record.glory === "confirmed100") badges.append(createBadge("100%", "glory"));
     if (record.gateType === "critical") badges.append(createBadge("CRITICAL GATE", "critical"));
     else if (record.gateType === "gate") badges.append(createBadge("GATE", "gate"));
     heading.append(identity, badges);
 
     const shield = shieldPresentation(record, nowEpoch);
-    const glory = window.OnyxAtlasCommand?.castleGlory?.({ id: record.coordinate, owner: record.ownerTeam, level: record.tier });
+    const glory = window.OnyxAtlasCommand?.castleGlory?.({
+      id: record.coordinate,
+      owner: record.ownerTeam,
+      level: record.tier,
+      source: record.source === "official" ? "War Dragons API" : "Atlas capture",
+      gloryPercent: record.gloryPercent,
+      gloryObservedAt: epochIso(record.gloryObservedAt)
+    });
+    if (glory?.percent === 100) badges.append(createBadge("100%", "glory"));
     const metrics = document.createElement("div");
     metrics.className = "atlas-card-metrics";
     metrics.append(
       createMetric("APR", record.apr === null ? "—" : formatNumber(record.apr)),
-      createMetric("Castle glory", glory?.percent != null ? `${glory.percent}%` : record.glory === "confirmed100" ? "100%" : "Check in-game"),
+      createMetric("Castle glory", glory?.percent != null ? `${glory.percent}%` : "Check in-game"),
       createMetric("Shield", shield.label, shield.state),
       createMetric("Guards", record.checked ? (record.guards === null ? "Unknown" : formatNumber(record.guards)) : "Not checked"),
       createMetric("Fort", Number.isInteger(record?.officialFort?.level) ? `Level ${record.officialFort.level}` : "Not supplied"),
@@ -950,7 +955,7 @@
   }
 
   function selectBalancedLiveBatch(records, limit = LIVE_BATCH_SIZE) {
-    const maximum = Math.max(1, Math.min(LIVE_BATCH_SIZE, Number(limit) || LIVE_BATCH_SIZE));
+    const maximum = Math.max(1, Math.min(MAX_LIVE_SCAN_CASTLES, Number(limit) || LIVE_BATCH_SIZE));
     const compareAge = (left, right) =>
       (Number(left?.criticalObservedAt) || 0) - (Number(right?.criticalObservedAt) || 0) ||
       String(left?.coordinate || "").localeCompare(String(right?.coordinate || ""), "en", { numeric: true });
@@ -1098,12 +1103,12 @@
         return;
       }
       if (candidates.length > MAX_LIVE_SCAN_CASTLES) {
-        candidates = selectBalancedLiveBatch(candidates);
+        candidates = selectBalancedLiveBatch(candidates, MAX_LIVE_SCAN_CASTLES);
         const tiers = [...new Set(candidates.map(record => record.tier))]
           .sort((left, right) => left - right)
           .map(tier => `T${tier}`)
           .join(", ");
-        setImportStatus(`Checking 25 across ${tiers} · oldest observations first in each tier`);
+        setImportStatus(`Checking ${formatNumber(candidates.length)} across ${tiers} · oldest observations first in each tier`);
       }
 
       let infoNote = "";
@@ -1285,7 +1290,7 @@
           <label class="atlas-filter-wide" for="atlasSearch"><span>Castle, team, castle ID or X/Y</span><input id="atlasSearch" type="search" autocomplete="off" placeholder="Name or X:-310.5"></label>
           <label for="atlasAprMin"><span>APR minimum</span><input id="atlasAprMin" type="number" min="0" step="1" inputmode="numeric" placeholder="Any"></label>
           <label for="atlasAprMax"><span>APR maximum</span><input id="atlasAprMax" type="number" min="0" step="1" inputmode="numeric" placeholder="Any"></label>
-          <label for="atlasGloryFilter"><span>Glory</span><select id="atlasGloryFilter"><option value="any">Any glory</option><option value="confirmed100">100% confirmed</option><option value="needsData">Needs defender data</option></select></label>
+          <label for="atlasGloryFilter"><span>Glory</span><select id="atlasGloryFilter"><option value="any">Any glory</option><option value="confirmed100">Live 100%</option><option value="needsData">Needs live calculation</option></select></label>
           <label for="atlasShieldFilter"><span>Shield</span><select id="atlasShieldFilter"><option value="any">Any shield state</option><option value="down">Shield down now</option><option value="observedDown">Observed down in capture</option><option value="cooldown">Cooldown</option><option value="shielded">Shielded / bubbled</option><option value="inactive">Offline / disabled</option><option value="notChecked">Not checked / stale</option></select></label>
           <label for="atlasGateFilter"><span>Gate</span><select id="atlasGateFilter"><option value="any">Any castle</option><option value="gate">Gate castles</option><option value="critical">Critical gates</option><option value="none">Non-gates</option></select></label>
           <label for="atlasSort"><span>Sort</span><select id="atlasSort"><option value="glory">Best glory</option><option value="shield">Shield opportunity</option><option value="aprDesc">APR high to low</option><option value="aprAsc">APR low to high</option><option value="tierDesc">Tier high to low</option><option value="coordinate">Castle ID</option></select></label>

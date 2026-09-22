@@ -8,7 +8,8 @@ const Core = globalThis.OnyxAtlasCore;
 test("calculates lower-castle glory from live Atlas power ranks", () => {
   assert.equal(Core.calculateCastleGloryPercent(1, 2, 17, 102), 68);
   assert.equal(Core.calculateCastleGloryPercent(1, 2, 17, 8), 100);
-  assert.equal(Core.calculateCastleGloryPercent(4, 2, null, null), 100);
+  assert.equal(Core.calculateCastleGloryPercent(4, 2, null, null), null);
+  assert.equal(Core.calculateCastleGloryPercent(4, 2, 17, 102), 68);
   assert.equal(Core.calculateCastleGloryPercent(1, 2, null, 102), null);
 });
 
@@ -153,9 +154,9 @@ test("missing shield toggle is unknown, never disabled", () => {
 
 test("intersects inclusive APR bounds with tier and glory filters", () => {
   const records = [
-    castle({ coordinate: "42-A1-1", tier: 4, apr: 99 }),
-    castle({ coordinate: "42-A1-2", tier: 4, apr: 100 }),
-    castle({ coordinate: "42-A1-3", tier: 5, apr: 200 }),
+    castle({ coordinate: "42-A1-1", tier: 4, apr: 99, gloryPercent: 100 }),
+    castle({ coordinate: "42-A1-2", tier: 4, apr: 100, gloryPercent: 100 }),
+    castle({ coordinate: "42-A1-3", tier: 5, apr: 200, gloryPercent: 100 }),
     castle({ coordinate: "42-A1-4", tier: 3, apr: null, glory: "needsData" })
   ];
   const result = Core.filterCastles(records, {
@@ -178,12 +179,12 @@ test("rejects invalid or negative APR inputs", () => {
   assert.match(Core.filterCastles([castle()], { aprMax: "not-a-number" }, 1000).error, /zero or higher/i);
 });
 
-test("only the captured high-tier rule receives confirmed 100 percent glory", () => {
-  assert.equal(Core.classifyGlory(3, 2), "confirmed100");
-  assert.equal(Core.classifyGlory(4, 2), "confirmed100");
+test("every castle tier requires live glory data", () => {
+  assert.equal(Core.classifyGlory(3, 2), "needsData");
+  assert.equal(Core.classifyGlory(4, 2), "needsData");
   assert.equal(Core.classifyGlory(2, 2), "needsData");
   assert.equal(Core.classifyGlory(1, 2), "needsData");
-  assert.equal(Core.classifyGlory(3, null), "unknown");
+  assert.equal(Core.classifyGlory(3, null), "needsData");
 });
 
 test("derives gate and critical-gate endpoints from cross-region topology", () => {
@@ -357,7 +358,7 @@ test("merges official ownership and APR without replacing topology", () => {
   assert.equal(merged.records[0].ownerTeam, "Live Team");
   assert.equal(merged.records[0].apr, 80);
   assert.equal(merged.records[0].tier, 4);
-  assert.equal(merged.records[0].glory, "confirmed100");
+  assert.equal(merged.records[0].glory, "needsData");
   assert.equal(merged.records[0].gateType, "critical");
 });
 

@@ -597,8 +597,6 @@
   }
 
   function castleGlory(castle, now = Date.now()) {
-    // Pocket Gems: level 4 and 5 castles bypass level/team glory scaling.
-    if ([4, 5].includes(castle.level)) return { percent: 100, source: "Level 4–5 castle rule" };
     const livePercent = castle.gloryPercent === null ? NaN : Number(castle.gloryPercent);
     const liveCheckedAt = Date.parse(castle.gloryObservedAt || "");
     if (
@@ -643,7 +641,6 @@
   }
 
   function renderGloryEntry(castle) {
-    if ([4, 5].includes(castle.level)) return "";
     const glory = castleGlory(castle);
     if (glory.source.startsWith("Live Atlas ranks")) return "";
     return `<details class="oac-glory"><summary>Record in-game glory %</summary>
@@ -653,7 +650,7 @@
   }
 
   function renderGloryGuide() {
-    return `<p class="oac-evidence-note">Glory % is the pre-attack reward rate. Level 4–5: 100% under the <a href="https://pocketgems-support.helpshift.com/hc/en/3-war-dragons/faq/686-glory-calculations/" target="_blank" rel="noopener">Pocket Gems rule</a>. Lower-level percentages are calculated from freshly loaded Atlas team-power ranks and expire after 10 minutes. Unknown does not mean 0%.</p>`;
+    return `<p class="oac-evidence-note">Glory % is the pre-attack reward rate. Percentages appear only when freshly calculated from live Atlas team-power ranks or when you record an in-game check. Live calculations expire after 10 minutes. Unknown does not mean 0%.</p>`;
   }
 
   function renderPrimarchIntel(castle) {

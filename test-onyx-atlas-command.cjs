@@ -12,12 +12,12 @@ const hunterCore = fs.readFileSync("onyx-atlas-castle-hunter-core.js", "utf8");
 const hunterWorker = fs.readFileSync("onyx-atlas-har-worker.js", "utf8");
 
 assert.match(html, /onyx-atlas-command\.css\?v=20260922-live-glory-1/);
-assert.match(html, /onyx-atlas-command\.js\?v=20260922-target-view-1/);
+assert.match(html, /onyx-atlas-command\.js\?v=20260922-live-glory-only-1/);
 assert.match(html, /onyx-war-dragons-auth\.js\?v=20260921-owner-api-1/);
 assert.match(html, /onyx-atlas-castle-hunter\.css\?v=20260922-shield-context-1/);
-assert.match(html, /onyx-atlas-castle-hunter-core\.js\?v=20260922-primarch-owners-1/);
+assert.match(html, /onyx-atlas-castle-hunter-core\.js\?v=20260922-live-glory-only-1/);
 assert.match(html, /database\.js\?v=20260922-atlas-account-sync-1/);
-assert.match(html, /onyx-atlas-castle-hunter\.js\?v=20260922-glory-null-1/);
+assert.match(html, /onyx-atlas-castle-hunter\.js\?v=20260922-scan-250-1/);
 assert.match(hunterSource, /!apiState\.connected && !apiState\.readyToAuthorise/);
 assert.ok(
   html.indexOf("onyx-atlas-command.js") < html.indexOf("onyx-command.js"),
@@ -55,7 +55,7 @@ assert.doesNotMatch(hunterSource, />Import capture</);
 assert.doesNotMatch(hunterSource, /id="atlasCaptureFile"/);
 assert.match(hunterSource, /LIVE_BATCH_SIZE = 25/);
 assert.match(hunterWorker, /Only an allowlisted/);
-assert.match(hunterWorker, /onyx-atlas-castle-hunter-core\.js\?v=20260922-live-glory-1/);
+assert.match(hunterWorker, /onyx-atlas-castle-hunter-core\.js\?v=20260922-live-glory-only-1/);
 assert.doesNotMatch(hunterSource, /WAR_DRAGONS_(?:API_KEY|CLIENT_SECRET)|client_secret/i);
 assert.match(source, /FICTIONAL DEMO INTELLIGENCE/);
 assert.match(source, /No player or team data is shown/);
@@ -332,8 +332,8 @@ assert.match(command.renderLivePreview(), /Target 44/);
 command.setTestQuery("missing-name");
 assert.doesNotMatch(command.renderLivePreview(), /<article /);
 
-assert.equal(command.castleGlory({level: 5}).percent, 100);
-assert.equal(command.castleGlory({level: 4}).percent, 100);
+assert.equal(command.castleGlory({level: 5}).percent, null);
+assert.equal(command.castleGlory({level: 4}).percent, null);
 assert.equal(command.castleGlory({level: 3}).percent, null);
 assert.equal(command.castleGlory({level: 2}).percent, null);
 const liveVan = {
@@ -356,8 +356,8 @@ assert.equal(command.castleGlory(van).percent, null);
 sandbox.OnyxCommandCore = { getCurrentUserId: () => "player-one" };
 command.setTestQuery("");
 command.setTestFilter("vulnerable");
-command.setLiveSnapshot({castles: [{...van, shieldState: "vulnerable"}, {id: "r",name:"Resolute",owner:"Loners101",level:5,shieldState:"vulnerable"}]});
-assert.match(command.renderLivePreview(), /100% glory/);
+command.setLiveSnapshot({castles: [{...van, shieldState: "vulnerable"}, {id: "r",name:"Resolute",owner:"Loners101",level:5,shieldState:"vulnerable",source:"War Dragons API",gloryPercent:82,gloryObservedAt:new Date().toISOString()}]});
+assert.match(command.renderLivePreview(), /82% glory/);
 assert.match(command.renderLivePreview(), /68% glory/);
 assert.ok(command.renderLivePreview().indexOf("Resolute") < command.renderLivePreview().indexOf("Van"));
 command.setTestGloryFilter("full");

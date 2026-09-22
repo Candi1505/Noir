@@ -136,7 +136,7 @@ async function parseSyntheticCapture() {
   context.globalThis = context;
   context.self = context;
   context.importScripts = name => {
-    assert.equal(name, "onyx-atlas-castle-hunter-core.js?v=20260922-live-glory-1");
+    assert.equal(name, "onyx-atlas-castle-hunter-core.js?v=20260922-live-glory-only-1");
     vm.runInContext(coreSource, context, { filename: name });
   };
   context.addEventListener = (type, handler) => {
@@ -164,7 +164,7 @@ test("returns only the allowlisted derived Atlas snapshot", async () => {
   assert.equal(snapshot.summary.gateCount, 2);
   assert.equal(snapshot.summary.criticalGateCount, 2);
   assert.deepEqual(Array.from(snapshot.records, record => record.coordinate), ["42-A1-1", "42-A2-1"]);
-  assert.equal(snapshot.records[0].glory, "confirmed100");
+  assert.equal(snapshot.records[0].glory, "needsData");
   assert.equal(snapshot.records[0].shield.state, "down");
   assert.equal(snapshot.records[0].material, "stone");
 });

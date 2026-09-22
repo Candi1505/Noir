@@ -39,7 +39,12 @@ assert.match(
 assert.match(
   hunterSource,
   /candidates\.length > MAX_LIVE_SCAN_CASTLES/,
-  "Broad live scans must be refused until the operator narrows the filters."
+  "Broad live scans must be capped to a paced coverage window."
+);
+assert.match(
+  hunterSource,
+  /selectBalancedLiveBatch\(candidates, MAX_LIVE_SCAN_CASTLES\)/,
+  "A broad scan must fill the complete paced 250-castle window."
 );
 assert.match(
   hunterSource,
@@ -107,6 +112,15 @@ assert.deepEqual(
   [2, 3, 4, 5].map(tier => Math.min(...balanced.filter(record => record.tier === tier).map(record => record.criticalObservedAt))),
   [0, 0, 0, 0]
 );
+const expanded = sandbox.OnyxAtlasCastleHunter.selectBalancedLiveBatch(
+  [2, 3, 4, 5].flatMap(tier => Array.from({ length: 75 }, (_, index) => ({
+    tier,
+    coordinate: `42-A${tier}-${index}`,
+    criticalObservedAt: index
+  }))),
+  250
+);
+assert.equal(expanded.length, 250);
 
 const now = 10_000;
 const snapshot = JSON.parse(JSON.stringify(sandbox.OnyxAtlasCastleHunter.toCommandSnapshot({
