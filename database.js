@@ -565,6 +565,45 @@ window.ChestDatabase = {
     return data.onyx_command_preferences;
   },
 
+  async loadOnyxAtlasShieldContext() {
+    const user = await this.getAuthenticatedProfileUser();
+    return user?.user_metadata?.onyx_atlas_shield_context || null;
+  },
+
+  async saveOnyxAtlasShieldContext(context) {
+    const user = await this.getAuthenticatedProfileUser();
+    let cleanContext = null;
+
+    if (context !== null) {
+      const confirmedAt = Number(context?.confirmedAt);
+      const expiresAt = Number(context?.expiresAt);
+      if (
+        context?.mode !== "pvp-down" ||
+        !Number.isFinite(confirmedAt) ||
+        !Number.isFinite(expiresAt) ||
+        expiresAt <= confirmedAt ||
+        expiresAt - confirmedAt > 6 * 60 * 60 + 5
+      ) {
+        throw new Error("Invalid Atlas PvP shield confirmation.");
+      }
+      cleanContext = {
+        version: 1,
+        mode: "pvp-down",
+        confirmedAt,
+        expiresAt
+      };
+    }
+
+    const { data, error } = await window.chestSupabase.auth.updateUser({
+      data: { onyx_atlas_shield_context: cleanContext }
+    });
+    if (error) throw error;
+    if (!data?.user || data.user.id !== user.id) {
+      throw new Error("Atlas shield confirmation could not be verified.");
+    }
+    return data.user.user_metadata?.onyx_atlas_shield_context || null;
+  },
+
   async loadOnyxBaseLayout() {
     const user = await this.getAuthenticatedProfileUser();
     const { data, error } = await window.chestSupabase

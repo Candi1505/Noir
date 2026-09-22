@@ -91,21 +91,57 @@
     return `${SHIELD_CONTEXT_KEY_PREFIX}:${playerId}`;
   }
 
+  function normaliseShieldContext(value, nowEpoch = Date.now() / 1000) {
+    const confirmedAt = Number(value?.confirmedAt);
+    const expiresAt = Number(value?.expiresAt);
+    if (
+      value?.mode !== "pvp-down" ||
+      !Number.isFinite(confirmedAt) ||
+      !Number.isFinite(expiresAt) ||
+      expiresAt <= nowEpoch ||
+      expiresAt <= confirmedAt ||
+      expiresAt - confirmedAt > SHIELD_CONTEXT_TTL_SECONDS + 5
+    ) return null;
+    return { mode: "pvp-down", confirmedAt, expiresAt, source: "player-confirmed" };
+  }
+
+  function writeLocalShieldContext(context) {
+    if (playerId === "signed-out") return;
+    if (context) {
+      window.localStorage.setItem(shieldContextStorageKey(), JSON.stringify(context));
+    } else {
+      window.localStorage.removeItem(shieldContextStorageKey());
+    }
+  }
+
   function readShieldContext(nowEpoch = Date.now() / 1000) {
     if (playerId === "signed-out") return null;
     try {
-      const value = JSON.parse(window.localStorage.getItem(shieldContextStorageKey()) || "null");
-      const confirmedAt = Number(value?.confirmedAt);
-      const expiresAt = Number(value?.expiresAt);
-      if (
-        value?.mode !== "pvp-down" ||
-        !Number.isFinite(confirmedAt) ||
-        !Number.isFinite(expiresAt) ||
-        expiresAt <= nowEpoch
-      ) return null;
-      return { mode: "pvp-down", confirmedAt, expiresAt, source: "player-confirmed" };
+      return normaliseShieldContext(
+        JSON.parse(window.localStorage.getItem(shieldContextStorageKey()) || "null"),
+        nowEpoch
+      );
     } catch {
       return null;
+    }
+  }
+
+  async function syncShieldContextFromCloud() {
+    const local = readShieldContext();
+    const loader = window.ChestDatabase?.loadOnyxAtlasShieldContext;
+    const saver = window.ChestDatabase?.saveOnyxAtlasShieldContext;
+    if (typeof loader !== "function") return local;
+    try {
+      const cloud = normaliseShieldContext(await loader.call(window.ChestDatabase));
+      const winner = !local || (cloud && cloud.confirmedAt > local.confirmedAt) ? cloud : local;
+      writeLocalShieldContext(winner);
+      if (winner && (!cloud || winner.confirmedAt > cloud.confirmedAt) && typeof saver === "function") {
+        await saver.call(window.ChestDatabase, winner);
+      }
+      return winner;
+    } catch (error) {
+      console.warn("[Onyx Atlas] Shield confirmation is available on this device only.", error);
+      return local;
     }
   }
 
@@ -148,15 +184,25 @@
 
   async function setPvpShieldContext(enabled) {
     if (playerId === "signed-out") return;
+    let cloudSaved = true;
+    let context = null;
     if (enabled) {
       const confirmedAt = Date.now() / 1000;
-      window.localStorage.setItem(shieldContextStorageKey(), JSON.stringify({
+      context = {
         mode: "pvp-down",
         confirmedAt,
         expiresAt: confirmedAt + SHIELD_CONTEXT_TTL_SECONDS
-      }));
-    } else {
-      window.localStorage.removeItem(shieldContextStorageKey());
+      };
+    }
+    writeLocalShieldContext(context);
+    const saver = window.ChestDatabase?.saveOnyxAtlasShieldContext;
+    if (typeof saver === "function") {
+      try {
+        await saver.call(window.ChestDatabase, context);
+      } catch (error) {
+        cloudSaved = false;
+        console.warn("[Onyx Atlas] Shield confirmation was saved on this device only.", error);
+      }
     }
     if (snapshot?.atlas?.topologySource === "official-metadata") {
       snapshot = applyOfficialShieldContext(snapshot);
@@ -166,7 +212,7 @@
     }
     syncShieldContextControl();
     setImportStatus(enabled
-      ? "PvP shields down confirmed for 6 hours · scan live to refresh each castle"
+      ? `PvP shields down confirmed for 6 hours${cloudSaved ? " on your Onyx account" : " on this device"} · choose a team, then scan live`
       : "PvP shield context cleared · live vulnerability is unknown");
   }
 
@@ -626,6 +672,26 @@
         button.dataset.atlasShowObservedDown = "true";
         button.textContent = `Show ${formatNumber(observedDownFallbackCount)} captured downs`;
         empty.append(title, detail, button);
+      } else if (get("atlasShieldFilter")?.value === "down") {
+        const title = document.createElement("p");
+        const detail = document.createElement("small");
+        const button = document.createElement("button");
+        const nowEpoch = Date.now() / 1000;
+        const hasFreshChecks = liveScanCandidates().some(record =>
+          record.checked && Number(record.criticalObservedAt) > 0 &&
+          nowEpoch - Number(record.criticalObservedAt) <= Core.LIVE_TTL_SECONDS
+        );
+        title.textContent = hasFreshChecks
+          ? "No shield-down castles in this checked group."
+          : "This group has not been live-checked yet.";
+        detail.textContent = hasFreshChecks
+          ? "Try another team or show castles that still need checking."
+          : "Enter an exact team name, tap Check team API, then Scan live.";
+        button.type = "button";
+        button.className = "atlas-copy-button";
+        button.dataset.atlasShowUnchecked = "true";
+        button.textContent = "Show castles needing a check";
+        empty.append(title, detail, button);
       } else {
         empty.textContent = "No castles match these filters.";
       }
@@ -828,7 +894,7 @@
     const filters = readFilters();
     return Core.filterCastles(
       snapshot?.records || [],
-      filters,
+      { ...filters, shield: "any" },
       Date.now() / 1000
     ).records;
   }
@@ -861,8 +927,13 @@
     try {
       const result = await WarDragons.atlasTeam({ ...atlasIdentity(), teamName });
       const team = result.teams?.[0];
+      if (team) {
+        const search = get("atlasSearch");
+        if (search) search.value = team.name;
+        applyFilters();
+      }
       output.textContent = team
-        ? `${team.name} returned by the team API. Capital castle ID: ${team.capitalId || "not supplied"}. Game position still unverified.`
+        ? `${team.name} returned by the team API. Target list narrowed to that team · tap Scan live to check its castles.`
         : `The team API returned no matching entry for ${teamName} on ${result.realmName}, kingdom ${result.kingdomId}. This does not establish that the team is absent from your game map.`;
     } catch (error) {
       output.textContent = `Team lookup failed: ${error.message || "official source unavailable"}`;
@@ -1173,6 +1244,12 @@
         applyFilters();
         return;
       }
+      const unchecked = event.target.closest("[data-atlas-show-unchecked]");
+      if (unchecked) {
+        get("atlasShieldFilter").value = "notChecked";
+        applyFilters();
+        return;
+      }
       const button = event.target.closest("[data-atlas-copy]");
       if (button) copyCoordinate(button);
     });
@@ -1184,6 +1261,8 @@
     const nextPlayerId = await resolvePlayerId();
     if (generation !== mountGeneration || !host?.isConnected) return;
     playerId = nextPlayerId;
+    await syncShieldContextFromCloud();
+    if (generation !== mountGeneration || !host?.isConnected) return;
     syncShieldContextControl();
     applyFiltersToControls(loadFilters());
     if (loadedPlayerId === playerId && snapshot) {

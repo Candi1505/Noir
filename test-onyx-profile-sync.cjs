@@ -4,6 +4,7 @@ const vm = require("node:vm");
 
 const operations = [];
 let currentUserId = "player-one";
+let currentUserMetadata = {};
 
 class Query {
   constructor(table) {
@@ -77,7 +78,14 @@ const sandbox = {
     chestSupabase: {
       auth: {
         async getUser() {
-          return { data: { user: { id: currentUserId } }, error: null };
+          return { data: { user: { id: currentUserId, user_metadata: currentUserMetadata } }, error: null };
+        },
+        async updateUser(attributes) {
+          currentUserMetadata = { ...currentUserMetadata, ...(attributes?.data || {}) };
+          return {
+            data: { user: { id: currentUserId, user_metadata: currentUserMetadata } },
+            error: null
+          };
         }
       },
       from(table) {
@@ -117,6 +125,27 @@ vm.runInContext(fs.readFileSync("database.js", "utf8"), sandbox);
   assert.equal(seasonPreferences.mythicChoice, "Smirkle");
   assert.equal(seasonPreferences.branchKeys["charged-volt-tower"], 6);
   assert.equal("rawSourceFile" in seasonPreferences, false);
+
+  const shieldContext = {
+    mode: "pvp-down",
+    confirmedAt: 1_790_000_000,
+    expiresAt: 1_790_000_000 + 6 * 60 * 60
+  };
+  const savedShieldContext = await database.saveOnyxAtlasShieldContext({
+    ...shieldContext,
+    rawApiPayload: "never persist"
+  });
+  assert.equal(savedShieldContext.version, 1);
+  assert.equal(savedShieldContext.mode, "pvp-down");
+  assert.equal(savedShieldContext.rawApiPayload, undefined);
+  assert.deepEqual(await database.loadOnyxAtlasShieldContext(), savedShieldContext);
+  await assert.rejects(
+    database.saveOnyxAtlasShieldContext({
+      ...shieldContext,
+      expiresAt: shieldContext.confirmedAt + 7 * 60 * 60
+    }),
+    /Invalid Atlas PvP shield confirmation/
+  );
 
   await assert.rejects(
     database.saveOnyxCommandState({ currentKeys: 41 }),
