@@ -1072,8 +1072,8 @@
     const targets = records.filter(record => !String(record.name || "").trim() || record.name === record.coordinate || !record.infoObservedAt ||
       nowEpoch - record.infoObservedAt > 3600);
     const batches = [];
-    for (let offset = 0; offset < targets.length; offset += 100) {
-      batches.push(targets.slice(offset, offset + 100).map(record => record.coordinate));
+    for (let offset = 0; offset < targets.length; offset += 25) {
+      batches.push(targets.slice(offset, offset + 25).map(record => record.coordinate));
     }
     return batches;
   }
@@ -1151,9 +1151,14 @@
     let missingNames = 0;
     let requested = 0;
     let unavailable = 0;
-    for (const batch of batches) {
+    const attemptedIds = new Set();
+    const rejectedIds = [];
+    let splitCount = 0;
+    for (let batchIndex = 0; batchIndex < batches.length; batchIndex += 1) {
+      const batch = batches[batchIndex];
       if (cancelLiveScan) break;
-      requested += batch.length;
+      batch.forEach(id => attemptedIds.add(id));
+      requested = attemptedIds.size;
       for (let attempt = 0; attempt < 4; attempt += 1) {
         if (cancelLiveScan) break;
         try {
@@ -1173,6 +1178,22 @@
           await cacheSnapshot(snapshot).catch(() => undefined);
           break;
         } catch (error) {
+          if (clearScanPending) return "";
+          // A rejected request is not evidence that its castles have no names.
+          // Split only upstream HTTP 400 responses; retain normal auth/rate handling.
+          if (Number(error?.status) === 400 && error?.code === "atlas-live-unavailable") {
+            if (batch.length > 1 && splitCount < 32) {
+              const middle = Math.ceil(batch.length / 2);
+              batches.splice(batchIndex + 1, 0, batch.slice(0, middle), batch.slice(middle));
+              splitCount += 1;
+              setApiStatus("Name request rejected · trying smaller groups", "working");
+              break;
+            }
+            if (batch.length === 1) {
+              rejectedIds.push(batch[0]);
+              break;
+            }
+          }
           if (!retryableNameError(error) || attempt === 3) {
             saveNameLookupResult(nameFailureSummary(error, received, requested));
             return ` · ${received} names loaded; lookup paused (${error?.code || "request failed"}). Tap Retry missing names`;
@@ -1187,8 +1208,9 @@
     }
     saveNameLookupResult((cancelLiveScan ? "Name lookup cancelled: " : "Name lookup finished: ") +
       received + " names loaded from " + requested + " requested. " +
-      (missingNames - unavailable) + " returned without a name; " + unavailable + " castles unavailable.");
-    return ` · ${received} names loaded${missingNames ? ` · ${missingNames} names not supplied by the API; tap Retry missing names` : ""}`;
+      (missingNames - unavailable) + " returned without a name; " + unavailable + " castles unavailable." +
+      (rejectedIds.length ? " HTTP 400 rejected " + rejectedIds.length + " individual castles: " + rejectedIds.slice(0, 8).join(", ") + "." : ""));
+    return ` · ${received} names loaded${missingNames ? ` · ${missingNames} names not supplied by the API; tap Retry missing names` : ""}${rejectedIds.length ? ` · ${rejectedIds.length} castles rejected (HTTP 400); other batches continued` : ""}`;
   }
 
   function atlasIdentity() {

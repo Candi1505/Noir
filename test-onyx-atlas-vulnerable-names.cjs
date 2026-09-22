@@ -24,6 +24,6 @@ check(hunter.castleDetailBatches([updated],now).length===0,"Do not refetch fresh
 const merged=win.OnyxAtlasCore.mergeOfficialInfo(value,{records:[{coordinate:old.coordinate,available:true,name:"Recovered Keep",observedAt:now}]});
 check(hunter.toCommandSnapshot(merged,now).castles[0].name==="Recovered Keep","Name reaches Overview and Castles");
 const rows=Array.from({length:251},(_,i)=>({...next,coordinate:"22-A55-"+i}));
-check(hunter.castleDetailBatches(rows,now).map(b=>b.length).join(",")==="100,100,51","Keep API batch limit");
+check(hunter.castleDetailBatches(rows,now).map(b=>b.length).join(",")==="25,25,25,25,25,25,25,25,25,25,1","Keep API batch limit");
 
 console.log("Vulnerable castle name regression checks passed.");
