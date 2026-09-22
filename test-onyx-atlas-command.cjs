@@ -12,12 +12,12 @@ const hunterCore = fs.readFileSync("onyx-atlas-castle-hunter-core.js", "utf8");
 const hunterWorker = fs.readFileSync("onyx-atlas-har-worker.js", "utf8");
 
 assert.match(html, /onyx-atlas-command\.css\?v=20260922-live-glory-1/);
-assert.match(html, /onyx-atlas-command\.js\?v=20260922-shield-armed-1/);
+assert.match(html, /onyx-atlas-command\.js\?v=20260922-primarch-owners-1/);
 assert.match(html, /onyx-war-dragons-auth\.js\?v=20260921-owner-api-1/);
 assert.match(html, /onyx-atlas-castle-hunter\.css\?v=20260922-shield-context-1/);
-assert.match(html, /onyx-atlas-castle-hunter-core\.js\?v=20260922-live-glory-1/);
+assert.match(html, /onyx-atlas-castle-hunter-core\.js\?v=20260922-primarch-owners-1/);
 assert.match(html, /database\.js\?v=20260922-atlas-account-sync-1/);
-assert.match(html, /onyx-atlas-castle-hunter\.js\?v=20260922-shield-armed-1/);
+assert.match(html, /onyx-atlas-castle-hunter\.js\?v=20260922-primarch-owners-1/);
 assert.match(hunterSource, /!apiState\.connected && !apiState\.readyToAuthorise/);
 assert.ok(
   html.indexOf("onyx-atlas-command.js") < html.indexOf("onyx-command.js"),
@@ -51,6 +51,8 @@ assert.match(hunterSource, /matched the loaded team directory/);
 assert.match(hunterSource, /This group has not been live-checked yet/);
 assert.match(hunterSource, /SHIELD_CONTEXT_TTL_SECONDS = 6 \* 60 \* 60/);
 assert.match(hunterSource, /to trigger/);
+assert.doesNotMatch(hunterSource, />Import capture</);
+assert.doesNotMatch(hunterSource, /id="atlasCaptureFile"/);
 assert.match(hunterSource, /LIVE_BATCH_SIZE = 25/);
 assert.match(hunterWorker, /Only an allowlisted/);
 assert.match(hunterWorker, /onyx-atlas-castle-hunter-core\.js\?v=20260922-live-glory-1/);
@@ -218,7 +220,7 @@ command.setLiveSnapshot({
       shieldShipsUntilTrigger: 170000,
       shieldArmed: true,
       observedAt: "2026-08-28T10:14:00.000Z",
-      primarchs: [{ type: "Taunter", tier: 4, level: 14, troops: 6444, teamName: "nightKnights", rawId: "drop" }],
+      primarchs: [{ type: "Rusher", tier: 4, level: 14, troops: 6444, playerName: "NightFox", playerRef: "player-1", teamName: "nightKnights", allianceName: "DarkAlliance", rawId: "drop" }],
       mapCoordinates: "X:3360 Y:2340",
       shieldState: "cooldown",
       cooldownEndsAt: "2026-08-28T11:15:00.000Z",
@@ -239,7 +241,9 @@ assert.equal(live.castles[0].troops, 123456);
 assert.equal(live.castles[0].apr, 873);
 assert.equal(live.castles[0].atlasRank, 130);
 assert.equal(live.castles[0].gloryPercent, 68);
-assert.equal(live.castles[0].primarchs[0].type, "Taunter");
+assert.equal(live.castles[0].primarchs[0].type, "Trapper");
+assert.equal(live.castles[0].primarchs[0].playerName, "NightFox");
+assert.equal(live.castles[0].primarchs[0].playerRef, "player-1");
 assert.equal("rawId" in live.castles[0].primarchs[0], false);
 assert.equal(live.castles[0].fortLevel, 12);
 assert.equal(live.castles[0].shieldShipsUntilTrigger, 170000);
@@ -250,6 +254,20 @@ assert.equal(live.castles[0].source, "War Dragons API");
 assert.equal(live.castles[1].shieldState, "unknown");
 assert.equal("rawApiKey" in live.castles[0], false);
 assert.equal("privateResponse" in live, false);
+
+command.setLiveSnapshot({ castles: [{
+  name: "Primarch Keep",
+  shieldState: "vulnerable",
+  observedAt: new Date().toISOString(),
+  primarchs: [
+    { type: "Rusher", tier: 5, level: 30, troops: 7001, playerName: "NightFox", playerRef: "player-1", teamName: "NightTeam", allianceName: "NightAlliance" },
+    { type: "Destroyer", tier: 4, level: 20, troops: 5000, playerRef: "player-2", teamName: "NightTeam", allianceName: "NightAlliance" }
+  ]
+}] });
+const primarchPanel = command.renderLiveCastles();
+assert.match(primarchPanel, /T5 Trapper/);
+assert.match(primarchPanel, /NightFox · Team NightTeam · Alliance NightAlliance/);
+assert.match(primarchPanel, /Player 1 · name unavailable · Team NightTeam/);
 
 const largeSummary = command.setLiveSnapshot({
   fetchedAt: "2026-08-28T10:30:00.000Z",

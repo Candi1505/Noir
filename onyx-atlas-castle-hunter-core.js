@@ -302,11 +302,12 @@
   function normalisePrimarchs(value) {
     if (!Array.isArray(value)) return [];
     return value.slice(0, 100).flatMap(raw => {
-      const type = typeof raw?.type === "string" &&
-        ["Rusher", "Destroyer", "Taunter", "Sieger"].includes(raw.type)
-        ? raw.type : "";
+      const suppliedType = typeof raw?.type === "string" ? raw.type : "";
+      const type = suppliedType === "Rusher" ? "Trapper" : suppliedType;
+      const playerRef = typeof raw?.playerRef === "string" && /^player-[0-9]{1,4}$/.test(raw.playerRef)
+        ? raw.playerRef : null;
       const tier = integer(raw?.tier);
-      if (!type || tier === null || tier < 1 || tier > 5) return [];
+      if (!["Trapper", "Destroyer", "Taunter", "Sieger"].includes(type) || tier === null || tier < 1 || tier > 5) return [];
       const level = integer(raw?.level);
       const troops = finiteNumber(raw?.troops);
       return [{
@@ -314,6 +315,8 @@
         tier,
         level: level !== null && level >= 0 ? level : null,
         troops: troops !== null && troops >= 0 ? troops : null,
+        playerName: typeof raw?.playerName === "string" ? raw.playerName.slice(0, 120) : null,
+        playerRef,
         teamName: typeof raw?.teamName === "string" ? raw.teamName.slice(0, 120) : null,
         allianceName: typeof raw?.allianceName === "string" ? raw.allianceName.slice(0, 120) : null
       }];

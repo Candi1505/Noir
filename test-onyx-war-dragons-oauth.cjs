@@ -74,6 +74,12 @@ assert.match(gatewaySource, /typeof value === "string"/);
 assert.match(gatewaySource, /value\.length <= MAX_CASTLE_ID_LENGTH/);
 assert.match(gatewaySource, /rpc\/claim_war_dragons_critical_request/);
 assert.match(gatewaySource, /p_interval_ms: CRITICAL_INTERVAL_MS/);
+assert.match(gatewaySource, /match\[1\] === "rusher"/);
+assert.match(gatewaySource, /\? "Trapper"/);
+assert.match(gatewaySource, /playerName,/);
+assert.match(gatewaySource, /playerRef,/);
+assert.match(gatewaySource, /`player-\$\{playerRefs\.size \+ 1\}`/);
+assert.doesNotMatch(gatewaySource, /\bplayerId:\s*playerKey\b/);
 assert.doesNotMatch(gatewaySource, /lastCriticalRequest|new Map<string, number>\(\)/);
 assert.doesNotMatch(gatewaySource, /return json\([\s\S]{0,240}\bapi(?:Key|_key)\s*:/i);
 

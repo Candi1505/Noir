@@ -407,6 +407,8 @@
               troops: Number.isFinite(Number(primarch?.troops))
                 ? Math.max(0, Number(primarch.troops))
                 : null,
+              playerName: String(primarch?.playerName || ""),
+              playerRef: String(primarch?.playerRef || ""),
               teamName: String(primarch?.teamName || ""),
               allianceName: String(primarch?.allianceName || "")
             }))
@@ -1228,9 +1230,7 @@
         <div class="atlas-command-actions">
           <span id="atlasApiStatus" class="onyx-status-chip atlas-api-status" data-state="pending" aria-live="polite">Checking API</span>
           <button id="atlasLiveButton" type="button" class="button atlas-live-button" disabled>Scan live</button>
-          <label class="button atlas-import-button" for="atlasCaptureFile">Import capture</label>
         </div>
-        <input id="atlasCaptureFile" class="atlas-file-input" type="file" accept=".har,.zip,.har.zip,application/json,application/zip">
       </div>
 
       <section class="glass-panel atlas-command-hero">
@@ -1240,7 +1240,7 @@
           <div><span>Live checked</span><strong id="atlasCheckedCount">0</strong></div>
           <div><span>Matches</span><strong id="atlasMatchCount">0</strong></div>
         </div>
-        <p id="atlasImportStatus" class="atlas-import-status" role="status" aria-live="polite">No Atlas capture loaded</p>
+        <p id="atlasImportStatus" class="atlas-import-status" role="status" aria-live="polite">Waiting for the official Atlas map</p>
         <p id="atlasSourceDates" class="atlas-import-status"></p>
         <fieldset class="atlas-shield-context">
           <legend>Current PvP shield context</legend>
@@ -1257,7 +1257,6 @@
           <button id="atlasTeamLookup" type="button" class="button atlas-live-button">Check team API</button>
         </div>
         <p id="atlasTeamResult" class="atlas-import-status" role="status" aria-live="polite"></p>
-        <progress id="atlasImportProgress" class="atlas-import-progress hidden" max="100" value="0">0%</progress>
       </section>
 
       <section class="glass-panel atlas-filter-panel" aria-labelledby="atlasFilterTitle">
@@ -1301,9 +1300,6 @@
   }
 
   function bindEvents() {
-    get("atlasCaptureFile")?.addEventListener("change", event => {
-      importCapture(event.target.files?.[0] || null);
-    });
     host?.querySelectorAll(
       "[data-atlas-tier], #atlasSearch, #atlasAprMin, #atlasAprMax, #atlasGloryFilter, #atlasShieldFilter, #atlasGateFilter, #atlasSort"
     ).forEach(control => {

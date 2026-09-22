@@ -453,16 +453,36 @@ function sanitiseFleetTroops(value: JsonRecord) {
   return found ? total : null;
 }
 
-function sanitisePrimarch(value: JsonRecord) {
+function sanitisePrimarch(value: JsonRecord, playerRefs: Map<string, string>) {
   const match = String(value.dtype || "").match(/^(rusher|destroyer|taunter|sieger)([1-5])$/);
   if (!match) return null;
   const level = integer(value.level);
   const troops = sanitiseFleetTroops(value);
+  const player = value.player && typeof value.player === "object"
+    ? value.player as JsonRecord
+    : null;
+  const playerName = safeTeamName(
+    value.player_name ?? value.owner_player_name ?? value.owner_name ??
+      value.playerName ?? player?.name,
+  );
+  const fleetId = typeof value.id === "string" ? value.id : "";
+  const playerKey = fleetId.match(/^([a-f0-9]{16,64})-[0-9]+$/i)?.[1] || "";
+  let playerRef: string | null = null;
+  if (playerKey) {
+    if (!playerRefs.has(playerKey)) {
+      playerRefs.set(playerKey, `player-${playerRefs.size + 1}`);
+    }
+    playerRef = playerRefs.get(playerKey) || null;
+  }
   return {
-    type: `${match[1][0].toUpperCase()}${match[1].slice(1)}`,
+    type: match[1] === "rusher"
+      ? "Trapper"
+      : `${match[1][0].toUpperCase()}${match[1].slice(1)}`,
     tier: Number(match[2]),
     level: level !== null && level >= 0 ? level : null,
     troops,
+    playerName,
+    playerRef,
     teamName: safeTeamName(value.team_name),
     allianceName: safeTeamName(value.alliance_name),
   };
@@ -483,6 +503,7 @@ function sanitiseFort(value: unknown) {
 function sanitiseCritical(payload: unknown, castleIds: string[], observedAt: number) {
   if (!payload || typeof payload !== "object") throw new Error("invalid-critical-response");
   const source = payload as JsonRecord;
+  const playerRefs = new Map<string, string>();
   return castleIds.map(coordinate => {
     const raw = source[coordinate];
     if (!raw || typeof raw !== "object") {
@@ -507,7 +528,7 @@ function sanitiseCritical(payload: unknown, castleIds: string[], observedAt: num
     if (sawGarrison) guards = guardTotal;
     const primarchs = fleets.slice(0, 1000).flatMap(rawFleet => {
       if (!rawFleet || typeof rawFleet !== "object") return [];
-      const primarch = sanitisePrimarch(rawFleet as JsonRecord);
+      const primarch = sanitisePrimarch(rawFleet as JsonRecord, playerRefs);
       return primarch ? [primarch] : [];
     }).slice(0, 100);
     return {

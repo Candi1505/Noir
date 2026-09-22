@@ -136,12 +136,13 @@ test("live critical details retain only sanitised primarch intelligence", () => 
   const merged = Core.mergeOfficialCritical(original, { observedAt: 1000, records: [{
     coordinate: "42-A1-1", available: true, observedAt: 1000, fleetCount: 2,
     primarchs: [
-      { type: "Taunter", tier: 4, level: 14, troops: 6444, teamName: "nightKnights" },
+      { type: "Rusher", tier: 4, level: 14, troops: 6444, playerName: "NightFox", playerRef: "player-1", teamName: "nightKnights" },
       { type: "private-id", tier: 9, level: 999, troops: -1 }
     ]
   }] });
   assert.deepEqual(merged.records[0].primarchs, [{
-    type: "Taunter", tier: 4, level: 14, troops: 6444,
+    type: "Trapper", tier: 4, level: 14, troops: 6444,
+    playerName: "NightFox", playerRef: "player-1",
     teamName: "nightKnights", allianceName: null
   }]);
 });

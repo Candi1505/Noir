@@ -178,14 +178,17 @@
     const primarchs = (Array.isArray(source.primarchs) ? source.primarchs : [])
       .slice(0, 100)
       .flatMap(raw => {
-        const type = cleanText(raw?.type, 20);
+        const suppliedType = cleanText(raw?.type, 20);
+        const type = suppliedType === "Rusher" ? "Trapper" : suppliedType;
         const tier = cleanNumber(raw?.tier, 5);
-        if (!["Rusher", "Destroyer", "Taunter", "Sieger"].includes(type) || tier === null || tier < 1) return [];
+        if (!["Trapper", "Destroyer", "Taunter", "Sieger"].includes(type) || tier === null || tier < 1) return [];
         return [{
           type,
           tier,
           level: cleanNumber(raw?.level, 100),
           troops: cleanNumber(raw?.troops),
+          playerName: cleanText(raw?.playerName, 70),
+          playerRef: /^player-[0-9]{1,4}$/.test(String(raw?.playerRef || "")) ? String(raw.playerRef) : "",
           teamName: cleanText(raw?.teamName, 70),
           allianceName: cleanText(raw?.allianceName, 70)
         }];
@@ -661,7 +664,14 @@
     if (!fresh) {
       return `<details class="oac-primarchs stale"><summary>Who’s here · scan expired</summary><p>Run a live scan to refresh the primarchs and troop stacks at this castle.</p></details>`;
     }
-    return `<details class="oac-primarchs"><summary>Who’s here · ${castle.primarchs.length} primarch${castle.primarchs.length === 1 ? "" : "s"}</summary><div>${castle.primarchs.map(primarch => `<article><strong>T${formatNumber(primarch.tier)} ${escapeHtml(primarch.type)}</strong><span>${primarch.level === null ? "Level not supplied" : `Level ${formatNumber(primarch.level)}`} · ${primarch.troops === null ? "Troops not supplied" : `${formatNumber(primarch.troops)} troops`}</span>${primarch.teamName ? `<small>${escapeHtml(primarch.teamName)}${primarch.allianceName ? ` · ${escapeHtml(primarch.allianceName)}` : ""}</small>` : ""}</article>`).join("")}</div></details>`;
+    const playerNumbers = new Map();
+    const playerLabel = primarch => {
+      if (primarch.playerName) return primarch.playerName;
+      if (!primarch.playerRef) return "Player name unavailable";
+      if (!playerNumbers.has(primarch.playerRef)) playerNumbers.set(primarch.playerRef, playerNumbers.size + 1);
+      return `Player ${playerNumbers.get(primarch.playerRef)} · name unavailable`;
+    };
+    return `<details class="oac-primarchs"><summary>Who’s here · ${castle.primarchs.length} primarch${castle.primarchs.length === 1 ? "" : "s"}</summary><div>${castle.primarchs.map(primarch => `<article><strong>T${formatNumber(primarch.tier)} ${escapeHtml(primarch.type)}</strong><span>${primarch.level === null ? "Level not supplied" : `Level ${formatNumber(primarch.level)}`} · ${primarch.troops === null ? "Troops not supplied" : `${formatNumber(primarch.troops)} troops`}</span><small>${escapeHtml(playerLabel(primarch))}${primarch.teamName ? ` · Team ${escapeHtml(primarch.teamName)}` : ""}${primarch.allianceName ? ` · Alliance ${escapeHtml(primarch.allianceName)}` : ""}</small></article>`).join("")}</div></details>`;
   }
 
   function renderLiveSearch() {
