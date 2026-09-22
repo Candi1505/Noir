@@ -940,6 +940,37 @@
     ).records;
   }
 
+  function selectBalancedLiveBatch(records, limit = LIVE_BATCH_SIZE) {
+    const maximum = Math.max(1, Math.min(LIVE_BATCH_SIZE, Number(limit) || LIVE_BATCH_SIZE));
+    const compareAge = (left, right) =>
+      (Number(left?.criticalObservedAt) || 0) - (Number(right?.criticalObservedAt) || 0) ||
+      String(left?.coordinate || "").localeCompare(String(right?.coordinate || ""), "en", { numeric: true });
+    const tierOrder = [2, 3, 4, 5];
+    const buckets = new Map(tierOrder.map(tier => [
+      tier,
+      records.filter(record => Number(record?.tier) === tier).sort(compareAge)
+    ]));
+    const selected = [];
+    while (selected.length < maximum) {
+      let added = false;
+      tierOrder.forEach(tier => {
+        if (selected.length >= maximum) return;
+        const next = buckets.get(tier)?.shift();
+        if (!next) return;
+        selected.push(next);
+        added = true;
+      });
+      if (!added) break;
+    }
+    if (selected.length < maximum) {
+      const chosen = new Set(selected);
+      records.filter(record => !chosen.has(record)).sort(compareAge).forEach(record => {
+        if (selected.length < maximum) selected.push(record);
+      });
+    }
+    return selected;
+  }
+
   async function requestCriticalBatch(castleIds) {
     for (let attempt = 0; attempt < 3; attempt += 1) {
       try {
@@ -1058,10 +1089,12 @@
         return;
       }
       if (candidates.length > MAX_LIVE_SCAN_CASTLES) {
-        candidates = [...candidates].sort((a, b) =>
-          (Number(a.criticalObservedAt) || 0) - (Number(b.criticalObservedAt) || 0)
-        ).slice(0, LIVE_BATCH_SIZE);
-        setImportStatus("Checking the next 25 matching castles · oldest observations first");
+        candidates = selectBalancedLiveBatch(candidates);
+        const tiers = [...new Set(candidates.map(record => record.tier))]
+          .sort((left, right) => left - right)
+          .map(tier => `T${tier}`)
+          .join(", ");
+        setImportStatus(`Checking 25 across ${tiers} · oldest observations first in each tier`);
       }
 
       let infoNote = "";
@@ -1356,6 +1389,7 @@
   window.OnyxAtlasCastleHunter = Object.freeze({
     mount,
     unmount,
-    toCommandSnapshot
+    toCommandSnapshot,
+    selectBalancedLiveBatch
   });
 })(window, document);

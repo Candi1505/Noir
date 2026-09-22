@@ -44,12 +44,12 @@ assert.match(
 assert.match(
   hunterSource,
   /function liveScanCandidates\(\) \{\s*const filters = readFilters\(\);/,
-  "Live batches must honour the selected shield-state filter."
+  "Live batches must honour the selected non-shield filters."
 );
-assert.doesNotMatch(
+assert.match(
   hunterSource,
-  /liveScanCandidates\(\)[\s\S]{0,180}shield:\s*["']any["']/,
-  "Live batches must not silently replace the shield-state filter."
+  /\{ \.\.\.filters, shield: ["']any["'] \}/,
+  "Live discovery must scan unknown shield states before it can classify vulnerable castles."
 );
 assert.match(
   hunterSource,
@@ -89,6 +89,24 @@ sandbox.window = sandbox;
 vm.createContext(sandbox);
 vm.runInContext(coreSource, sandbox);
 vm.runInContext(hunterSource, sandbox);
+
+const balanced = sandbox.OnyxAtlasCastleHunter.selectBalancedLiveBatch(
+  [2, 3, 4, 5].flatMap(tier => Array.from({ length: 20 }, (_, index) => ({
+    tier,
+    coordinate: `42-A${tier}-${index}`,
+    criticalObservedAt: index
+  }))),
+  25
+);
+const balancedCounts = balanced.reduce((counts, record) => {
+  counts[record.tier] = (counts[record.tier] || 0) + 1;
+  return counts;
+}, {});
+assert.deepEqual(JSON.parse(JSON.stringify(balancedCounts)), { 2: 7, 3: 6, 4: 6, 5: 6 });
+assert.deepEqual(
+  [2, 3, 4, 5].map(tier => Math.min(...balanced.filter(record => record.tier === tier).map(record => record.criticalObservedAt))),
+  [0, 0, 0, 0]
+);
 
 const now = 10_000;
 const snapshot = JSON.parse(JSON.stringify(sandbox.OnyxAtlasCastleHunter.toCommandSnapshot({
