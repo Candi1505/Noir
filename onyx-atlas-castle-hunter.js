@@ -71,6 +71,8 @@
   let host = null;
   let loadedPlayerId = null;
   let mountGeneration = 0;
+  let lastImportStatus = null;
+  let lastApiStatus = null;
 
   const get = id => host?.querySelector(`#${id}`) || null;
   const formatNumber = value => Number(value || 0).toLocaleString("en-AU");
@@ -312,13 +314,14 @@
 
   async function cacheSnapshot(value) {
     if (playerId === "signed-out") return;
+    const cachePlayerId = playerId;
     const database = await openDatabase();
     try {
       await new Promise((resolve, reject) => {
         const request = database
           .transaction(SNAPSHOT_STORE, "readwrite")
           .objectStore(SNAPSHOT_STORE)
-          .put(value, playerId);
+          .put(value, cachePlayerId);
         request.addEventListener("success", () => resolve());
         request.addEventListener("error", () => reject(request.error));
       });
@@ -502,6 +505,7 @@
   }
 
   function setImportStatus(message, failed = false) {
+    lastImportStatus = { message, failed };
     const status = get("atlasImportStatus");
     if (!status) return;
     status.textContent = message;
@@ -515,6 +519,7 @@
   }
 
   function setApiStatus(message, state = "pending") {
+    lastApiStatus = { message, state };
     const status = get("atlasApiStatus");
     if (!status) return;
     status.textContent = message;
@@ -694,6 +699,7 @@
   }
 
   function readFilters() {
+    if (!host?.isConnected) return loadFilters();
     return {
       tiers: Array.from(host?.querySelectorAll("[data-atlas-tier]:checked") || [])
         .map(input => Number(input.value)),
@@ -929,6 +935,8 @@
   }
 
   function applyFilters({ persist = true } = {}) {
+    // The scan owns the data; the Hunter tab is only one view of it.
+    if (!host?.isConnected) return;
     const filters = readFilters();
     const nowEpoch = Date.now() / 1000;
     const records = withAttackingTeam(snapshot)?.records || [];
@@ -1165,7 +1173,7 @@
         try {
           setApiStatus(`Loading castle details · ${received} returned`, "working");
           const details = await WarDragons.atlasInfo(batch);
-          if (clearScanPending) return "";
+          if (clearScanPending || cancelLiveScan) return "";
           snapshot = Core.mergeOfficialInfo(snapshot, details);
           const named = new Set((details.records || []).filter(record =>
             record.available && String(record.name || "").trim() && record.name !== record.coordinate
@@ -1398,7 +1406,7 @@
           .slice(offset, offset + LIVE_BATCH_SIZE)
           .map(record => record.coordinate);
         const live = await requestCriticalBatch(batch);
-        if (clearScanPending) break;
+        if (clearScanPending || cancelLiveScan) break;
         snapshot = Core.mergeOfficialCritical(snapshot, live);
         processed += batch.length;
         setApiStatus(`Live ${formatNumber(processed)}/${formatNumber(candidates.length)}`, "working");
@@ -1491,6 +1499,10 @@
     const status = event?.detail && typeof event.detail === "object"
       ? event.detail
       : WarDragonsAuth?.getStatus?.() || {};
+    if (liveScanning && (
+      (status.playerId && status.playerId !== playerId) ||
+      (["ready", "pending", "error"].includes(status.phase) && status.connected === false)
+    )) cancelLiveScan = true;
     apiState = {
       signedIn: playerId !== "signed-out",
       connected: status.connected === true,
@@ -1634,6 +1646,11 @@
     renderApiState();
     const nextPlayerId = await resolvePlayerId();
     if (generation !== mountGeneration || !host?.isConnected) return;
+    if (nextPlayerId !== playerId) {
+      cancelLiveScan = true;
+      lastImportStatus = null;
+      lastApiStatus = null;
+    }
     playerId = nextPlayerId;
     renderNameLookupResult();
     get("atlasAttackingTeam").value = readAttackingTeam();
@@ -1644,6 +1661,8 @@
     if (loadedPlayerId === playerId && snapshot) {
       snapshot = applyOfficialShieldContext(snapshot);
       applyFilters({ persist: false });
+      if (lastImportStatus) setImportStatus(lastImportStatus.message, lastImportStatus.failed);
+      if (liveScanning && lastApiStatus) setApiStatus(lastApiStatus.message, lastApiStatus.state);
       await initialiseOfficialApi();
       return;
     }
@@ -1671,10 +1690,15 @@
     return true;
   }
 
-  function unmount() {
+  function unmount({ cancelScan = true } = {}) {
     mountGeneration += 1;
-    cancelLiveScan = true;
+    if (host?.isConnected) saveFilters(readFilters());
+    window.clearTimeout(filterTimer);
+    // Switching Atlas tabs or repainting a board must not stop name enrichment.
+    // Closing Atlas still cancels, as do Stop scan and Clear scan.
+    if (cancelScan) cancelLiveScan = true;
     if (activeWorker) stopWorker();
+    host = null;
   }
 
   window.addEventListener?.("onyx-war-dragons-connection", handleConnectionState);

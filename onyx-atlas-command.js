@@ -594,7 +594,9 @@
     const matches = castles.filter(castle => [castle.name, castle.owner, castle.region, castle.id, castle.mapCoordinates].some(value => String(value || "").toLowerCase().includes(liveQuery.toLowerCase().trim())));
     const glory = new Map(matches.map(castle => [castle, castleGlory(castle).percent]));
     return matches.filter(castle => liveGloryFilter === "any" || (liveGloryFilter === "full" ? glory.get(castle) === 100 : glory.get(castle) !== null && glory.get(castle) < 100))
-      .sort((left, right) => (glory.get(right) ?? -1) - (glory.get(left) ?? -1) || left.name.localeCompare(right.name));
+      // Names arrive progressively. Keep each castle in place as its ID label
+      // becomes a name, instead of sorting newly named cards off the page.
+      .sort((left, right) => (glory.get(right) ?? -1) - (glory.get(left) ?? -1) || left.id.localeCompare(right.id, "en", { numeric: true }));
   }
 
   function castleGlory(castle, now = Date.now()) {
@@ -1379,7 +1381,7 @@
 
   function render(options = {}) {
     const overlay = ensureOverlay();
-    window.OnyxAtlasCastleHunter?.unmount?.();
+    window.OnyxAtlasCastleHunter?.unmount?.({ cancelScan: activeMode !== "live" });
     overlay.innerHTML = shell();
     bindOverlay(overlay);
     if (activeMode === "live" && activeTab === "hunter") {
