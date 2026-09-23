@@ -5,7 +5,7 @@
   const STORAGE_PREFIX = "onyxAtlasManualV1";
   const MODE_PREFIX = "onyxAtlasModeV1";
   const VALID_MODES = new Set(["live", "demo", "manual"]);
-  const VALID_TABS = new Set(["overview", "hunter", "battles", "castles", "team", "entry"]);
+  const VALID_TABS = new Set(["overview", "hunter", "snipe", "battles", "castles", "team", "entry"]);
   const VALID_LIVE_FILTERS = new Set(["vulnerable", "cooldown", "dropping", "shielded", "armed", "unknown", "all"]);
   const LIVE_SHIELD_STATES = new Set(["vulnerable", "cooldown", "dropping", "shielded", "unknown"]);
   const MEMBER_STATUSES = new Set(["ready", "watch", "support"]);
@@ -508,6 +508,9 @@
     </section>`;
   }
 
+  let snipeFilters = { min: 9000, aprMin: 1, aprMax: 250, kind: "primarch" };
+  let snipeLimit = 20;
+
   function renderTabs() {
     const tabs = [
       ["overview", "overview", "Overview"],
@@ -516,6 +519,7 @@
       ["team", "team", "Team"]
     ];
     if (activeMode === "live") tabs.splice(1, 0, ["hunter", "castle", "Hunter"]);
+    if (activeMode === "live") tabs.splice(2, 0, ["snipe", "fleet", "Snipe"]);
     if (activeMode === "manual") tabs.push(["entry", "edit", "Enter intel"]);
     return `<nav class="oac-tabs" role="tablist" aria-label="Atlas Command workspaces">
       ${tabs.map(([tab, iconName, label]) => `<button type="button" role="tab" data-oac-tab="${tab}" aria-selected="${activeTab === tab}" class="${activeTab === tab ? "active" : ""}">${icon(iconName)}<span>${label}</span></button>`).join("")}
@@ -923,6 +927,45 @@
     </div>`;
   }
 
+  function snipeTargets(castles, filters = {}, now = Date.now()) {
+    const min = Number(filters.min ?? 9000);
+    const aprMin = Number(filters.aprMin ?? 1);
+    const aprMax = Number(filters.aprMax ?? 250);
+    if (![min, aprMin, aprMax].every(Number.isFinite) || min < 0 || aprMin < 0 || aprMax < aprMin) return [];
+    return castles.flatMap(castle => {
+      const checked = Date.parse(castle.observedAt || "");
+      if (!Number.isFinite(checked) || checked > now + 60000 || now - checked >= 600000 ||
+          castle.apr === null || castle.apr < aprMin || castle.apr > aprMax) return [];
+      const stacks = filters.kind === "garrison"
+        ? [{ troops: castle.troops, type: "Garrison" }]
+        : castle.primarchs;
+      return stacks.flatMap((stack, index) => stack.troops !== null && stack.troops > 0 && stack.troops >= min
+        ? [{ castle, stack, key: `${castle.id}:${index}` }] : []);
+    }).sort((a, b) => b.stack.troops - a.stack.troops || a.key.localeCompare(b.key, "en", { numeric: true }));
+  }
+
+  function renderSnipe() {
+    const targets = snipeTargets(liveCastles, snipeFilters);
+    return `<div class="oac-workspace" role="tabpanel">
+      <section class="oac-workspace-lead"><div><p>LIVE SCAN RESULTS</p><h2>Snipe finder</h2><span>Find troop stacks in your latest Hunter observations.</span></div><b>${targets.length}</b></section>
+      <form id="oacSnipeFilters" class="oac-search">
+        <label>Target type<select name="kind"><option value="primarch" ${snipeFilters.kind === "primarch" ? "selected" : ""}>Primarchs</option><option value="garrison" ${snipeFilters.kind === "garrison" ? "selected" : ""}>Garrisons</option></select></label>
+        <div>${[["min", "Minimum troops"], ["aprMin", "Castle owner APR minimum"], ["aprMax", "Castle owner APR maximum"]].map(([name, label]) => `<label>${label}<input name="${name}" type="number" min="0" step="1" required value="${snipeFilters[name]}"></label>`).join("")}</div>
+        <div><button type="submit">Find targets</button><button type="button" data-oac-tab="hunter">Scan in Hunter</button></div>
+      </form>
+      <p class="oac-evidence-note">Scanned castles only · observations expire after 10 minutes · largest stacks first. APR belongs to the castle owner; a visiting primarch may belong to another team. Player level and depth are unavailable. API coordinates have not been matched to the in-game map.</p>
+      <div class="oac-live-castle-grid">${targets.slice(0, snipeLimit).map(({castle, stack}) => `<article class="oac-live-castle-card">
+        <header><span>${icon("fleet")}</span><div><small>${escapeHtml(castle.id)}</small><h3>${escapeHtml(castle.name)}</h3><p>Castle owner: ${escapeHtml(castle.owner || "Not supplied")}</p></div><b>${castle.level === null ? "Tier unknown" : `T${castle.level}`}</b></header>
+        <section class="oac-live-shield-signal"><div><strong>${formatNumber(stack.troops)} ${stack.type === "Garrison" ? "guards" : "troops"}</strong><span>${stack.type === "Garrison" ? "Garrison" : `T${stack.tier} ${escapeHtml(stack.type)} · ${stack.level === null ? "Level unknown" : `Level ${stack.level}`}${stack.teamName ? ` · Team ${escapeHtml(stack.teamName)}` : ""}`}</span><span>Castle owner APR ${castle.apr} · ${escapeHtml(liveShieldLabel(castle))}</span></div></section>
+        ${renderCastleGlory(castle)}
+        <footer><span>Checked ${escapeHtml(formatLiveTime(castle.observedAt))}${castle.mapCoordinates ? ` · API ${escapeHtml(castle.mapCoordinates)}` : ""}</span>${castle.mapCoordinates ? `<button type="button" data-oac-copy-coordinate="${escapeHtml(castle.mapCoordinates)}">Copy API X/Y</button>` : ""}</footer>
+        <p class="oac-live-castle-caveat">${castle.attackable ? "Attackable confirmed" : "Attackability not confirmed"}</p>
+      </article>`).join("")}</div>
+      ${targets.length ? `<p class="oac-evidence-note">Showing ${Math.min(targets.length, snipeLimit)} of ${targets.length} matching stacks</p>` : `<p class="oac-evidence-note">No fresh stacks match. Scan in Hunter or change these filters. Missing troop counts are excluded.</p>`}
+      ${targets.length > snipeLimit ? '<button type="button" class="oac-more" data-oac-snipe-more>Show 20 more</button>' : ""}
+    </div>`;
+  }
+
   function renderLiveCastles() {
     const castles = filteredLiveCastles();
     const visibleCastles = castles.slice(0, liveLimit);
@@ -1151,10 +1194,11 @@
   function shell() {
     const state = currentState();
     if (activeMode !== "manual" && activeTab === "entry") activeTab = "overview";
-    if (activeMode !== "live" && activeTab === "hunter") activeTab = "overview";
+    if (activeMode !== "live" && ["hunter", "snipe"].includes(activeTab)) activeTab = "overview";
     const workspace = {
       overview: renderOverview,
       hunter: renderHunter,
+      snipe: renderSnipe,
       battles: renderBattles,
       castles: renderCastles,
       team: renderTeam,
@@ -1261,6 +1305,17 @@
   }
 
   function bindOverlay(overlay) {
+    overlay.querySelector("#oacSnipeFilters")?.addEventListener("submit", event => {
+      event.preventDefault();
+      const fields = event.currentTarget.elements;
+      fields.aprMax.setCustomValidity(Number(fields.aprMax.value) < Number(fields.aprMin.value) ? "Maximum APR must be at least the minimum." : "");
+      if (!event.currentTarget.reportValidity()) return;
+      snipeFilters = { min: Number(fields.min.value), aprMin: Number(fields.aprMin.value), aprMax: Number(fields.aprMax.value), kind: fields.kind.value };
+      snipeLimit = 20;
+      render();
+    });
+    overlay.querySelector("#oacSnipeFilters")?.addEventListener("input", event => event.currentTarget.elements.aprMax.setCustomValidity(""));
+    overlay.querySelector("[data-oac-snipe-more]")?.addEventListener("click", () => { snipeLimit += 20; render(); });
     overlay.querySelector("#oacLiveSearch")?.addEventListener("submit", event => {
       event.preventDefault();
       liveQuery = overlay.querySelector("#oacCastleQuery").value;
@@ -1504,6 +1559,7 @@
     getLiveState: () => clone({ castles: liveCastles, fetchedAt: liveFetchedAt, source: liveSource }),
     setLiveSnapshot,
     castleGlory,
+    snipeTargets,
     openGloryTarget: id => { open("castles"); liveQuery = String(id || ""); liveFilter = "all"; liveGloryFilter = "any"; render(); },
     normaliseLiveSnapshot,
     normaliseManualState,

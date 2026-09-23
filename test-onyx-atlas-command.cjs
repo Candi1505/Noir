@@ -12,7 +12,7 @@ const hunterCore = fs.readFileSync("onyx-atlas-castle-hunter-core.js", "utf8");
 const hunterWorker = fs.readFileSync("onyx-atlas-har-worker.js", "utf8");
 
 assert.match(html, /onyx-atlas-command\.css\?v=20260922-live-glory-1/);
-assert.match(html, /onyx-atlas-command\.js\?v=20260923-live-name-updates-1/);
+assert.match(html, /onyx-atlas-command\.js\?v=20260923-snipe-1/);
 assert.match(html, /onyx-war-dragons-auth\.js\?v=20260921-owner-api-1/);
 assert.match(html, /onyx-atlas-castle-hunter\.css\?v=20260922-shield-context-1/);
 assert.match(html, /onyx-atlas-castle-hunter-core\.js\?v=20260922-name-queue-1/);
@@ -123,7 +123,7 @@ sandbox.window = sandbox;
 vm.createContext(sandbox);
 const testableSource = source.replace(
   "window.OnyxAtlasCommand = Object.freeze({",
-  "window.OnyxAtlasCommand = Object.freeze({ renderLiveCastles, renderLiveOverview, renderLivePreview, saveCastleGlory, setTestGloryFilter: value => { liveGloryFilter = value; }, setTestQuery: value => { liveQuery = value; liveLimit = 20; }, moreTestResults: () => { liveLimit += 20; }, setTestFilter: value => { liveFilter = value; },"
+  "window.OnyxAtlasCommand = Object.freeze({ renderSnipe, renderLiveCastles, renderLiveOverview, renderLivePreview, saveCastleGlory, setTestGloryFilter: value => { liveGloryFilter = value; }, setTestQuery: value => { liveQuery = value; liveLimit = 20; }, moreTestResults: () => { liveLimit += 20; }, setTestFilter: value => { liveFilter = value; },"
 );
 vm.runInContext(testableSource, sandbox);
 
@@ -362,3 +362,26 @@ assert.match(command.renderLivePreview(), /68% glory/);
 assert.ok(command.renderLivePreview().indexOf("Resolute") < command.renderLivePreview().indexOf("Van"));
 command.setTestGloryFilter("full");
 assert.doesNotMatch(command.renderLivePreview(), /68% glory/);
+
+// Snipe filters use fresh critical observations and never substitute guards for primarch troops.
+const snipeNow = Date.now();
+const snipeBase = { id: "22-A1-0", name: "22-A1-0", apr: 17, troops: 2000000,
+  observedAt: new Date(snipeNow).toISOString(),
+  primarchs: [{ type: "Taunter", tier: 4, troops: 9001, level: 30, teamName: "Visitors" },
+    { type: "Trapper", tier: 3, troops: null }, { type: "Taunter", tier: 2, troops: 8999 }] };
+const snipeList = command.normaliseLiveSnapshot({castles: [snipeBase,
+  {...snipeBase, id: "stale", observedAt: new Date(snipeNow - 600000).toISOString()},
+  {...snipeBase, id: "unknown-apr", apr: null},
+  {...snipeBase, id: "future", observedAt: new Date(snipeNow + 120000).toISOString()}]}).castles;
+assert.equal(command.snipeTargets(snipeList, {}, snipeNow).length, 1);
+assert.equal(command.snipeTargets(snipeList, {}, snipeNow)[0].stack.troops, 9001);
+assert.equal(command.snipeTargets(snipeList, {kind: "garrison"}, snipeNow)[0].stack.troops, 2000000);
+assert.equal(command.snipeTargets(snipeList, {aprMin:18}, snipeNow).length, 0);
+assert.equal(command.snipeTargets(snipeList, {aprMin:20, aprMax:10}, snipeNow).length, 0);
+command.setLiveSnapshot({castles:[snipeBase]});
+assert.match(command.renderSnipe(), /9,001 troops/);
+assert.match(command.renderSnipe(), /Castle owner APR 17/);
+command.setLiveSnapshot({castles:[{...snipeBase, name:"Resolved Castle"}]});
+assert.match(command.renderSnipe(), /Resolved Castle/);
+assert.equal(command.snipeTargets(command.getLiveState().castles)[0].key, "22-A1-0:0");
+console.log("Snipe freshness, APR, troop separation and late-name checks passed.");
