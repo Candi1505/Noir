@@ -1463,3 +1463,8 @@
 .oac-primarchs.stale { border-color: rgba(223, 183, 85, .2); color: #dfb755; }
 .oac-primarchs.stale p { margin: 0; padding: 0 14px 12px; color: #858691; font-size: .62rem; line-height: 1.45; }
 .oac-search select { margin-top: 6px; padding: 12px; background: #0b1118; color: #d6d5dc; border: 1px solid #455265; border-radius: 9px; font-size: 16px; }
+
+.oac-live-preview article[role="button"] { cursor: pointer; }
+.oac-live-preview article[role="button"]:hover,
+.oac-live-preview article[role="button"]:focus-visible { outline: 2px solid #ebce83; outline-offset: 3px; }
+.oac-live-preview .oac-target-open { margin-top: 10px; color: #ebce83; font-size: .8rem; }

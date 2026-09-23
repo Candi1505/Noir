@@ -93,3 +93,24 @@ test('connection refresh preserves a scan, account change cancels it', async () 
   f.deliver(0); await task;
   assert.equal(f.context.testHunter.snapshot().records[0].name,'');
 });
+
+test('Overview cards open the exact castle and expose its coordinate copy action', () => {
+  for (const activation of ['click', 'Enter', ' ']) {
+    const f = fixture();
+    const handlers = {};
+    const card = { dataset: {oacLiveTarget: '22-A1-1'}, addEventListener: (name, fn) => {handlers[name] = fn;} };
+    f.overlay.querySelectorAll = selector => selector === '[data-oac-live-target]' ? [card] : [];
+    f.context.OnyxAtlasCommand.setLiveSnapshot({castles: [
+      {id:'22-A1-1', name:'Chosen Castle', shieldState:'vulnerable', mapCoordinates:'X:123 Y:456'},
+      {id:'22-A1-10', name:'Different Castle', shieldState:'vulnerable', mapCoordinates:'X:999 Y:999'}
+    ]});
+    f.context.OnyxAtlasCommand.open('overview');
+    assert.match(f.overlay.innerHTML, /role="button" tabindex="0" data-oac-live-target="22-A1-1"/);
+    if (activation === 'click') handlers.click();
+    else handlers.keydown({key:activation, preventDefault(){}});
+    assert.match(f.overlay.innerHTML, /Castle target board/);
+    assert.match(f.overlay.innerHTML, /Chosen Castle/);
+    assert.doesNotMatch(f.overlay.innerHTML, /Different Castle/);
+    assert.match(f.overlay.innerHTML, /data-oac-copy-coordinate="X:123 Y:456"/);
+  }
+});

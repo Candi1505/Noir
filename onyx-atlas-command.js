@@ -595,7 +595,8 @@
       : liveFilter === "armed"
         ? liveCastles.filter(castle => castle.shieldArmed)
         : liveCastles.filter(castle => castle.shieldState === liveFilter);
-    const matches = castles.filter(castle => [castle.name, castle.owner, castle.region, castle.id, castle.mapCoordinates].some(value => String(value || "").toLowerCase().includes(liveQuery.toLowerCase().trim())));
+    const exactId = castles.find(castle => castle.id.toLowerCase() === liveQuery.trim().toLowerCase());
+    const matches = exactId ? [exactId] : castles.filter(castle => [castle.name, castle.owner, castle.region, castle.id, castle.mapCoordinates].some(value => String(value || "").toLowerCase().includes(liveQuery.toLowerCase().trim())));
     const glory = new Map(matches.map(castle => [castle, castleGlory(castle).percent]));
     return matches.filter(castle => liveGloryFilter === "any" || (liveGloryFilter === "full" ? glory.get(castle) === 100 : glory.get(castle) !== null && glory.get(castle) < 100))
       // Names arrive progressively. Keep each castle in place as its ID label
@@ -738,9 +739,9 @@
     if (!castles.length && (liveQuery.trim() || liveGloryFilter !== "any")) return `<p class="oac-evidence-note">No castles match your search and glory filters in this group. Clear the search, choose Any glory or choose another group.</p>`;
     if (!castles.length) return `<p class="oac-evidence-note">No verified matches in this group. ${formatNumber(liveCounts().unknown)} castles have unknown shield states.</p>`;
     return `<section class="oac-live-preview">
-      ${castles.map(castle => `<article class="${escapeHtml(castle.shieldState)}">
+      ${castles.map(castle => `<article role="button" tabindex="0" data-oac-live-target="${escapeHtml(castle.id)}" aria-label="Open ${escapeHtml(castle.name)} in Castles" class="${escapeHtml(castle.shieldState)}">
         ${icon(castle.shieldState === "cooldown" || castle.shieldState === "dropping" ? "clock" : "shield")}
-        <div><small>${escapeHtml(liveShieldLabel(castle))} · ${escapeHtml(castle.source)}</small><strong>${escapeHtml(castle.name)}</strong><span>${escapeHtml(castle.owner || "Owner not supplied")}</span>${renderCastleGlory(castle, true)}</div>
+        <div><small>${escapeHtml(liveShieldLabel(castle))} · ${escapeHtml(castle.source)}</small><strong>${escapeHtml(castle.name)}</strong><span>${escapeHtml(castle.owner || "Owner not supplied")}</span>${renderCastleGlory(castle, true)}<span class="oac-target-open">View castle &amp; coordinates</span></div>
       </article>`).join("")}
     </section>${renderLiveMore(matches.length)}`;
   }
@@ -987,7 +988,7 @@
       ${!liveCastles.length
           ? renderLiveLockedState()
           : castles.length
-            ? `<div class="oac-live-castle-grid">${visibleCastles.map((castle, index) => `<article class="oac-live-castle-card ${escapeHtml(castle.shieldState)}" id="oacLiveCastle${index}">
+            ? `<div class="oac-live-castle-grid">${visibleCastles.map((castle, index) => `<article class="oac-live-castle-card ${escapeHtml(castle.shieldState)}" id="oacLiveCastle${index}" tabindex="-1">
                 <header>
                   <span>${icon(castle.shieldState === "cooldown" || castle.shieldState === "dropping" ? "clock" : "shield")}</span>
                   <div><small>${escapeHtml(castle.region || castle.id)}</small><h3>${escapeHtml(castle.name)}</h3><p>${escapeHtml(castle.owner || "Owner not supplied")}</p></div>
@@ -1304,7 +1305,25 @@
     });
   }
 
+  function selectLiveCastle(id) {
+    activeTab = "castles";
+    liveQuery = id;
+    liveFilter = "all";
+    liveGloryFilter = "any";
+    liveLimit = 20;
+    render({ focusSelector: "#oacLiveCastle0" });
+    window.requestAnimationFrame?.(() => document.getElementById("oacLiveCastle0")?.scrollIntoView?.({ block: "center" }));
+  }
+
   function bindOverlay(overlay) {
+    overlay.querySelectorAll("[data-oac-live-target]").forEach(card => {
+      card.addEventListener("click", () => selectLiveCastle(card.dataset.oacLiveTarget));
+      card.addEventListener("keydown", event => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        event.preventDefault();
+        selectLiveCastle(card.dataset.oacLiveTarget);
+      });
+    });
     overlay.querySelector("#oacSnipeFilters")?.addEventListener("submit", event => {
       event.preventDefault();
       const fields = event.currentTarget.elements;
