@@ -463,7 +463,7 @@
       const captureOnly = liveCastles.length > 0 && liveSource === "Atlas capture";
       const mixed = liveCastles.length > 0 && liveSource === "Mixed Atlas sources";
       return `<section class="oac-source-banner live ${connected ? "connected" : "pending"}">
-        <span>${captureOnly ? "PRIVATE ATLAS CAPTURE" : mixed ? "MIXED ATLAS SOURCES" : connected ? "OFFICIAL PLAYER-AUTHORISED INTELLIGENCE" : "LIVE ATLAS FOUNDATION"}</span>
+        <span>${captureOnly ? "PRIVATE ATLAS CAPTURE" : mixed ? "MIXED ATLAS SOURCES" : connected ? (liveConnection.connectionMode === "shared" ? "SHARED ATLAS TRIAL" : "OFFICIAL PLAYER-AUTHORISED INTELLIGENCE") : "LIVE ATLAS FOUNDATION"}</span>
         <p>${escapeHtml(captureOnly
           ? "This board is based on the private capture loaded on this device."
           : mixed
@@ -820,7 +820,7 @@
     const ownerConnection = liveConnection.connectionMode === "owner";
     const pending = liveConnection.reviewStatus !== "ready";
     const phaseLabel = connected
-      ? ownerConnection ? "Secure owner connection" : "Securely connected"
+      ? ownerConnection ? "Secure owner connection" : liveConnection.connectionMode === "shared" ? "Shared Atlas trial" : "Securely connected"
       : pending
         ? "Approval pending"
         : liveConnection.phase === "checking" || liveConnection.phase === "working"
@@ -1503,7 +1503,7 @@
       connected: detail.connected === true,
       readyToAuthorise: detail.readyToAuthorise === true,
       reviewStatus: detail.reviewStatus === "ready" ? "ready" : "pending_review",
-      connectionMode: ["owner", "player"].includes(detail.connectionMode)
+      connectionMode: ["owner", "player", "shared"].includes(detail.connectionMode)
         ? detail.connectionMode
         : null,
       playerId: cleanText(detail.playerId, 160) || null,

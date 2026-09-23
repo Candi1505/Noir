@@ -9,7 +9,7 @@ const oauthSource = fs.readFileSync("supabase/functions/onyx-war-dragons-oauth/i
 const gatewaySource = fs.readFileSync("supabase/functions/onyx-war-dragons/index.ts", "utf8");
 const sql = fs.readFileSync("supabase/war_dragons_multi_player_oauth.sql", "utf8");
 
-assert.match(html, /onyx-war-dragons-auth\.js\?v=20260921-owner-api-1/);
+assert.match(html, /onyx-war-dragons-auth\.js\?v=20260923-shared-atlas-1/);
 assert.ok(
   html.indexOf("onyx-war-dragons-api.js") < html.indexOf("onyx-war-dragons-auth.js")
   && html.indexOf("onyx-war-dragons-auth.js") < html.indexOf("onyx-atlas-command.js"),
@@ -32,7 +32,7 @@ assert.match(atlasSource, /Owner connection/);
 
 assert.match(oauthSource, /WAR_DRAGONS_MULTI_PLAYER_ENABLED/);
 assert.match(oauthSource, /function ownerFallbackConfigured\(userId: string\)/);
-assert.match(oauthSource, /connectionMode: connection \? "player" : ownerFallback \? "owner" : null/);
+assert.match(oauthSource, /connectionMode: connection \? "player" : ownerFallback \? "owner" : sharedFallback \? "shared" : null/);
 assert.match(oauthSource, /reviewStatus: connected \|\| configured \? "ready" : "pending_review"/);
 assert.match(oauthSource, /WAR_DRAGONS_TOKEN_ENCRYPTION_KEY/);
 assert.match(oauthSource, /AES-GCM/);

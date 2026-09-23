@@ -52,7 +52,7 @@
       connected,
       readyToAuthorise,
       reviewStatus: source.reviewStatus === "ready" ? "ready" : "pending_review",
-      connectionMode: ["owner", "player"].includes(source.connectionMode)
+      connectionMode: ["owner", "player", "shared"].includes(source.connectionMode)
         ? source.connectionMode
         : null,
       playerId: cleanText(source.playerId, 160) || null,
@@ -64,7 +64,9 @@
       message: connected
         ? source.connectionMode === "owner"
           ? "Your secure owner War Dragons connection is active."
-          : "Your player-authorised War Dragons connection is active."
+          : source.connectionMode === "shared"
+            ? "Shared Atlas trial is active. Scan limits are shared; choose your attacking team in Hunter."
+            : "Your player-authorised War Dragons connection is active."
         : readyToAuthorise
           ? "Onyx is ready for your War Dragons authorisation."
           : "War Dragons multi-player API review is pending."

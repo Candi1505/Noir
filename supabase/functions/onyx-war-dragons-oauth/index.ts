@@ -111,18 +111,24 @@ function serviceHeaders(contentType = false, prefer = "") {
   };
 }
 
-async function authenticatedUserId(
+async function authenticatedAccess(
   authorization: string,
   supabaseUrl: string,
   key: string,
 ) {
-  if (!authorization.startsWith("Bearer ")) return "";
+  if (!authorization.startsWith("Bearer ")) return null;
   const response = await fetch(`${supabaseUrl}/auth/v1/user`, {
     headers: { authorization, apikey: key },
   });
-  if (!response.ok) return "";
-  const user = await response.json() as { id?: unknown };
-  return typeof user.id === "string" ? user.id : "";
+  if (!response.ok) return null;
+  const user = await response.json() as { id?: unknown; app_metadata?: JsonRecord };
+  if (typeof user.id !== "string") return null;
+  const metadata = user.app_metadata || {};
+  const owner = Deno.env.get("WAR_DRAGONS_OWNER_USER_ID") || "";
+  const grant = metadata.onyx_shared_atlas as JsonRecord | undefined;
+  const shared = Boolean(owner && user.id !== owner && grant?.owner === owner &&
+    typeof grant?.expires_at === "string" && Date.parse(grant.expires_at) > Date.now());
+  return { id: user.id, shared, metadata };
 }
 
 async function sha256Hex(value: string) {
@@ -241,7 +247,7 @@ async function connectionFor(userId: string) {
   return rows[0] || null;
 }
 
-async function handleStatus(origin: string | null, userId: string) {
+async function handleStatus(origin: string | null, userId: string, shared = false) {
   let connection = null;
   try {
     connection = await connectionFor(userId);
@@ -253,19 +259,20 @@ async function handleStatus(origin: string | null, userId: string) {
   }
   const configured = multiPlayerConfigured();
   const ownerFallback = ownerFallbackConfigured(userId);
-  const connected = Boolean(connection) || ownerFallback;
+  const sharedFallback = shared && Boolean(Deno.env.get("WAR_DRAGONS_API_KEY") && Deno.env.get("WAR_DRAGONS_CLIENT_SECRET"));
+  const connected = Boolean(connection) || ownerFallback || sharedFallback;
   return json(origin, 200, {
     ok: true,
     connected,
     readyToAuthorise: configured,
     reviewStatus: connected || configured ? "ready" : "pending_review",
-    connectionMode: connection ? "player" : ownerFallback ? "owner" : null,
+    connectionMode: connection ? "player" : ownerFallback ? "owner" : sharedFallback ? "shared" : null,
     playerId: connection?.player_id || null,
     scopes: Array.isArray(connection?.scopes)
       ? connection.scopes
       : ownerFallback
         ? REQUESTED_SCOPES
-        : [],
+        : sharedFallback ? ["atlas.read"] : [],
     connectedAt: connection?.connected_at || null,
     lastVerifiedAt: connection?.last_verified_at || null,
   });
@@ -539,14 +546,15 @@ Deno.serve(async request => {
       message: "The secure connection service is not configured yet.",
     });
   }
-  const userId = await authenticatedUserId(
+  const access = await authenticatedAccess(
     request.headers.get("authorization") || "",
     supabaseUrl,
     publicKey,
   );
-  if (!userId) {
+  if (!access) {
     return json(origin, 401, { ok: false, message: "Sign in to Onyx Command first." });
   }
+  const userId = access.id;
 
   let body: JsonRecord;
   try {
@@ -555,11 +563,21 @@ Deno.serve(async request => {
     return json(origin, 400, { ok: false, message: "Choose a valid action." });
   }
 
-  if (body.action === "status") return handleStatus(origin, userId);
+  if (body.action === "status") return handleStatus(origin, userId, access.shared);
   if (body.action === "begin") return handleBegin(origin, userId);
   if (body.action === "complete") {
     return handleComplete(origin, userId, body.handoffToken);
   }
-  if (body.action === "disconnect") return handleDisconnect(origin, userId);
+  if (body.action === "disconnect") {
+    if (access.shared) {
+      const metadata = { ...access.metadata };
+      metadata.onyx_shared_atlas = null;
+      const revoke = await fetch(`${supabaseUrl}/auth/v1/admin/users/${encodeURIComponent(userId)}`, {
+        method: "PUT", headers: serviceHeaders(true), body: JSON.stringify({ app_metadata: metadata }),
+      });
+      if (!revoke.ok) return json(origin, 503, { ok: false, message: "Shared access could not be disconnected. Try again." });
+    }
+    return handleDisconnect(origin, userId);
+  }
   return json(origin, 400, { ok: false, message: "That action is not available." });
 });

@@ -117,7 +117,7 @@ function serviceHeaders(serviceKey: string, contentType = false) {
   };
 }
 
-async function authenticatedUserId(
+async function authenticatedAccess(
   authorization: string,
   supabaseUrl: string,
   publishableKey: string,
@@ -125,9 +125,15 @@ async function authenticatedUserId(
   const response = await fetch(`${supabaseUrl}/auth/v1/user`, {
     headers: { authorization, apikey: publishableKey },
   });
-  if (!response.ok) return "";
-  const user = await response.json() as { id?: unknown };
-  return typeof user.id === "string" ? user.id : "";
+  if (!response.ok) return null;
+  const user = await response.json() as { id?: unknown; app_metadata?: JsonRecord };
+  if (typeof user.id !== "string") return null;
+  const metadata = user.app_metadata || {};
+  const owner = Deno.env.get("WAR_DRAGONS_OWNER_USER_ID") || "";
+  const grant = metadata.onyx_shared_atlas as JsonRecord | undefined;
+  const shared = Boolean(owner && user.id !== owner && grant?.owner === owner &&
+    typeof grant?.expires_at === "string" && Date.parse(grant.expires_at) > Date.now());
+  return { id: user.id, shared, metadata };
 }
 
 async function sha256Hex(value: string) {
@@ -702,6 +708,7 @@ async function handleAtlasMacro(
   apiKey: string,
   clientSecret: string,
   body: JsonRecord,
+  shared = false,
 ) {
   const kingdomId = integer(body.kingdomId);
   const realmName = safeRealmName(body.realmName);
@@ -710,7 +717,7 @@ async function handleAtlasMacro(
   }
 
   trimMacroCache();
-  const cacheKey = `${userId}:${kingdomId}:${realmName}`;
+  const cacheKey = `${userId}:${shared ? "shared" : "personal"}:${kingdomId}:${realmName}`;
   const cached = macroCache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) {
     return { ok: true as const, data: cached.value, cached: true };
@@ -733,7 +740,7 @@ async function handleAtlasMacro(
       clientSecret,
       query,
     ),
-    upstreamJson(
+    shared ? Promise.resolve({ ok: false, data: null }) : upstreamJson(
       "/api/v1/player/public/my_profile",
       apiKey,
       clientSecret,
@@ -912,10 +919,11 @@ Deno.serve(async request => {
     });
   }
 
-  const userId = await authenticatedUserId(authorization, supabaseUrl, publishableKey);
-  if (!userId) {
+  const access = await authenticatedAccess(authorization, supabaseUrl, publishableKey);
+  if (!access) {
     return json(origin, 401, { ok: false, message: "Sign in to Onyx Command first." });
   }
+  const userId = access.id;
 
   let body: JsonRecord;
   try {
@@ -952,6 +960,12 @@ Deno.serve(async request => {
     }
   }
 
+  let sharedConnection = false;
+  if (!apiKey && access.shared && ownerApiKey) {
+    apiKey = ownerApiKey;
+    scopes = ["atlas.read"];
+    sharedConnection = true;
+  }
   if (!apiKey && userId === ownerUserId && ownerApiKey) {
     apiKey = ownerApiKey;
     scopes = ["atlas.read", "player.public.read"];
@@ -973,6 +987,7 @@ Deno.serve(async request => {
   }
 
   try {
+    const requestOwnerId = sharedConnection || apiKey === ownerApiKey ? ownerUserId : userId;
     let result:
       | Awaited<ReturnType<typeof handleProfile>>
       | Awaited<ReturnType<typeof handleAtlasContext>>
@@ -982,15 +997,17 @@ Deno.serve(async request => {
     if (body.resource === "profile") {
       result = await handleProfile(apiKey, clientSecret);
     } else if (body.resource === "atlasContext") {
-      result = await handleAtlasContext(apiKey, clientSecret);
+      result = sharedConnection
+        ? { ok: true as const, data: { kingdomId: null, evidence: "unavailable", validReportCount: 0 } }
+        : await handleAtlasContext(apiKey, clientSecret);
     } else if (body.resource === "atlasTeam") {
       result = await handleAtlasTeam(apiKey, clientSecret, body);
     } else if (body.resource === "atlasMacro") {
-      result = await handleAtlasMacro(userId, apiKey, clientSecret, body);
+      result = await handleAtlasMacro(requestOwnerId, apiKey, clientSecret, body, sharedConnection);
     } else {
       result = await handleAtlasCastleBatch(
         body.resource,
-        userId,
+        requestOwnerId,
         apiKey,
         clientSecret,
         supabaseUrl,
