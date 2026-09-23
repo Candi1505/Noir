@@ -568,7 +568,7 @@
     if (castle?.shieldState === "vulnerable") {
       const trigger = castle.shieldShipsUntilTrigger === null
         ? ""
-        : ` · ${formatNumber(castle.shieldShipsUntilTrigger)} stationed troops to trigger`;
+        : ` · ${formatNumber(castle.shieldShipsUntilTrigger)} more troop losses to reach the shield trigger`;
       return official && castle.attackable
         ? "Officially reported unshielded and attackable."
         : official
@@ -648,7 +648,7 @@
   function renderCastleGlory(castle, compact = false) {
     const glory = castleGlory(castle);
     const status = glory.percent === 100 ? "full" : glory.percent === null ? "unknown" : "reduced";
-    return `<div class="oac-target-glory ${status}"><strong>${glory.percent === null ? "Glory unknown" : `${glory.percent}% glory`}</strong>${compact && !castle.glorySource?.startsWith("Estimate for ") ? "" : `<small>${escapeHtml(glory.source)}</small>`}</div>`;
+    return `<div class="oac-target-glory ${status}"><strong>${glory.percent === null ? "Glory unknown" : `${glory.percent}% glory`}</strong>${compact && !castle.glorySource?.startsWith("Estimate for ") ? "" : `<small>${escapeHtml(glory.source.replace(" · live APR ", " · attacking team APR "))}</small>`}</div>`;
   }
 
   function renderGloryEntry(castle) {
@@ -665,13 +665,16 @@
   }
 
   function renderPrimarchIntel(castle) {
-    if (!castle.primarchs.length) return "";
+    if (!castle.primarchs.length) return castle.fleets > 0 ? `<p class="oac-evidence-note">API fleet count: ${formatNumber(castle.fleets)}. No primarch details returned; troop stacks are unknown.</p>` : "";
     const checkedAt = Date.parse(castle.observedAt || "");
     const fresh = Number.isFinite(checkedAt) && checkedAt <= Date.now() + 60000 &&
       Date.now() - checkedAt < 10 * 60 * 1000;
     if (!fresh) {
       return `<details class="oac-primarchs stale"><summary>Who’s here · scan expired</summary><p>Run a live scan to refresh the primarchs and troop stacks at this castle.</p></details>`;
     }
+    const knownStacks = castle.primarchs.filter(primarch => primarch.troops !== null);
+    const listedTroops = knownStacks.reduce((total, primarch) => total + primarch.troops, 0);
+    const coverage = `<p>${knownStacks.length ? formatNumber(listedTroops) + " troops" : "Troop counts unavailable"} across returned primarchs${knownStacks.length < castle.primarchs.length ? " with known troop counts" : ""}. Garrison guards are separate.${castle.fleets !== null && castle.fleets !== castle.primarchs.length ? ` API fleet count is ${formatNumber(castle.fleets)}, but ${castle.primarchs.length} primarch detail record${castle.primarchs.length === 1 ? " was" : "s were"} returned. This list may be incomplete.` : ""}</p>`;
     const playerNumbers = new Map();
     const playerLabel = primarch => {
       if (primarch.playerName) return primarch.playerName;
@@ -679,7 +682,7 @@
       if (!playerNumbers.has(primarch.playerRef)) playerNumbers.set(primarch.playerRef, playerNumbers.size + 1);
       return `Player ${playerNumbers.get(primarch.playerRef)} · name unavailable`;
     };
-    return `<details class="oac-primarchs"><summary>Who’s here · ${castle.primarchs.length} primarch${castle.primarchs.length === 1 ? "" : "s"}</summary><div>${castle.primarchs.map(primarch => `<article><strong>T${formatNumber(primarch.tier)} ${escapeHtml(primarch.type)}</strong><span>${primarch.level === null ? "Level not supplied" : `Level ${formatNumber(primarch.level)}`} · ${primarch.troops === null ? "Troops not supplied" : `${formatNumber(primarch.troops)} troops`}</span><small>${escapeHtml(playerLabel(primarch))}${primarch.teamName ? ` · Team ${escapeHtml(primarch.teamName)}` : ""}${primarch.allianceName ? ` · Alliance ${escapeHtml(primarch.allianceName)}` : ""}</small></article>`).join("")}</div></details>`;
+    return `<details class="oac-primarchs"><summary>Returned primarchs · ${castle.primarchs.length}</summary>${coverage}<div>${castle.primarchs.map(primarch => `<article><strong>T${formatNumber(primarch.tier)} ${escapeHtml(primarch.type)}</strong><span>${primarch.level === null ? "Level not supplied" : `Level ${formatNumber(primarch.level)}`} · ${primarch.troops === null ? "Troops not supplied" : `${formatNumber(primarch.troops)} troops`}</span><small>${escapeHtml(playerLabel(primarch))}${primarch.teamName ? ` · Team ${escapeHtml(primarch.teamName)}` : ""}${primarch.allianceName ? ` · Alliance ${escapeHtml(primarch.allianceName)}` : ""}</small></article>`).join("")}</div></details>`;
   }
 
   function renderLiveSearch() {
@@ -1000,12 +1003,12 @@
                   <i></i>
                 </section>
                 <dl>
-                  <div><dt>Stationed troops</dt><dd>${formatNumber(castle.troops)}</dd></div>
-                  <div><dt>Visible fleets</dt><dd>${formatNumber(castle.fleets)}</dd></div>
+                  <div><dt>Garrison guards</dt><dd>${formatNumber(castle.troops)}</dd></div>
+                  <div><dt>API fleet count</dt><dd>${formatNumber(castle.fleets)}</dd></div>
                   <div><dt>Fort building</dt><dd>${castle.fortLevel === null ? "Not supplied" : `Level ${formatNumber(castle.fortLevel)}`}</dd></div>
-                  <div><dt>APR</dt><dd>${castle.apr === null ? "Not supplied" : formatNumber(castle.apr)}</dd></div>
+                  <div><dt>Castle owner APR</dt><dd>${castle.apr === null ? "Not supplied" : formatNumber(castle.apr)}</dd></div>
                   <div><dt>Atlas rank</dt><dd>${castle.atlasRank === null ? "Not supplied" : formatNumber(castle.atlasRank)}</dd></div>
-                  <div><dt>Troops remaining to trigger</dt><dd>${castle.shieldShipsUntilTrigger === null ? "Not supplied" : `${formatNumber(castle.shieldShipsUntilTrigger)} troops`}</dd></div>
+                  <div><dt>Troop losses until shield trigger</dt><dd>${castle.shieldShipsUntilTrigger === null ? "Not supplied" : `${formatNumber(castle.shieldShipsUntilTrigger)} troops`}</dd></div>
                 </dl>
                 ${renderPrimarchIntel(castle)}
                 ${renderGloryEntry(castle)}

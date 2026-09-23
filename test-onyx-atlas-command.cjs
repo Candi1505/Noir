@@ -12,7 +12,7 @@ const hunterCore = fs.readFileSync("onyx-atlas-castle-hunter-core.js", "utf8");
 const hunterWorker = fs.readFileSync("onyx-atlas-har-worker.js", "utf8");
 
 assert.match(html, /onyx-atlas-command\.css\?v=20260923-select-castle-1/);
-assert.match(html, /onyx-atlas-command\.js\?v=20260923-select-castle-1/);
+assert.match(html, /onyx-atlas-command\.js\?v=20260923-troop-labels-1/);
 assert.match(html, /onyx-war-dragons-auth\.js\?v=20260921-owner-api-1/);
 assert.match(html, /onyx-atlas-castle-hunter\.css\?v=20260922-shield-context-1/);
 assert.match(html, /onyx-atlas-castle-hunter-core\.js\?v=20260922-name-queue-1/);
@@ -385,3 +385,14 @@ command.setLiveSnapshot({castles:[{...snipeBase, name:"Resolved Castle"}]});
 assert.match(command.renderSnipe(), /Resolved Castle/);
 assert.equal(command.snipeTargets(command.getLiveState().castles)[0].key, "22-A1-0:0");
 console.log("Snipe freshness, APR, troop separation and late-name checks passed.");
+
+command.setTestFilter("all"); command.setTestQuery(""); command.setTestGloryFilter("any");
+command.setLiveSnapshot({castles:[{...snipeBase, source:"War Dragons API", troops:0, fleets:2, shieldState:"vulnerable", shieldShipsUntilTrigger:60000,
+  primarchs:[{type:"Destroyer",tier:5,level:30,troops:5001}]}]});
+const troopCard = command.renderLiveCastles();
+assert.match(troopCard, /Garrison guards<\/dt><dd>0/);
+assert.match(troopCard, /5,001 troops across returned primarchs/);
+assert.match(troopCard, /This list may be incomplete/);
+assert.match(troopCard, /Castle owner APR/);
+assert.match(troopCard, /60,000 more troop losses/);
+assert.doesNotMatch(troopCard, /stationed troops to trigger|Visible fleets/);
