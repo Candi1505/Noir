@@ -397,7 +397,42 @@
       .reduce((sum, row) => sum + (Number(row?.xp) || 0), 0);
   }
 
+  function mergeSeries(type, cap) {
+    const rows = rowsFor(type).filter(r => Number(r.level) <= cap).slice().sort((a,b) => a.level-b.level);
+    let value = 0, seconds = 0, xp = 0, expected = 1;
+    const costs = {}, result = [];
+    for (const row of rows) {
+      // Stop at gaps or incomplete data instead of treating missing levels as free.
+      if (Number(row.level) !== expected++ || !Number.isFinite(Number(row.seconds)) ||
+          Number(row.seconds) < 0 || !Number.isFinite(Number(row.xp)) || Number(row.xp) < 0 ||
+          row.seconds == null || row.xp == null || String(row.seconds).trim() === "" ||
+          String(row.xp).trim() === "" || typeof row.cost !== "string") break;
+      let valid = true;
+      for (const part of row.cost.split(/[|;]/).filter(Boolean)) {
+        const [key, amount, extra] = part.split(":");
+        const n = Number(amount);
+        if (extra !== undefined || !Object.hasOwn(MERGE_VALUE_WEIGHTS, key) || amount == null || amount.trim() === "" || !Number.isFinite(n) || n < 0) { valid = false; break; }
+        costs[key] = (costs[key] || 0) + n;
+      }
+      if (!valid) break;
+      value += mergeUpgradeValue(row); seconds += Number(row.seconds); xp += Number(row.xp);
+      result.push({ level: Number(row.level), value, seconds, xp, costs: { ...costs } });
+    }
+    return result;
+  }
+
   function estimateMerge(value) {
+    if (!value || !towerTypes().includes(value.destinationType) || !towerTypes().includes(value.sourceType)) {
+      return { ok: false, message: "Choose two catalogue tower types." };
+    }
+    for (const key of ["destinationLevel", "sourceLevel", "quantity", "maximumTowerLevel", "previewResultLevel"]) {
+      const raw = value[key];
+      if (raw == null || (key === "previewResultLevel" && raw === "")) continue;
+      const n = Number(raw);
+      if (!Number.isInteger(n) || n < 1 || n > (key === "quantity" ? 100 : 999)) {
+        return { ok: false, message: "Enter valid whole tower levels, quantity and cap." };
+      }
+    }
     const draft = normaliseMergeDraft(value);
     const destinationRows = rowsFor(draft.destinationType);
     const sourceRows = rowsFor(draft.sourceType);
@@ -414,6 +449,13 @@
     const effectiveCap = Math.min(draft.maximumTowerLevel, catalogueCap);
     if (draft.destinationLevel > effectiveCap || draft.sourceLevel > draft.maximumTowerLevel) {
       return { ok: false, message: "A tower level cannot exceed the tower cap entered for this merge." };
+    }
+
+    const destinationSeries = mergeSeries(draft.destinationType, effectiveCap);
+    const sourceSeries = mergeSeries(draft.sourceType, draft.sourceLevel);
+    if (!destinationSeries.some(row => row.level === effectiveCap) ||
+        !sourceSeries.some(row => row.level === draft.sourceLevel)) {
+      return { ok: false, message: "Complete catalogue costs, time and XP are unavailable for this merge. Missing levels cannot be treated as free." };
     }
 
     const destinationValue = accumulatedTowerValue(
@@ -1794,36 +1836,13 @@
     if (!Object.hasOwn(TARGET_RESOURCE_FILTERS, resourceFilter))
       return fail("Choose an available resource filter.");
     const allowed = TARGET_RESOURCE_FILTERS[resourceFilter].allowed;
-    function series(type) {
-      const rows = rowsFor(type).filter(r => Number(r.level) <= cap).slice().sort((a,b) => a.level-b.level);
-      let value = 0, seconds = 0, xp = 0, expected = 1;
-      const costs = {}, result = [];
-      for (const row of rows) {
-        // Stop at gaps or incomplete data instead of treating missing levels as free.
-        if (Number(row.level) !== expected++ || !Number.isFinite(Number(row.seconds)) ||
-            Number(row.seconds) < 0 || !Number.isFinite(Number(row.xp)) || Number(row.xp) < 0 ||
-            row.seconds == null || row.xp == null || String(row.seconds).trim() === "" ||
-            String(row.xp).trim() === "" || typeof row.cost !== "string") break;
-        let valid = true;
-        for (const part of row.cost.split(/[|;]/).filter(Boolean)) {
-          const [key, amount] = part.split(":");
-          const n = Number(amount);
-          if (!Object.hasOwn(MERGE_VALUE_WEIGHTS, key) || amount === "" || !Number.isFinite(n) || n < 0) { valid = false; break; }
-          costs[key] = (costs[key] || 0) + n;
-        }
-        if (!valid) break;
-        value += mergeUpgradeValue(row); seconds += Number(row.seconds); xp += Number(row.xp);
-        result.push({ level: Number(row.level), value, seconds, xp, costs: { ...costs } });
-      }
-      return result;
-    }
-    const destination = series(destinationType);
+    const destination = mergeSeries(destinationType, cap);
     const start = destination.find(r => r.level === current), goal = destination.find(r => r.level === target);
     if (!start || !goal) return fail("Complete catalogue costs, time and XP are unavailable for these levels.");
     const needed = goal.value - start.value, options = [];
     let checked = 0;
     for (const type of sourceType ? [sourceType] : towerTypes()) {
-      for (const donor of series(type)) {
+      for (const donor of mergeSeries(type, cap)) {
         if (allowed && Object.entries(donor.costs).some(([key, value]) => value > 0 && !allowed.includes(key))) continue;
         const unit = donor.value * MERGE_TRANSFER_RATE;
         if (!(unit > 0)) continue;
@@ -1850,7 +1869,7 @@
       destinationLevel: 142, targetLevel: 185, maximumTowerLevel: maximumCatalogueLevel(), maxQuantity: 20, sourceType: "", sortBy: "time", resourceFilter: "any" };
     return `<section class="obc-merge-command obc-target-planner" aria-label="Target level planner">
       <div class="obc-section-heading"><div><p>TARGET LEVEL PLANNER · ESTIMATE</p><h3>Reach a target level</h3></div></div>
-      <p>Compare matching donor batches built from scratch using the existing 45% model. This model still needs in-game verification.</p>
+      <p>Compare matching donor batches built from scratch using the existing 45% model. The model matches four recorded July game previews. Other combinations remain estimates; check your current WD preview.</p>
       <div class="obc-form-row">
         <label>Tower to keep<select id="obcTargetType">${mergeTowerOptions(d.destinationType)}</select></label>
         <label>Current level<input id="obcTargetCurrent" type="number" min="1" max="999" value="${escapeHtml(d.destinationLevel)}"></label>
@@ -1888,7 +1907,7 @@
     return `
       <section class="obc-source-banner merge-ready">
         <strong>Tower Merge Intelligence</strong>
-        <p>Estimate the kept tower's resulting level using the existing 45% transferable-value estimate. If WD shows a preview level, enter it and the game preview becomes the source of truth.</p>
+        <p>Estimate the kept tower's resulting level using the 45% model checked against four recorded game previews. If WD shows a preview level, enter it and the game preview becomes the source of truth.</p>
       </section>
 
       ${renderTargetMerge()}
