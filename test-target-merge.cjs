@@ -21,6 +21,16 @@ for (const current of [142,182]) {
 for(const change of [{targetLevel:142},{targetLevel:186},{maxQuantity:0},{maxQuantity:101},{destinationLevel:1.5},{destinationType:'No tower'},{sortBy:'invalid'}]) assert.equal(api.planTargetMerge({...input,...change}).ok,false);
 const resources=api.planTargetMerge({...input,sortBy:'elementalEmber'});
 assert.ok(resources.options.every((o,i,a)=>!i || (a[i-1].costs.elementalEmber||0)<=(o.costs.elementalEmber||0)));
+for (const [resourceFilter, allowed] of Object.entries({wood:['piercing'],bars:['piercing','electrumBar'],embers:['piercing','elementalEmber'],barsEmbers:['piercing','electrumBar','elementalEmber']})) {
+ const r=api.planTargetMerge({...input,resourceFilter,sortBy:'xpDebt'});
+ assert.equal(r.ok,true,r.message); assert.ok(r.options.length>0,resourceFilter);
+ assert.ok(r.options.every(o=>Object.entries(o.costs).every(([k,v])=>!v || allowed.includes(k))),resourceFilter+' excludes other currencies');
+ assert.ok(r.options.every((o,i,a)=>!i || a[i-1].xpDebt<=o.xpDebt),'XP debt ordering');
+ console.log(resourceFilter+':',r.checked,'permitted batches');
+}
+assert.equal(api.planTargetMerge({...input,resourceFilter:'invalid'}).ok,false);
+const forbidden=api.planTargetMerge({...input,resourceFilter:'wood',sourceType:'Ice Flak Tower'});
+assert.equal(forbidden.ok,true); assert.equal(forbidden.options.length,0,'Ember construction must not pass wood-only filter');
 // Independent small catalogue: time-only rubble, exact boundary and donor limit.
 const rows=[1,2,3,4].map(level=>({level,seconds:100,xp:10,cost:'piercing:5'}));
 sandbox.NoirBaseCatalog={towerLevels:{Keep:rows,Donor:rows},towers:[]};
