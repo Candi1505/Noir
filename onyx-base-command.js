@@ -127,6 +127,8 @@
   let mergeDraft = null;
   let mergeResult = null;
   let mergeMessage = "";
+  let targetDraft = null;
+  let targetResult = null;
   let referencePhotos = [];
   let referenceMessage = "";
   let openedForUser = null;
@@ -293,6 +295,8 @@
   }
 
   function readMergeDraft() {
+    targetDraft = null;
+    targetResult = null;
     const key = storageKey(MERGE_STORAGE_PREFIX);
     try {
       mergeDraft = normaliseMergeDraft(
@@ -393,7 +397,42 @@
       .reduce((sum, row) => sum + (Number(row?.xp) || 0), 0);
   }
 
+  function mergeSeries(type, cap) {
+    const rows = rowsFor(type).filter(r => Number(r.level) <= cap).slice().sort((a,b) => a.level-b.level);
+    let value = 0, seconds = 0, xp = 0, expected = 1;
+    const costs = {}, result = [];
+    for (const row of rows) {
+      // Stop at gaps or incomplete data instead of treating missing levels as free.
+      if (Number(row.level) !== expected++ || !Number.isFinite(Number(row.seconds)) ||
+          Number(row.seconds) < 0 || !Number.isFinite(Number(row.xp)) || Number(row.xp) < 0 ||
+          row.seconds == null || row.xp == null || String(row.seconds).trim() === "" ||
+          String(row.xp).trim() === "" || typeof row.cost !== "string") break;
+      let valid = true;
+      for (const part of row.cost.split(/[|;]/).filter(Boolean)) {
+        const [key, amount, extra] = part.split(":");
+        const n = Number(amount);
+        if (extra !== undefined || !Object.hasOwn(MERGE_VALUE_WEIGHTS, key) || amount == null || amount.trim() === "" || !Number.isFinite(n) || n < 0) { valid = false; break; }
+        costs[key] = (costs[key] || 0) + n;
+      }
+      if (!valid) break;
+      value += mergeUpgradeValue(row); seconds += Number(row.seconds); xp += Number(row.xp);
+      result.push({ level: Number(row.level), value, seconds, xp, costs: { ...costs } });
+    }
+    return result;
+  }
+
   function estimateMerge(value) {
+    if (!value || !towerTypes().includes(value.destinationType) || !towerTypes().includes(value.sourceType)) {
+      return { ok: false, message: "Choose two catalogue tower types." };
+    }
+    for (const key of ["destinationLevel", "sourceLevel", "quantity", "maximumTowerLevel", "previewResultLevel"]) {
+      const raw = value[key];
+      if (raw == null || (key === "previewResultLevel" && raw === "")) continue;
+      const n = Number(raw);
+      if (!Number.isInteger(n) || n < 1 || n > (key === "quantity" ? 100 : 999)) {
+        return { ok: false, message: "Enter valid whole tower levels, quantity and cap." };
+      }
+    }
     const draft = normaliseMergeDraft(value);
     const destinationRows = rowsFor(draft.destinationType);
     const sourceRows = rowsFor(draft.sourceType);
@@ -412,6 +451,13 @@
       return { ok: false, message: "A tower level cannot exceed the tower cap entered for this merge." };
     }
 
+    const destinationSeries = mergeSeries(draft.destinationType, effectiveCap);
+    const sourceSeries = mergeSeries(draft.sourceType, draft.sourceLevel);
+    if (!destinationSeries.some(row => row.level === effectiveCap) ||
+        !sourceSeries.some(row => row.level === draft.sourceLevel)) {
+      return { ok: false, message: "Complete catalogue costs, time and XP are unavailable for this merge. Missing levels cannot be treated as free." };
+    }
+
     const destinationValue = accumulatedTowerValue(
       draft.destinationType,
       draft.destinationLevel
@@ -422,7 +468,7 @@
     const modelResultLevel = destinationRows
       .filter(row =>
         Number(row?.level) <= effectiveCap &&
-        accumulatedTowerValue(draft.destinationType, row.level) <= availableValue
+        accumulatedTowerValue(draft.destinationType, row.level) <= availableValue + Math.max(1, availableValue) * 1e-12
       )
       .reduce(
         (highest, row) => Math.max(highest, Number(row?.level) || 0),
@@ -1765,6 +1811,135 @@
     ).join("");
   }
 
+  const TARGET_RESOURCE_FILTERS = Object.freeze({
+    any: { label: "Any recorded resources", allowed: null },
+    wood: { label: "Wood only", allowed: ["piercing"] },
+    bars: { label: "Wood + electrum bars only", allowed: ["piercing", "electrumBar"] },
+    embers: { label: "Wood + elemental embers only", allowed: ["piercing", "elementalEmber"] },
+    barsEmbers: { label: "Wood + bars + embers only", allowed: ["piercing", "electrumBar", "elementalEmber"] }
+  });
+
+  // Search matching batches and bounded two-group combinations. Costs remain separate currencies;
+  // the rubble weights are NOT a claim about resource purchasing prices.
+  function planTargetMerge(input = {}) {
+    const { destinationType, sourceType = "", sortBy = "time", resourceFilter = "any" } = input;
+    const current = Number(input.destinationLevel), target = Number(input.targetLevel);
+    const cap = Number(input.maximumTowerLevel), limit = Number(input.maxQuantity);
+    const fail = message => ({ ok: false, message, options: [] });
+    if (![current, target, cap, limit].every(Number.isInteger) || current < 1 ||
+        target <= current || cap < target || cap > 999 || limit < 1 || limit > 100)
+      return fail("Enter whole levels: target above current, target within your tower cap, and 1–100 donor towers.");
+    if (!towerTypes().includes(destinationType) || (sourceType && !towerTypes().includes(sourceType)))
+      return fail("Choose a catalogue tower type.");
+    if (!["time", "xpDebt"].includes(sortBy) && !Object.hasOwn(MERGE_VALUE_WEIGHTS, sortBy))
+      return fail("Choose build time, XP debt or a listed resource to compare.");
+    if (!Object.hasOwn(TARGET_RESOURCE_FILTERS, resourceFilter))
+      return fail("Choose an available resource filter.");
+    const allowed = TARGET_RESOURCE_FILTERS[resourceFilter].allowed;
+    const destination = mergeSeries(destinationType, cap);
+    const start = destination.find(r => r.level === current), goal = destination.find(r => r.level === target);
+    if (!start || !goal) return fail("Complete catalogue costs, time and XP are unavailable for these levels.");
+    const needed = goal.value - start.value, options = [], candidates = [];
+    const compare = (a,b) => (sortBy === "time" ? a.seconds-b.seconds : sortBy === "xpDebt" ? a.xpDebt-b.xpDebt : (a.costs[sortBy] || 0)-(b.costs[sortBy] || 0)) ||
+      a.seconds-b.seconds || a.quantity-b.quantity || a.sourceType.localeCompare(b.sourceType) || a.sourceLevel-b.sourceLevel;
+    function resultAt(available) {
+      let lo = 0, hi = destination.length - 1;
+      while (lo < hi) {
+        const mid = Math.ceil((lo + hi) / 2);
+        if (destination[mid].value <= available + Math.max(1, available) * 1e-12) lo = mid; else hi = mid - 1;
+      }
+      return destination[lo];
+    }
+    function optionFor(groups) {
+      const costs = {}; let seconds = 0, xp = 0, transferred = 0, quantity = 0;
+      for (const {donor, count} of groups) {
+        seconds += donor.seconds * count; xp += donor.xp * count;
+        transferred += donor.unit * count; quantity += count;
+        for (const [key, value] of Object.entries(donor.costs)) costs[key] = (costs[key] || 0) + value * count;
+      }
+      const result = resultAt(start.value + transferred);
+      if (result.level < target || quantity > limit) return null;
+      return {sourceType: groups[0].donor.type, sourceLevel: groups[0].donor.level,
+        quantity, resultLevel: result.level, seconds, costs,
+        donors: groups.map(({donor,count}) => ({sourceType: donor.type, sourceLevel: donor.level, quantity: count})),
+        xpDebt: Math.max(0, start.xp + xp - result.xp)};
+    }
+    let checked = 0;
+    for (const type of sourceType ? [sourceType] : towerTypes()) {
+      for (const donor of mergeSeries(type, cap)) {
+        if (allowed && Object.entries(donor.costs).some(([key, value]) => value > 0 && !allowed.includes(key))) continue;
+        const unit = donor.value * MERGE_TRANSFER_RATE;
+        if (!(unit > 0)) continue;
+        candidates.push({...donor, type, unit});
+        const quantity = Math.max(1, Math.ceil(needed / unit - 1e-10));
+        if (quantity > limit) continue;
+        const option = optionFor([{donor: {...donor, type, unit}, count: quantity}]);
+        if (option) { checked++; options.push(option); }
+      }
+    }
+    options.sort(compare);
+    // Bound the mixed search for phones: retain efficient donors and a spread
+    // of transfer sizes. This is best-found search, not a global optimum claim.
+    let mixedChecked = 0;
+    if (input.includeMixed !== false && limit > 1) {
+      const metric = donor => sortBy === "time" ? donor.seconds : sortBy === "xpDebt" ? donor.xp : donor.costs[sortBy] || 0;
+      const shortlist = new Map();
+      const add = d => { if (d) shortlist.set(d.type + ":" + d.level, d); };
+      candidates.slice().sort((a,b) => metric(a)/a.unit - metric(b)/b.unit || a.seconds-b.seconds).slice(0,32).forEach(add);
+      const bySize = candidates.slice().sort((a,b) => a.unit-b.unit);
+      for (let i=0; i<32 && bySize.length; i++) add(bySize[Math.floor(i*(bySize.length-1)/31)]);
+      const pool = [...shortlist.values()];
+      let best = options.slice(0,12);
+      for (let i=0; i<pool.length; i++) for (let j=i+1; j<pool.length; j++) {
+        const a = pool[i], b = pool[j];
+        const maxA = Math.min(limit-1, Math.ceil(needed/a.unit - 1e-10)-1);
+        for (let countA=1; countA<=maxA; countA++) {
+          const countB = Math.max(1, Math.ceil((needed-countA*a.unit)/b.unit - 1e-10));
+          if (countA+countB > limit) continue;
+          const option = optionFor([{donor:a,count:countA},{donor:b,count:countB}]);
+          if (!option) continue;
+          mixedChecked++;
+          if (best.length < 12 || compare(option,best[best.length-1]) < 0) {
+            best.push(option); best.sort(compare); best = best.slice(0,12);
+          }
+        }
+      }
+      options.splice(0,options.length,...best);
+    }
+    return { ok: true, checked: checked + mixedChecked, mixedChecked, searchScope: "Matching batches plus a shortlist of two donor groups; best found, not exhaustive.", options: options.slice(0, 12), destinationType,
+      destinationLevel: current, targetLevel: target, maximumTowerLevel: cap, sortBy, resourceFilter };
+  }
+
+  function renderTargetMerge() {
+    const d = targetDraft || { destinationType: towerTypes().includes("Ice Flak Tower") ? "Ice Flak Tower" : towerTypes()[0],
+      destinationLevel: 142, targetLevel: 185, maximumTowerLevel: maximumCatalogueLevel(), maxQuantity: 20, sourceType: "", sortBy: "time", resourceFilter: "any" };
+    return `<section class="obc-merge-command obc-target-planner" aria-label="Target level planner">
+      <div class="obc-section-heading"><div><p>TARGET LEVEL PLANNER · ESTIMATE</p><h3>Reach a target level</h3></div></div>
+      <p>Compare matching and mixed donor batches built from scratch using the existing 45% model. The model matches four recorded July game previews. Other combinations remain estimates; check your current WD preview.</p>
+      <div class="obc-form-row">
+        <label>Tower to keep<select id="obcTargetType">${mergeTowerOptions(d.destinationType)}</select></label>
+        <label>Current level<input id="obcTargetCurrent" type="number" min="1" max="999" value="${escapeHtml(d.destinationLevel)}"></label>
+        <label>Target level<input id="obcTargetLevel" type="number" min="2" max="999" value="${escapeHtml(d.targetLevel)}"></label>
+        <label>Your maximum tower level<input id="obcTargetCap" type="number" min="1" max="999" value="${escapeHtml(d.maximumTowerLevel)}"></label>
+        <label>Donor type<select id="obcTargetSource"><option value="">Compare all catalogue types</option>${mergeTowerOptions(d.sourceType)}</select></label>
+        <label>Resources allowed for donors<select id="obcTargetResources">${Object.entries(TARGET_RESOURCE_FILTERS).map(([key, filter])=>`<option value="${key}" ${(d.resourceFilter || "any") === key ? "selected" : ""}>${filter.label}</option>`).join("")}</select></label>
+        <label>Combinations<select id="obcTargetMixed"><option value="yes">Matching + mixed batches</option><option value="no" ${d.includeMixed === false ? "selected" : ""}>Matching batches only</option></select></label>
+        <label>Maximum donors<input id="obcTargetQuantity" type="number" min="1" max="100" value="${escapeHtml(d.maxQuantity)}"></label>
+        <label>Compare by<select id="obcTargetSort"><option value="time">Lowest catalogue build time</option><option value="xpDebt" ${d.sortBy === "xpDebt" ? "selected" : ""}>Lowest estimated XP debt</option>${Object.keys(MERGE_VALUE_WEIGHTS).filter(k=>k!=="time").map(k=>`<option value="${k}" ${d.sortBy===k?"selected":""}>Lowest ${escapeHtml(RESOURCE_NAMES[k] || k)}</option>`).join("")}</select></label>
+      </div>
+      <div class="obc-merge-actions"><button id="obcPlanTarget" class="primary" type="button">Find estimated options</button></div>
+      <p>Compares matching batches and a shortlist of combinations using two donor types or levels. Shows the best options found, not a guaranteed global minimum. Donors are built from scratch; owned inventory and intermediate merges are not included. Resource filters check all recorded donor construction costs from level 1. Saving XP means minimising estimated XP debt; it does not mean zero debt. Totals are raw catalogue values before discounts, boosts or parallel construction. Merge fees and eligibility are not verified; check them in-game. Lowest cost means only the selected resource, not cheapest overall.</p>
+      <div id="obcTargetResults" role="status">${!targetResult ? "" : !targetResult.ok ? escapeHtml(targetResult.message) : `
+        <p>${targetResult.checked} candidate batches found for ${escapeHtml(targetResult.destinationType)} ${targetResult.destinationLevel} → ${targetResult.targetLevel}. Showing up to 12, ordered by ${escapeHtml(targetResult.sortBy === "time" ? "catalogue build time" : targetResult.sortBy === "xpDebt" ? "estimated XP debt" : RESOURCE_NAMES[targetResult.sortBy] || targetResult.sortBy)}.</p>
+        ${targetResult.options.length ? targetResult.options.map(o=>`<article class="obc-merge-limits">
+          <h4>${o.donors.map(d => `${d.quantity} × ${escapeHtml(d.sourceType)} · level ${d.sourceLevel}`).join(" + ")}</h4>
+          <p>Estimated result: level ${o.resultLevel} · Estimated XP debt: ${formatNumber(o.xpDebt)}</p>
+          <p>Total catalogue build time: ${formatDuration(o.seconds)}</p>
+          <p>${Object.entries(o.costs).filter(([,v])=>v>0).map(([k,v])=>`${formatNumber(v)} ${escapeHtml(RESOURCE_NAMES[k] || k)}`).join(" · ") || "No recorded resource cost"}</p>
+        </article>`).join("") : "<p>No matching batch within these limits. Try a different resource filter, donor type or maximum quantity.</p>"}`}</div>
+    </section>`;
+  }
+
   function renderMergeCalculator() {
     if (!mergeDraft) mergeDraft = blankMergeDraft();
     const draft = normaliseMergeDraft(mergeDraft);
@@ -1779,9 +1954,10 @@
     return `
       <section class="obc-source-banner merge-ready">
         <strong>Tower Merge Intelligence</strong>
-        <p>Estimate the kept tower's resulting level using the verified 45% transferable-value model. If WD shows a preview level, enter it and the game preview becomes the source of truth.</p>
+        <p>Estimate the kept tower's resulting level using the 45% model checked against four recorded game previews. If WD shows a preview level, enter it and the game preview becomes the source of truth.</p>
       </section>
 
+      ${renderTargetMerge()}
       <section class="obc-merge-command">
         <div class="obc-section-heading obc-merge-heading">
           <div><p>MERGE CALCULATOR</p><h3>Build the merge before you confirm it</h3></div>
@@ -2155,6 +2331,16 @@
     overlay.querySelector("#obcTowerLevel")?.addEventListener("change", event => {
       selectedLevel = Number.parseInt(event.target.value, 10) || 1;
       render({ focusSelector: "#obcTowerLevel" });
+    });
+
+    overlay.querySelector("#obcPlanTarget")?.addEventListener("click", () => {
+      const value = id => overlay.querySelector(id)?.value;
+      targetDraft = { destinationType: value("#obcTargetType"), destinationLevel: value("#obcTargetCurrent"),
+        targetLevel: value("#obcTargetLevel"), maximumTowerLevel: value("#obcTargetCap"),
+        includeMixed: value("#obcTargetMixed") !== "no", sourceType: value("#obcTargetSource"), maxQuantity: value("#obcTargetQuantity"), sortBy: value("#obcTargetSort"), resourceFilter: value("#obcTargetResources") };
+      mergeDraft = readMergeForm(overlay);
+      targetResult = planTargetMerge(targetDraft);
+      render({ focusSelector: "#obcPlanTarget", scrollSelector: "#obcTargetResults" });
     });
 
     overlay.querySelector("#obcCalculateMerge")?.addEventListener("click", () => {
@@ -2609,6 +2795,7 @@
     createLayout,
     estimateLayout,
     estimateMerge,
+    planTargetMerge,
     getLayout: () => clone(layout),
     getTowerRecord: (type, level) => clone(exactRow(type, level))
   });

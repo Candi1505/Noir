@@ -18,6 +18,11 @@ jobs:
           node-version: 22
       - name: Reject private captures and credentials
         run: node test-private-artifact-gate.cjs
+      - name: Check tower merge calculations
+        run: |
+          node test-merge-har-validation.cjs
+          node test-target-merge.cjs
+          node test-mixed-merge.cjs
       - name: Check JavaScript syntax
         shell: bash
         run: |

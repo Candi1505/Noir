@@ -1,0 +1,3042 @@
+{
+  "sourceHar": "970-dot-pgdragonsong.appspot.com_07-29-2026-07-42-32.har",
+  "sha256": "88eec721817d0be6bfeff8ee0a885889c2be184c20d0dd6da74d0dfb20335f40",
+  "entryIndex": 68,
+  "note": "Only public gameplay table fields extracted. Preview expectations recovered from July conversation records; original screenshots not re-inspected in this session. Parameters CSV contains a hash only. No claim of universal or current-game verification.",
+  "towerLevels": {
+    "Charged Volt Tower": [
+      {
+        "level": 1,
+        "seconds": 990.0,
+        "cost": "electrumBar:25",
+        "xp": 28.0
+      },
+      {
+        "level": 2,
+        "seconds": 3510.0,
+        "cost": "piercing:208",
+        "xp": 98.0
+      },
+      {
+        "level": 3,
+        "seconds": 7200.0,
+        "cost": "electrumBar:50",
+        "xp": 225.0
+      },
+      {
+        "level": 4,
+        "seconds": 10800.0,
+        "cost": "piercing:861",
+        "xp": 383.0
+      },
+      {
+        "level": 5,
+        "seconds": 16200.0,
+        "cost": "electrumBar:75",
+        "xp": 428.0
+      },
+      {
+        "level": 6,
+        "seconds": 21600.0,
+        "cost": "piercing:1894",
+        "xp": 600.0
+      },
+      {
+        "level": 7,
+        "seconds": 28800.0,
+        "cost": "electrumBar:100",
+        "xp": 750.0
+      },
+      {
+        "level": 8,
+        "seconds": 36000.0,
+        "cost": "piercing:3714",
+        "xp": 750.0
+      },
+      {
+        "level": 9,
+        "seconds": 43200.0,
+        "cost": "electrumBar:150",
+        "xp": 924.0
+      },
+      {
+        "level": 10,
+        "seconds": 57600.0,
+        "cost": "piercing:8712",
+        "xp": 1264.0
+      },
+      {
+        "level": 11,
+        "seconds": 72000.0,
+        "cost": "electrumBar:200",
+        "xp": 1298.0
+      },
+      {
+        "level": 12,
+        "seconds": 86400.0,
+        "cost": "piercing:17819",
+        "xp": 1667.0
+      },
+      {
+        "level": 13,
+        "seconds": 129600.0,
+        "cost": "electrumBar:250",
+        "xp": 2058.0
+      },
+      {
+        "level": 14,
+        "seconds": 172800.0,
+        "cost": "piercing:38115",
+        "xp": 2118.0
+      },
+      {
+        "level": 15,
+        "seconds": 216000.0,
+        "cost": "electrumBar:300",
+        "xp": 2546.0
+      },
+      {
+        "level": 16,
+        "seconds": 259200.0,
+        "cost": "piercing:57617",
+        "xp": 3000.0
+      },
+      {
+        "level": 17,
+        "seconds": 302400.0,
+        "cost": "electrumBar:350",
+        "xp": 3097.0
+      },
+      {
+        "level": 18,
+        "seconds": 345600.0,
+        "cost": "piercing:86400",
+        "xp": 4000.0
+      },
+      {
+        "level": 19,
+        "seconds": 388800.0,
+        "cost": "electrumBar:400",
+        "xp": 5334.0
+      },
+      {
+        "level": 20,
+        "seconds": 432000.0,
+        "cost": "piercing:154799",
+        "xp": 7000.0
+      },
+      {
+        "level": 21,
+        "seconds": 518400.0,
+        "cost": "electrumBar:450",
+        "xp": 9143.0
+      },
+      {
+        "level": 22,
+        "seconds": 604800.0,
+        "cost": "piercing:219599",
+        "xp": 12000.0
+      },
+      {
+        "level": 23,
+        "seconds": 691200.0,
+        "cost": "electrumBar:500",
+        "xp": 16000.0
+      },
+      {
+        "level": 24,
+        "seconds": 864000.0,
+        "cost": "piercing:269232",
+        "xp": 17600.0
+      },
+      {
+        "level": 25,
+        "seconds": 864000.0,
+        "cost": "electrumBar:550",
+        "xp": 19200.0
+      },
+      {
+        "level": 26,
+        "seconds": 936000.0,
+        "cost": "piercing:340800",
+        "xp": 20800.0
+      },
+      {
+        "level": 27,
+        "seconds": 1080000.0,
+        "cost": "electrumBar:600",
+        "xp": 24000.0
+      },
+      {
+        "level": 28,
+        "seconds": 1152000.0,
+        "cost": "piercing:422592",
+        "xp": 25600.0
+      },
+      {
+        "level": 29,
+        "seconds": 1224000.0,
+        "cost": "electrumBar:650",
+        "xp": 27200.0
+      },
+      {
+        "level": 30,
+        "seconds": 1224000.0,
+        "cost": "piercing:504384",
+        "xp": 30400.0
+      },
+      {
+        "level": 31,
+        "seconds": 1370990.0,
+        "cost": "electrumBar:700",
+        "xp": 32000.0
+      },
+      {
+        "level": 32,
+        "seconds": 1468800.0,
+        "cost": "piercing:586176",
+        "xp": 33600.0
+      },
+      {
+        "level": 33,
+        "seconds": 1566720.0,
+        "cost": "electrumBar:750",
+        "xp": 33600.0
+      },
+      {
+        "level": 34,
+        "seconds": 1664640.0,
+        "cost": "piercing:667968",
+        "xp": 33600.0
+      },
+      {
+        "level": 35,
+        "seconds": 1762560.0,
+        "cost": "electrumBar:800",
+        "xp": 33600.0
+      },
+      {
+        "level": 36,
+        "seconds": 1762560.0,
+        "cost": "piercing:749760",
+        "xp": 33600.0
+      },
+      {
+        "level": 37,
+        "seconds": 1762560.0,
+        "cost": "electrumBar:850",
+        "xp": 33600.0
+      },
+      {
+        "level": 38,
+        "seconds": 1762560.0,
+        "cost": "piercing:831552",
+        "xp": 33600.0
+      },
+      {
+        "level": 39,
+        "seconds": 1762560.0,
+        "cost": "electrumBar:900",
+        "xp": 33600.0
+      },
+      {
+        "level": 40,
+        "seconds": 1762560.0,
+        "cost": "piercing:913344",
+        "xp": 33600.0
+      },
+      {
+        "level": 41,
+        "seconds": 2290604.0,
+        "cost": "electrumBar:950",
+        "xp": 35349.0
+      },
+      {
+        "level": 42,
+        "seconds": 2743903.0,
+        "cost": "piercing:995136",
+        "xp": 42345.0
+      },
+      {
+        "level": 43,
+        "seconds": 3197201.0,
+        "cost": "electrumBar:1000",
+        "xp": 49340.0
+      },
+      {
+        "level": 44,
+        "seconds": 3650500.0,
+        "cost": "piercing:1076928",
+        "xp": 56335.0
+      },
+      {
+        "level": 45,
+        "seconds": 4103799.0,
+        "cost": "electrumBar:1050",
+        "xp": 63331.0
+      },
+      {
+        "level": 46,
+        "seconds": 4177339.0,
+        "cost": "piercing:1158720",
+        "xp": 70326.0
+      },
+      {
+        "level": 47,
+        "seconds": 4314507.0,
+        "cost": "electrumBar:1100",
+        "xp": 77321.0
+      },
+      {
+        "level": 48,
+        "seconds": 4553079.0,
+        "cost": "piercing:1240512",
+        "xp": 84317.0
+      },
+      {
+        "level": 49,
+        "seconds": 4602106.0,
+        "cost": "electrumBar:1150",
+        "xp": 91312.0
+      },
+      {
+        "level": 50,
+        "seconds": 4777719.0,
+        "cost": "piercing:1322304",
+        "xp": 98307.0
+      },
+      {
+        "level": 51,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:1200",
+        "xp": 101805.0
+      },
+      {
+        "level": 52,
+        "seconds": 5000000.0,
+        "cost": "piercing:1363200",
+        "xp": 105303.0
+      },
+      {
+        "level": 53,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:1250",
+        "xp": 106000.0
+      },
+      {
+        "level": 54,
+        "seconds": 5000000.0,
+        "cost": "piercing:1404096",
+        "xp": 106000.0
+      },
+      {
+        "level": 55,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:1300",
+        "xp": 106000.0
+      },
+      {
+        "level": 56,
+        "seconds": 5000000.0,
+        "cost": "piercing:1444992",
+        "xp": 106000.0
+      },
+      {
+        "level": 57,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:1350",
+        "xp": 106000.0
+      },
+      {
+        "level": 58,
+        "seconds": 5000000.0,
+        "cost": "piercing:1485888",
+        "xp": 106000.0
+      },
+      {
+        "level": 59,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:1400",
+        "xp": 106000.0
+      },
+      {
+        "level": 60,
+        "seconds": 5000000.0,
+        "cost": "piercing:1526784",
+        "xp": 106000.0
+      },
+      {
+        "level": 61,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:1450",
+        "xp": 106000.0
+      },
+      {
+        "level": 62,
+        "seconds": 5000000.0,
+        "cost": "piercing:1772160",
+        "xp": 106000.0
+      },
+      {
+        "level": 63,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:1500",
+        "xp": 106000.0
+      },
+      {
+        "level": 64,
+        "seconds": 5000000.0,
+        "cost": "piercing:1813056",
+        "xp": 106000.0
+      },
+      {
+        "level": 65,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:1550",
+        "xp": 106000.0
+      },
+      {
+        "level": 66,
+        "seconds": 5000000.0,
+        "cost": "piercing:1853952",
+        "xp": 106000.0
+      },
+      {
+        "level": 67,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:1600",
+        "xp": 106000.0
+      },
+      {
+        "level": 68,
+        "seconds": 5000000.0,
+        "cost": "piercing:1894848",
+        "xp": 106000.0
+      },
+      {
+        "level": 69,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:1650",
+        "xp": 106000.0
+      },
+      {
+        "level": 70,
+        "seconds": 5000000.0,
+        "cost": "piercing:1935744",
+        "xp": 106000.0
+      },
+      {
+        "level": 71,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:1700",
+        "xp": 106000.0
+      },
+      {
+        "level": 72,
+        "seconds": 5000000.0,
+        "cost": "piercing:1976640",
+        "xp": 106000.0
+      },
+      {
+        "level": 73,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:1750",
+        "xp": 106000.0
+      },
+      {
+        "level": 74,
+        "seconds": 5000000.0,
+        "cost": "piercing:2017536",
+        "xp": 106000.0
+      },
+      {
+        "level": 75,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:1800",
+        "xp": 106000.0
+      },
+      {
+        "level": 76,
+        "seconds": 5000000.0,
+        "cost": "piercing:2058432",
+        "xp": 106000.0
+      },
+      {
+        "level": 77,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:1850",
+        "xp": 106000.0
+      },
+      {
+        "level": 78,
+        "seconds": 5000000.0,
+        "cost": "piercing:2109552",
+        "xp": 106000.0
+      },
+      {
+        "level": 79,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:1900",
+        "xp": 106000.0
+      },
+      {
+        "level": 80,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160672",
+        "xp": 106000.0
+      },
+      {
+        "level": 81,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:1950",
+        "xp": 106000.0
+      },
+      {
+        "level": 82,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160672",
+        "xp": 106000.0
+      },
+      {
+        "level": 83,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:2000",
+        "xp": 106000.0
+      },
+      {
+        "level": 84,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160672",
+        "xp": 106000.0
+      },
+      {
+        "level": 85,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:2050",
+        "xp": 106000.0
+      },
+      {
+        "level": 86,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160672",
+        "xp": 106000.0
+      },
+      {
+        "level": 87,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:2100",
+        "xp": 106000.0
+      },
+      {
+        "level": 88,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160672",
+        "xp": 106000.0
+      },
+      {
+        "level": 89,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:2150",
+        "xp": 106000.0
+      },
+      {
+        "level": 90,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160672",
+        "xp": 106000.0
+      },
+      {
+        "level": 91,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:2200",
+        "xp": 106000.0
+      },
+      {
+        "level": 92,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160672",
+        "xp": 106000.0
+      },
+      {
+        "level": 93,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:2250",
+        "xp": 106000.0
+      },
+      {
+        "level": 94,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160672",
+        "xp": 106000.0
+      },
+      {
+        "level": 95,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:2300",
+        "xp": 106000.0
+      },
+      {
+        "level": 96,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160672",
+        "xp": 106000.0
+      },
+      {
+        "level": 97,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:2350",
+        "xp": 106000.0
+      },
+      {
+        "level": 98,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160672",
+        "xp": 106000.0
+      },
+      {
+        "level": 99,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:2400",
+        "xp": 106000.0
+      },
+      {
+        "level": 100,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160672",
+        "xp": 106000.0
+      },
+      {
+        "level": 101,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:2450",
+        "xp": 106000.0
+      },
+      {
+        "level": 102,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160672",
+        "xp": 106000.0
+      },
+      {
+        "level": 103,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:2500",
+        "xp": 106000.0
+      },
+      {
+        "level": 104,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160672",
+        "xp": 106000.0
+      },
+      {
+        "level": 105,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:2550",
+        "xp": 106000.0
+      },
+      {
+        "level": 106,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160673",
+        "xp": 106000.0
+      },
+      {
+        "level": 107,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:2600",
+        "xp": 106000.0
+      },
+      {
+        "level": 108,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160673",
+        "xp": 106000.0
+      },
+      {
+        "level": 109,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:2650",
+        "xp": 106000.0
+      },
+      {
+        "level": 110,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160673",
+        "xp": 106000.0
+      },
+      {
+        "level": 111,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:2700",
+        "xp": 106000.0
+      },
+      {
+        "level": 112,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160674",
+        "xp": 106000.0
+      },
+      {
+        "level": 113,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:2750",
+        "xp": 106000.0
+      },
+      {
+        "level": 114,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160674",
+        "xp": 106000.0
+      },
+      {
+        "level": 115,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:2800",
+        "xp": 106000.0
+      },
+      {
+        "level": 116,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160674",
+        "xp": 106000.0
+      },
+      {
+        "level": 117,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:2850",
+        "xp": 106000.0
+      },
+      {
+        "level": 118,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160675",
+        "xp": 106000.0
+      },
+      {
+        "level": 119,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:2900",
+        "xp": 106000.0
+      },
+      {
+        "level": 120,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160675",
+        "xp": 106000.0
+      },
+      {
+        "level": 121,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:2950",
+        "xp": 106000.0
+      },
+      {
+        "level": 122,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160675",
+        "xp": 106000.0
+      },
+      {
+        "level": 123,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:3000",
+        "xp": 106000.0
+      },
+      {
+        "level": 124,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160676",
+        "xp": 106000.0
+      },
+      {
+        "level": 125,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:3050",
+        "xp": 106000.0
+      },
+      {
+        "level": 126,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160676",
+        "xp": 106000.0
+      },
+      {
+        "level": 127,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:3100",
+        "xp": 106000.0
+      },
+      {
+        "level": 128,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160676",
+        "xp": 106000.0
+      },
+      {
+        "level": 129,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:3150",
+        "xp": 106000.0
+      },
+      {
+        "level": 130,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160677",
+        "xp": 106000.0
+      },
+      {
+        "level": 131,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:3200",
+        "xp": 106000.0
+      },
+      {
+        "level": 132,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160678",
+        "xp": 106000.0
+      },
+      {
+        "level": 133,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:3250",
+        "xp": 106000.0
+      },
+      {
+        "level": 134,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160679",
+        "xp": 106000.0
+      },
+      {
+        "level": 135,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:3300",
+        "xp": 106000.0
+      },
+      {
+        "level": 136,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160680",
+        "xp": 106000.0
+      },
+      {
+        "level": 137,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:3350",
+        "xp": 106000.0
+      },
+      {
+        "level": 138,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160681",
+        "xp": 106000.0
+      },
+      {
+        "level": 139,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:3400",
+        "xp": 106000.0
+      },
+      {
+        "level": 140,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160682",
+        "xp": 106000.0
+      },
+      {
+        "level": 141,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:3450",
+        "xp": 106000.0
+      },
+      {
+        "level": 142,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160683",
+        "xp": 106000.0
+      },
+      {
+        "level": 143,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:3500",
+        "xp": 106000.0
+      },
+      {
+        "level": 144,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160684",
+        "xp": 106000.0
+      },
+      {
+        "level": 145,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:3550",
+        "xp": 106000.0
+      },
+      {
+        "level": 146,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160685",
+        "xp": 106000.0
+      },
+      {
+        "level": 147,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:3600",
+        "xp": 106000.0
+      },
+      {
+        "level": 148,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160686",
+        "xp": 106000.0
+      },
+      {
+        "level": 149,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:3650",
+        "xp": 106000.0
+      },
+      {
+        "level": 150,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160687",
+        "xp": 106000.0
+      },
+      {
+        "level": 151,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:3700",
+        "xp": 106000.0
+      },
+      {
+        "level": 152,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160688",
+        "xp": 106000.0
+      },
+      {
+        "level": 153,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:3750",
+        "xp": 106000.0
+      },
+      {
+        "level": 154,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160689",
+        "xp": 106000.0
+      },
+      {
+        "level": 155,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:3800",
+        "xp": 106000.0
+      },
+      {
+        "level": 156,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160690",
+        "xp": 106000.0
+      },
+      {
+        "level": 157,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:3850",
+        "xp": 106000.0
+      },
+      {
+        "level": 158,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160691",
+        "xp": 106000.0
+      },
+      {
+        "level": 159,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:3900",
+        "xp": 106000.0
+      },
+      {
+        "level": 160,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160692",
+        "xp": 106000.0
+      },
+      {
+        "level": 161,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:3950",
+        "xp": 106000.0
+      },
+      {
+        "level": 162,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160693",
+        "xp": 106000.0
+      },
+      {
+        "level": 163,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:4000",
+        "xp": 106000.0
+      },
+      {
+        "level": 164,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160694",
+        "xp": 106000.0
+      },
+      {
+        "level": 165,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:4050",
+        "xp": 106000.0
+      },
+      {
+        "level": 166,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160695",
+        "xp": 106000.0
+      },
+      {
+        "level": 167,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:4100",
+        "xp": 106000.0
+      },
+      {
+        "level": 168,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160696",
+        "xp": 106000.0
+      },
+      {
+        "level": 169,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:4150",
+        "xp": 106000.0
+      },
+      {
+        "level": 170,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160697",
+        "xp": 106000.0
+      },
+      {
+        "level": 171,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:4200",
+        "xp": 106000.0
+      },
+      {
+        "level": 172,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160698",
+        "xp": 106000.0
+      },
+      {
+        "level": 173,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:4250",
+        "xp": 106000.0
+      },
+      {
+        "level": 174,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160699",
+        "xp": 106000.0
+      },
+      {
+        "level": 175,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:4300",
+        "xp": 106000.0
+      },
+      {
+        "level": 176,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160700",
+        "xp": 106000.0
+      },
+      {
+        "level": 177,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:4350",
+        "xp": 106000.0
+      },
+      {
+        "level": 178,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160701",
+        "xp": 106000.0
+      },
+      {
+        "level": 179,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:4400",
+        "xp": 106000.0
+      },
+      {
+        "level": 180,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160702",
+        "xp": 106000.0
+      },
+      {
+        "level": 181,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:4450",
+        "xp": 106000.0
+      },
+      {
+        "level": 182,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160703",
+        "xp": 106000.0
+      },
+      {
+        "level": 183,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:4500",
+        "xp": 106000.0
+      },
+      {
+        "level": 184,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160704",
+        "xp": 106000.0
+      },
+      {
+        "level": 185,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:4550",
+        "xp": 106000.0
+      },
+      {
+        "level": 186,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160705",
+        "xp": 106000.0
+      },
+      {
+        "level": 187,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:4600",
+        "xp": 106000.0
+      },
+      {
+        "level": 188,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160706",
+        "xp": 106000.0
+      },
+      {
+        "level": 189,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:4650",
+        "xp": 106000.0
+      },
+      {
+        "level": 190,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160707",
+        "xp": 106000.0
+      },
+      {
+        "level": 191,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:4700",
+        "xp": 106000.0
+      },
+      {
+        "level": 192,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160708",
+        "xp": 106000.0
+      },
+      {
+        "level": 193,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:4750",
+        "xp": 106000.0
+      },
+      {
+        "level": 194,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160709",
+        "xp": 106000.0
+      },
+      {
+        "level": 195,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:4800",
+        "xp": 106000.0
+      },
+      {
+        "level": 196,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160710",
+        "xp": 106000.0
+      },
+      {
+        "level": 197,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:4850",
+        "xp": 106000.0
+      },
+      {
+        "level": 198,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160711",
+        "xp": 106000.0
+      },
+      {
+        "level": 199,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:4900",
+        "xp": 106000.0
+      },
+      {
+        "level": 200,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160712",
+        "xp": 106000.0
+      },
+      {
+        "level": 201,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:4954",
+        "xp": 108120.0
+      },
+      {
+        "level": 202,
+        "seconds": 5000000.0,
+        "cost": "piercing:2317364",
+        "xp": 108120.0
+      },
+      {
+        "level": 203,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:5008",
+        "xp": 108120.0
+      },
+      {
+        "level": 204,
+        "seconds": 5000000.0,
+        "cost": "piercing:2317364",
+        "xp": 108120.0
+      },
+      {
+        "level": 205,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:5062",
+        "xp": 108120.0
+      },
+      {
+        "level": 206,
+        "seconds": 5000000.0,
+        "cost": "piercing:2317364",
+        "xp": 108120.0
+      },
+      {
+        "level": 207,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:5116",
+        "xp": 108120.0
+      },
+      {
+        "level": 208,
+        "seconds": 5000000.0,
+        "cost": "piercing:2317364",
+        "xp": 108120.0
+      },
+      {
+        "level": 209,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:5170",
+        "xp": 108120.0
+      },
+      {
+        "level": 210,
+        "seconds": 5000000.0,
+        "cost": "piercing:2317364",
+        "xp": 108120.0
+      },
+      {
+        "level": 211,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:5224",
+        "xp": 108120.0
+      },
+      {
+        "level": 212,
+        "seconds": 5000000.0,
+        "cost": "piercing:2317364",
+        "xp": 108120.0
+      },
+      {
+        "level": 213,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:5278",
+        "xp": 108120.0
+      },
+      {
+        "level": 214,
+        "seconds": 5000000.0,
+        "cost": "piercing:2317364",
+        "xp": 108120.0
+      },
+      {
+        "level": 215,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:5332",
+        "xp": 108120.0
+      },
+      {
+        "level": 216,
+        "seconds": 5000000.0,
+        "cost": "piercing:2317364",
+        "xp": 108120.0
+      },
+      {
+        "level": 217,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:5386",
+        "xp": 108120.0
+      },
+      {
+        "level": 218,
+        "seconds": 5000000.0,
+        "cost": "piercing:2317364",
+        "xp": 108120.0
+      },
+      {
+        "level": 219,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:5440",
+        "xp": 108120.0
+      },
+      {
+        "level": 220,
+        "seconds": 5000000.0,
+        "cost": "piercing:2317364",
+        "xp": 108120.0
+      },
+      {
+        "level": 221,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:5494",
+        "xp": 108120.0
+      },
+      {
+        "level": 222,
+        "seconds": 5000000.0,
+        "cost": "piercing:2317364",
+        "xp": 108120.0
+      },
+      {
+        "level": 223,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:5548",
+        "xp": 108120.0
+      },
+      {
+        "level": 224,
+        "seconds": 5000000.0,
+        "cost": "piercing:2317364",
+        "xp": 108120.0
+      },
+      {
+        "level": 225,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:5602",
+        "xp": 108120.0
+      },
+      {
+        "level": 226,
+        "seconds": 5000000.0,
+        "cost": "piercing:2485373",
+        "xp": 110282.0
+      },
+      {
+        "level": 227,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:5660",
+        "xp": 110282.0
+      },
+      {
+        "level": 228,
+        "seconds": 5000000.0,
+        "cost": "piercing:2485373",
+        "xp": 110282.0
+      },
+      {
+        "level": 229,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:5718",
+        "xp": 110282.0
+      },
+      {
+        "level": 230,
+        "seconds": 5000000.0,
+        "cost": "piercing:2485373",
+        "xp": 110282.0
+      },
+      {
+        "level": 231,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:5776",
+        "xp": 110282.0
+      },
+      {
+        "level": 232,
+        "seconds": 5000000.0,
+        "cost": "piercing:2485373",
+        "xp": 110282.0
+      },
+      {
+        "level": 233,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:5834",
+        "xp": 110282.0
+      },
+      {
+        "level": 234,
+        "seconds": 5000000.0,
+        "cost": "piercing:2485373",
+        "xp": 110282.0
+      },
+      {
+        "level": 235,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:5892",
+        "xp": 110282.0
+      },
+      {
+        "level": 236,
+        "seconds": 5000000.0,
+        "cost": "piercing:2485373",
+        "xp": 110282.0
+      },
+      {
+        "level": 237,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:5950",
+        "xp": 110282.0
+      },
+      {
+        "level": 238,
+        "seconds": 5000000.0,
+        "cost": "piercing:2485373",
+        "xp": 110282.0
+      },
+      {
+        "level": 239,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:6008",
+        "xp": 110282.0
+      },
+      {
+        "level": 240,
+        "seconds": 5000000.0,
+        "cost": "piercing:2485373",
+        "xp": 110282.0
+      },
+      {
+        "level": 241,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:6066",
+        "xp": 110282.0
+      },
+      {
+        "level": 242,
+        "seconds": 5000000.0,
+        "cost": "piercing:2485373",
+        "xp": 110282.0
+      },
+      {
+        "level": 243,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:6124",
+        "xp": 110282.0
+      },
+      {
+        "level": 244,
+        "seconds": 5000000.0,
+        "cost": "piercing:2485373",
+        "xp": 110282.0
+      },
+      {
+        "level": 245,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:6182",
+        "xp": 110282.0
+      },
+      {
+        "level": 246,
+        "seconds": 5000000.0,
+        "cost": "piercing:2485373",
+        "xp": 110282.0
+      },
+      {
+        "level": 247,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:6240",
+        "xp": 110282.0
+      },
+      {
+        "level": 248,
+        "seconds": 5000000.0,
+        "cost": "piercing:2485373",
+        "xp": 110282.0
+      },
+      {
+        "level": 249,
+        "seconds": 5000000.0,
+        "cost": "electrumBar:6298",
+        "xp": 110282.0
+      },
+      {
+        "level": 250,
+        "seconds": 5000000.0,
+        "cost": "piercing:2485373",
+        "xp": 110282.0
+      }
+    ],
+    "Electro-Flak Tower": [
+      {
+        "level": 1,
+        "seconds": 990.0,
+        "cost": "elementalEmber:100",
+        "xp": 1.0
+      },
+      {
+        "level": 2,
+        "seconds": 450.0,
+        "cost": "piercing:208",
+        "xp": 13.0
+      },
+      {
+        "level": 3,
+        "seconds": 1920.0,
+        "cost": "elementalEmber:200",
+        "xp": 60.0
+      },
+      {
+        "level": 4,
+        "seconds": 3952.0,
+        "cost": "piercing:861",
+        "xp": 140.0
+      },
+      {
+        "level": 5,
+        "seconds": 9094.0,
+        "cost": "elementalEmber:300",
+        "xp": 240.0
+      },
+      {
+        "level": 6,
+        "seconds": 14580.0,
+        "cost": "piercing:1894",
+        "xp": 405.0
+      },
+      {
+        "level": 7,
+        "seconds": 23040.0,
+        "cost": "elementalEmber:400",
+        "xp": 600.0
+      },
+      {
+        "level": 8,
+        "seconds": 28800.0,
+        "cost": "piercing:3714",
+        "xp": 600.0
+      },
+      {
+        "level": 9,
+        "seconds": 35100.0,
+        "cost": "elementalEmber:600",
+        "xp": 750.0
+      },
+      {
+        "level": 10,
+        "seconds": 41559.0,
+        "cost": "piercing:8712",
+        "xp": 912.0
+      },
+      {
+        "level": 11,
+        "seconds": 51896.0,
+        "cost": "elementalEmber:800",
+        "xp": 936.0
+      },
+      {
+        "level": 12,
+        "seconds": 66355.0,
+        "cost": "piercing:17819",
+        "xp": 1280.0
+      },
+      {
+        "level": 13,
+        "seconds": 103561.0,
+        "cost": "elementalEmber:1000",
+        "xp": 1644.0
+      },
+      {
+        "level": 14,
+        "seconds": 137915.0,
+        "cost": "piercing:38115",
+        "xp": 1691.0
+      },
+      {
+        "level": 15,
+        "seconds": 177093.0,
+        "cost": "elementalEmber:1200",
+        "xp": 2087.0
+      },
+      {
+        "level": 16,
+        "seconds": 219927.0,
+        "cost": "piercing:57617",
+        "xp": 2546.0
+      },
+      {
+        "level": 17,
+        "seconds": 297600.0,
+        "cost": "elementalEmber:1400",
+        "xp": 3048.0
+      },
+      {
+        "level": 18,
+        "seconds": 345600.0,
+        "cost": "piercing:86400",
+        "xp": 4000.0
+      },
+      {
+        "level": 19,
+        "seconds": 388800.0,
+        "cost": "elementalEmber:1600",
+        "xp": 5334.0
+      },
+      {
+        "level": 20,
+        "seconds": 432000.0,
+        "cost": "piercing:154799",
+        "xp": 7000.0
+      },
+      {
+        "level": 21,
+        "seconds": 518400.0,
+        "cost": "elementalEmber:1800",
+        "xp": 9143.0
+      },
+      {
+        "level": 22,
+        "seconds": 604800.0,
+        "cost": "piercing:219599",
+        "xp": 12000.0
+      },
+      {
+        "level": 23,
+        "seconds": 691200.0,
+        "cost": "elementalEmber:2000",
+        "xp": 16000.0
+      },
+      {
+        "level": 24,
+        "seconds": 864000.0,
+        "cost": "piercing:269232",
+        "xp": 17600.0
+      },
+      {
+        "level": 25,
+        "seconds": 864000.0,
+        "cost": "elementalEmber:2200",
+        "xp": 19200.0
+      },
+      {
+        "level": 26,
+        "seconds": 936000.0,
+        "cost": "piercing:340800",
+        "xp": 20800.0
+      },
+      {
+        "level": 27,
+        "seconds": 1080000.0,
+        "cost": "elementalEmber:2400",
+        "xp": 24000.0
+      },
+      {
+        "level": 28,
+        "seconds": 1152000.0,
+        "cost": "piercing:422592",
+        "xp": 25600.0
+      },
+      {
+        "level": 29,
+        "seconds": 1224000.0,
+        "cost": "elementalEmber:2600",
+        "xp": 27200.0
+      },
+      {
+        "level": 30,
+        "seconds": 1224000.0,
+        "cost": "piercing:504384",
+        "xp": 30400.0
+      },
+      {
+        "level": 31,
+        "seconds": 1370990.0,
+        "cost": "elementalEmber:2800",
+        "xp": 32000.0
+      },
+      {
+        "level": 32,
+        "seconds": 1468800.0,
+        "cost": "piercing:586176",
+        "xp": 33600.0
+      },
+      {
+        "level": 33,
+        "seconds": 1566720.0,
+        "cost": "elementalEmber:3000",
+        "xp": 33600.0
+      },
+      {
+        "level": 34,
+        "seconds": 1664640.0,
+        "cost": "piercing:667968",
+        "xp": 33600.0
+      },
+      {
+        "level": 35,
+        "seconds": 1762560.0,
+        "cost": "elementalEmber:3200",
+        "xp": 33600.0
+      },
+      {
+        "level": 36,
+        "seconds": 1762560.0,
+        "cost": "piercing:749760",
+        "xp": 33600.0
+      },
+      {
+        "level": 37,
+        "seconds": 1762560.0,
+        "cost": "elementalEmber:3400",
+        "xp": 33600.0
+      },
+      {
+        "level": 38,
+        "seconds": 1762560.0,
+        "cost": "piercing:831552",
+        "xp": 33600.0
+      },
+      {
+        "level": 39,
+        "seconds": 1762560.0,
+        "cost": "elementalEmber:3600",
+        "xp": 33600.0
+      },
+      {
+        "level": 40,
+        "seconds": 1762560.0,
+        "cost": "piercing:913344",
+        "xp": 33600.0
+      },
+      {
+        "level": 41,
+        "seconds": 2290604.0,
+        "cost": "elementalEmber:3800",
+        "xp": 35349.0
+      },
+      {
+        "level": 42,
+        "seconds": 2743903.0,
+        "cost": "piercing:995136",
+        "xp": 42345.0
+      },
+      {
+        "level": 43,
+        "seconds": 3197201.0,
+        "cost": "elementalEmber:4000",
+        "xp": 49340.0
+      },
+      {
+        "level": 44,
+        "seconds": 3650500.0,
+        "cost": "piercing:1076928",
+        "xp": 56335.0
+      },
+      {
+        "level": 45,
+        "seconds": 4103799.0,
+        "cost": "elementalEmber:4200",
+        "xp": 63331.0
+      },
+      {
+        "level": 46,
+        "seconds": 4177339.0,
+        "cost": "piercing:1158720",
+        "xp": 70326.0
+      },
+      {
+        "level": 47,
+        "seconds": 4314507.0,
+        "cost": "elementalEmber:4400",
+        "xp": 77321.0
+      },
+      {
+        "level": 48,
+        "seconds": 4553079.0,
+        "cost": "piercing:1240512",
+        "xp": 84317.0
+      },
+      {
+        "level": 49,
+        "seconds": 4602106.0,
+        "cost": "elementalEmber:4600",
+        "xp": 91312.0
+      },
+      {
+        "level": 50,
+        "seconds": 4777719.0,
+        "cost": "piercing:1322304",
+        "xp": 98307.0
+      },
+      {
+        "level": 51,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:4800",
+        "xp": 101805.0
+      },
+      {
+        "level": 52,
+        "seconds": 5000000.0,
+        "cost": "piercing:1363200",
+        "xp": 105303.0
+      },
+      {
+        "level": 53,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:5000",
+        "xp": 106000.0
+      },
+      {
+        "level": 54,
+        "seconds": 5000000.0,
+        "cost": "piercing:1404096",
+        "xp": 106000.0
+      },
+      {
+        "level": 55,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:5200",
+        "xp": 106000.0
+      },
+      {
+        "level": 56,
+        "seconds": 5000000.0,
+        "cost": "piercing:1444992",
+        "xp": 106000.0
+      },
+      {
+        "level": 57,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:5400",
+        "xp": 106000.0
+      },
+      {
+        "level": 58,
+        "seconds": 5000000.0,
+        "cost": "piercing:1485888",
+        "xp": 106000.0
+      },
+      {
+        "level": 59,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:5600",
+        "xp": 106000.0
+      },
+      {
+        "level": 60,
+        "seconds": 5000000.0,
+        "cost": "piercing:1526784",
+        "xp": 106000.0
+      },
+      {
+        "level": 61,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:5800",
+        "xp": 106000.0
+      },
+      {
+        "level": 62,
+        "seconds": 5000000.0,
+        "cost": "piercing:1772160",
+        "xp": 106000.0
+      },
+      {
+        "level": 63,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:6000",
+        "xp": 106000.0
+      },
+      {
+        "level": 64,
+        "seconds": 5000000.0,
+        "cost": "piercing:1813056",
+        "xp": 106000.0
+      },
+      {
+        "level": 65,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:6200",
+        "xp": 106000.0
+      },
+      {
+        "level": 66,
+        "seconds": 5000000.0,
+        "cost": "piercing:1853952",
+        "xp": 106000.0
+      },
+      {
+        "level": 67,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:6400",
+        "xp": 106000.0
+      },
+      {
+        "level": 68,
+        "seconds": 5000000.0,
+        "cost": "piercing:1894848",
+        "xp": 106000.0
+      },
+      {
+        "level": 69,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:6600",
+        "xp": 106000.0
+      },
+      {
+        "level": 70,
+        "seconds": 5000000.0,
+        "cost": "piercing:1935744",
+        "xp": 106000.0
+      },
+      {
+        "level": 71,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:6900",
+        "xp": 106000.0
+      },
+      {
+        "level": 72,
+        "seconds": 5000000.0,
+        "cost": "piercing:1976640",
+        "xp": 106000.0
+      },
+      {
+        "level": 73,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:7200",
+        "xp": 106000.0
+      },
+      {
+        "level": 74,
+        "seconds": 5000000.0,
+        "cost": "piercing:2017536",
+        "xp": 106000.0
+      },
+      {
+        "level": 75,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:7500",
+        "xp": 106000.0
+      },
+      {
+        "level": 76,
+        "seconds": 5000000.0,
+        "cost": "piercing:2058432",
+        "xp": 106000.0
+      },
+      {
+        "level": 77,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:7800",
+        "xp": 106000.0
+      },
+      {
+        "level": 78,
+        "seconds": 5000000.0,
+        "cost": "piercing:2109552",
+        "xp": 106000.0
+      },
+      {
+        "level": 79,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:8100",
+        "xp": 106000.0
+      },
+      {
+        "level": 80,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160672",
+        "xp": 106000.0
+      },
+      {
+        "level": 81,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:8400",
+        "xp": 106000.0
+      },
+      {
+        "level": 82,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160672",
+        "xp": 106000.0
+      },
+      {
+        "level": 83,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:8700",
+        "xp": 106000.0
+      },
+      {
+        "level": 84,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160672",
+        "xp": 106000.0
+      },
+      {
+        "level": 85,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:9000",
+        "xp": 106000.0
+      },
+      {
+        "level": 86,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160672",
+        "xp": 106000.0
+      },
+      {
+        "level": 87,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:9300",
+        "xp": 106000.0
+      },
+      {
+        "level": 88,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160672",
+        "xp": 106000.0
+      },
+      {
+        "level": 89,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:9600",
+        "xp": 106000.0
+      },
+      {
+        "level": 90,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160672",
+        "xp": 106000.0
+      },
+      {
+        "level": 91,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:9900",
+        "xp": 106000.0
+      },
+      {
+        "level": 92,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160672",
+        "xp": 106000.0
+      },
+      {
+        "level": 93,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:10200",
+        "xp": 106000.0
+      },
+      {
+        "level": 94,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160672",
+        "xp": 106000.0
+      },
+      {
+        "level": 95,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:10500",
+        "xp": 106000.0
+      },
+      {
+        "level": 96,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160672",
+        "xp": 106000.0
+      },
+      {
+        "level": 97,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:10800",
+        "xp": 106000.0
+      },
+      {
+        "level": 98,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160672",
+        "xp": 106000.0
+      },
+      {
+        "level": 99,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:11100",
+        "xp": 106000.0
+      },
+      {
+        "level": 100,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160672",
+        "xp": 106000.0
+      },
+      {
+        "level": 101,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:11400",
+        "xp": 106000.0
+      },
+      {
+        "level": 102,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160672",
+        "xp": 106000.0
+      },
+      {
+        "level": 103,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:11700",
+        "xp": 106000.0
+      },
+      {
+        "level": 104,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160672",
+        "xp": 106000.0
+      },
+      {
+        "level": 105,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:12000",
+        "xp": 106000.0
+      },
+      {
+        "level": 106,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160672",
+        "xp": 106000.0
+      },
+      {
+        "level": 107,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:12300",
+        "xp": 106000.0
+      },
+      {
+        "level": 108,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160672",
+        "xp": 106000.0
+      },
+      {
+        "level": 109,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:12600",
+        "xp": 106000.0
+      },
+      {
+        "level": 110,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160672",
+        "xp": 106000.0
+      },
+      {
+        "level": 111,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:12900",
+        "xp": 106000.0
+      },
+      {
+        "level": 112,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160672",
+        "xp": 106000.0
+      },
+      {
+        "level": 113,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:13200",
+        "xp": 106000.0
+      },
+      {
+        "level": 114,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160672",
+        "xp": 106000.0
+      },
+      {
+        "level": 115,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:13500",
+        "xp": 106000.0
+      },
+      {
+        "level": 116,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160672",
+        "xp": 106000.0
+      },
+      {
+        "level": 117,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:13800",
+        "xp": 106000.0
+      },
+      {
+        "level": 118,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160672",
+        "xp": 106000.0
+      },
+      {
+        "level": 119,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:14100",
+        "xp": 106000.0
+      },
+      {
+        "level": 120,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160672",
+        "xp": 106000.0
+      },
+      {
+        "level": 121,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:14400",
+        "xp": 106000.0
+      },
+      {
+        "level": 122,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160673",
+        "xp": 106000.0
+      },
+      {
+        "level": 123,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:14700",
+        "xp": 106000.0
+      },
+      {
+        "level": 124,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160674",
+        "xp": 106000.0
+      },
+      {
+        "level": 125,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:15000",
+        "xp": 106000.0
+      },
+      {
+        "level": 126,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160675",
+        "xp": 106000.0
+      },
+      {
+        "level": 127,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:15300",
+        "xp": 106000.0
+      },
+      {
+        "level": 128,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160676",
+        "xp": 106000.0
+      },
+      {
+        "level": 129,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:15600",
+        "xp": 106000.0
+      },
+      {
+        "level": 130,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160677",
+        "xp": 106000.0
+      },
+      {
+        "level": 131,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:15900",
+        "xp": 106000.0
+      },
+      {
+        "level": 132,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160678",
+        "xp": 106000.0
+      },
+      {
+        "level": 133,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:16200",
+        "xp": 106000.0
+      },
+      {
+        "level": 134,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160679",
+        "xp": 106000.0
+      },
+      {
+        "level": 135,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:16500",
+        "xp": 106000.0
+      },
+      {
+        "level": 136,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160680",
+        "xp": 106000.0
+      },
+      {
+        "level": 137,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:16800",
+        "xp": 106000.0
+      },
+      {
+        "level": 138,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160681",
+        "xp": 106000.0
+      },
+      {
+        "level": 139,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:17100",
+        "xp": 106000.0
+      },
+      {
+        "level": 140,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160682",
+        "xp": 106000.0
+      },
+      {
+        "level": 141,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:17400",
+        "xp": 106000.0
+      },
+      {
+        "level": 142,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160683",
+        "xp": 106000.0
+      },
+      {
+        "level": 143,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:17700",
+        "xp": 106000.0
+      },
+      {
+        "level": 144,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160684",
+        "xp": 106000.0
+      },
+      {
+        "level": 145,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:18000",
+        "xp": 106000.0
+      },
+      {
+        "level": 146,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160685",
+        "xp": 106000.0
+      },
+      {
+        "level": 147,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:18300",
+        "xp": 106000.0
+      },
+      {
+        "level": 148,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160686",
+        "xp": 106000.0
+      },
+      {
+        "level": 149,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:18600",
+        "xp": 106000.0
+      },
+      {
+        "level": 150,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160687",
+        "xp": 106000.0
+      },
+      {
+        "level": 151,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:18900",
+        "xp": 106000.0
+      },
+      {
+        "level": 152,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160688",
+        "xp": 106000.0
+      },
+      {
+        "level": 153,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:18901",
+        "xp": 106000.0
+      },
+      {
+        "level": 154,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160689",
+        "xp": 106000.0
+      },
+      {
+        "level": 155,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:18902",
+        "xp": 106000.0
+      },
+      {
+        "level": 156,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160690",
+        "xp": 106000.0
+      },
+      {
+        "level": 157,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:19202",
+        "xp": 106000.0
+      },
+      {
+        "level": 158,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160691",
+        "xp": 106000.0
+      },
+      {
+        "level": 159,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:19502",
+        "xp": 106000.0
+      },
+      {
+        "level": 160,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160692",
+        "xp": 106000.0
+      },
+      {
+        "level": 161,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:19802",
+        "xp": 106000.0
+      },
+      {
+        "level": 162,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160693",
+        "xp": 106000.0
+      },
+      {
+        "level": 163,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:20102",
+        "xp": 106000.0
+      },
+      {
+        "level": 164,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160694",
+        "xp": 106000.0
+      },
+      {
+        "level": 165,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:20402",
+        "xp": 106000.0
+      },
+      {
+        "level": 166,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160695",
+        "xp": 106000.0
+      },
+      {
+        "level": 167,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:20702",
+        "xp": 106000.0
+      },
+      {
+        "level": 168,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160696",
+        "xp": 106000.0
+      },
+      {
+        "level": 169,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:21002",
+        "xp": 106000.0
+      },
+      {
+        "level": 170,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160697",
+        "xp": 106000.0
+      },
+      {
+        "level": 171,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:21302",
+        "xp": 106000.0
+      },
+      {
+        "level": 172,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160698",
+        "xp": 106000.0
+      },
+      {
+        "level": 173,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:21602",
+        "xp": 106000.0
+      },
+      {
+        "level": 174,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160699",
+        "xp": 106000.0
+      },
+      {
+        "level": 175,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:21902",
+        "xp": 106000.0
+      },
+      {
+        "level": 176,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160700",
+        "xp": 106000.0
+      },
+      {
+        "level": 177,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:22202",
+        "xp": 106000.0
+      },
+      {
+        "level": 178,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160701",
+        "xp": 106000.0
+      },
+      {
+        "level": 179,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:22502",
+        "xp": 106000.0
+      },
+      {
+        "level": 180,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160702",
+        "xp": 106000.0
+      },
+      {
+        "level": 181,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:22802",
+        "xp": 106000.0
+      },
+      {
+        "level": 182,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160703",
+        "xp": 106000.0
+      },
+      {
+        "level": 183,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:23102",
+        "xp": 106000.0
+      },
+      {
+        "level": 184,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160704",
+        "xp": 106000.0
+      },
+      {
+        "level": 185,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:23402",
+        "xp": 106000.0
+      },
+      {
+        "level": 186,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160705",
+        "xp": 106000.0
+      },
+      {
+        "level": 187,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:23702",
+        "xp": 106000.0
+      },
+      {
+        "level": 188,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160706",
+        "xp": 106000.0
+      },
+      {
+        "level": 189,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:24002",
+        "xp": 106000.0
+      },
+      {
+        "level": 190,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160707",
+        "xp": 106000.0
+      },
+      {
+        "level": 191,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:24302",
+        "xp": 106000.0
+      },
+      {
+        "level": 192,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160708",
+        "xp": 106000.0
+      },
+      {
+        "level": 193,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:24602",
+        "xp": 106000.0
+      },
+      {
+        "level": 194,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160709",
+        "xp": 106000.0
+      },
+      {
+        "level": 195,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:24902",
+        "xp": 106000.0
+      },
+      {
+        "level": 196,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160710",
+        "xp": 106000.0
+      },
+      {
+        "level": 197,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:25202",
+        "xp": 106000.0
+      },
+      {
+        "level": 198,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160711",
+        "xp": 106000.0
+      },
+      {
+        "level": 199,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:25502",
+        "xp": 106000.0
+      },
+      {
+        "level": 200,
+        "seconds": 5000000.0,
+        "cost": "piercing:2160712",
+        "xp": 106000.0
+      },
+      {
+        "level": 201,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:25824",
+        "xp": 108120.0
+      },
+      {
+        "level": 202,
+        "seconds": 5000000.0,
+        "cost": "piercing:2317365",
+        "xp": 108120.0
+      },
+      {
+        "level": 203,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:26146",
+        "xp": 108120.0
+      },
+      {
+        "level": 204,
+        "seconds": 5000000.0,
+        "cost": "piercing:2317365",
+        "xp": 108120.0
+      },
+      {
+        "level": 205,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:26468",
+        "xp": 108120.0
+      },
+      {
+        "level": 206,
+        "seconds": 5000000.0,
+        "cost": "piercing:2317365",
+        "xp": 108120.0
+      },
+      {
+        "level": 207,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:26790",
+        "xp": 108120.0
+      },
+      {
+        "level": 208,
+        "seconds": 5000000.0,
+        "cost": "piercing:2317365",
+        "xp": 108120.0
+      },
+      {
+        "level": 209,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:27112",
+        "xp": 108120.0
+      },
+      {
+        "level": 210,
+        "seconds": 5000000.0,
+        "cost": "piercing:2317365",
+        "xp": 108120.0
+      },
+      {
+        "level": 211,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:27434",
+        "xp": 108120.0
+      },
+      {
+        "level": 212,
+        "seconds": 5000000.0,
+        "cost": "piercing:2317365",
+        "xp": 108120.0
+      },
+      {
+        "level": 213,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:27756",
+        "xp": 108120.0
+      },
+      {
+        "level": 214,
+        "seconds": 5000000.0,
+        "cost": "piercing:2317365",
+        "xp": 108120.0
+      },
+      {
+        "level": 215,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:28078",
+        "xp": 108120.0
+      },
+      {
+        "level": 216,
+        "seconds": 5000000.0,
+        "cost": "piercing:2317365",
+        "xp": 108120.0
+      },
+      {
+        "level": 217,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:28400",
+        "xp": 108120.0
+      },
+      {
+        "level": 218,
+        "seconds": 5000000.0,
+        "cost": "piercing:2317365",
+        "xp": 108120.0
+      },
+      {
+        "level": 219,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:28722",
+        "xp": 108120.0
+      },
+      {
+        "level": 220,
+        "seconds": 5000000.0,
+        "cost": "piercing:2317365",
+        "xp": 108120.0
+      },
+      {
+        "level": 221,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:29044",
+        "xp": 108120.0
+      },
+      {
+        "level": 222,
+        "seconds": 5000000.0,
+        "cost": "piercing:2317365",
+        "xp": 108120.0
+      },
+      {
+        "level": 223,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:29366",
+        "xp": 108120.0
+      },
+      {
+        "level": 224,
+        "seconds": 5000000.0,
+        "cost": "piercing:2317365",
+        "xp": 108120.0
+      },
+      {
+        "level": 225,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:29688",
+        "xp": 108120.0
+      },
+      {
+        "level": 226,
+        "seconds": 5000000.0,
+        "cost": "piercing:2485375",
+        "xp": 110282.0
+      },
+      {
+        "level": 227,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:30033",
+        "xp": 110282.0
+      },
+      {
+        "level": 228,
+        "seconds": 5000000.0,
+        "cost": "piercing:2485375",
+        "xp": 110282.0
+      },
+      {
+        "level": 229,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:30378",
+        "xp": 110282.0
+      },
+      {
+        "level": 230,
+        "seconds": 5000000.0,
+        "cost": "piercing:2485375",
+        "xp": 110282.0
+      },
+      {
+        "level": 231,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:30723",
+        "xp": 110282.0
+      },
+      {
+        "level": 232,
+        "seconds": 5000000.0,
+        "cost": "piercing:2485375",
+        "xp": 110282.0
+      },
+      {
+        "level": 233,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:31068",
+        "xp": 110282.0
+      },
+      {
+        "level": 234,
+        "seconds": 5000000.0,
+        "cost": "piercing:2485375",
+        "xp": 110282.0
+      },
+      {
+        "level": 235,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:31413",
+        "xp": 110282.0
+      },
+      {
+        "level": 236,
+        "seconds": 5000000.0,
+        "cost": "piercing:2485375",
+        "xp": 110282.0
+      },
+      {
+        "level": 237,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:31758",
+        "xp": 110282.0
+      },
+      {
+        "level": 238,
+        "seconds": 5000000.0,
+        "cost": "piercing:2485375",
+        "xp": 110282.0
+      },
+      {
+        "level": 239,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:32103",
+        "xp": 110282.0
+      },
+      {
+        "level": 240,
+        "seconds": 5000000.0,
+        "cost": "piercing:2485375",
+        "xp": 110282.0
+      },
+      {
+        "level": 241,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:32448",
+        "xp": 110282.0
+      },
+      {
+        "level": 242,
+        "seconds": 5000000.0,
+        "cost": "piercing:2485375",
+        "xp": 110282.0
+      },
+      {
+        "level": 243,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:32793",
+        "xp": 110282.0
+      },
+      {
+        "level": 244,
+        "seconds": 5000000.0,
+        "cost": "piercing:2485375",
+        "xp": 110282.0
+      },
+      {
+        "level": 245,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:33138",
+        "xp": 110282.0
+      },
+      {
+        "level": 246,
+        "seconds": 5000000.0,
+        "cost": "piercing:2485375",
+        "xp": 110282.0
+      },
+      {
+        "level": 247,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:33483",
+        "xp": 110282.0
+      },
+      {
+        "level": 248,
+        "seconds": 5000000.0,
+        "cost": "piercing:2485375",
+        "xp": 110282.0
+      },
+      {
+        "level": 249,
+        "seconds": 5000000.0,
+        "cost": "elementalEmber:33828",
+        "xp": 110282.0
+      },
+      {
+        "level": 250,
+        "seconds": 5000000.0,
+        "cost": "piercing:2485375",
+        "xp": 110282.0
+      }
+    ]
+  },
+  "previews": [
+    {
+      "sourceType": "Electro-Flak Tower",
+      "sourceLevel": 41,
+      "quantity": 1,
+      "resultLevel": 203,
+      "xpDebt": 280619
+    },
+    {
+      "sourceType": "Electro-Flak Tower",
+      "sourceLevel": 41,
+      "quantity": 2,
+      "resultLevel": 206,
+      "xpDebt": 561238
+    },
+    {
+      "sourceType": "Electro-Flak Tower",
+      "sourceLevel": 41,
+      "quantity": 3,
+      "resultLevel": 208,
+      "xpDebt": 949977
+    },
+    {
+      "sourceType": "Charged Volt Tower",
+      "sourceLevel": 122,
+      "quantity": 1,
+      "resultLevel": 208,
+      "xpDebt": 8004342
+    }
+  ]
+}
