@@ -6692,3 +6692,12 @@ body.onyx-modal-open {
     transition: none;
   }
 }
+
+/* Target-level merge search: consistent touch controls on narrow screens. */
+.obc-target-planner .obc-form-row { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
+.obc-target-planner label { display:grid; gap:8px; min-width:0; color:#d5dce3; }
+.obc-target-planner input,.obc-target-planner select { box-sizing:border-box; width:100%; min-width:0; min-height:44px; padding:10px; border:1px solid #465463; border-radius:10px; background:#0b1118; color:#eef2f6; font:inherit; }
+.obc-target-planner p { line-height:1.6; overflow-wrap:anywhere; }
+.obc-target-planner h4 { margin:0 0 8px; }
+.obc-target-planner #obcTargetResults article { margin-top:14px; }
+@media(max-width:600px) { .obc-target-planner .obc-form-row { grid-template-columns:1fr; } }
