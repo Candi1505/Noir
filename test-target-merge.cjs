@@ -6,7 +6,7 @@ sandbox.window = sandbox;
 vm.createContext(sandbox);
 for (const file of ['base-adviser-catalog-towers.js', 'onyx-base-command.js']) vm.runInContext(fs.readFileSync(file,'utf8'),sandbox);
 const api = sandbox.OnyxBaseCommand;
-const input = { destinationType:'Ice Flak Tower', destinationLevel:142, targetLevel:185, maximumTowerLevel:185, maxQuantity:20 };
+const input = { destinationType:'Ice Flak Tower', destinationLevel:142, targetLevel:185, maximumTowerLevel:185, maxQuantity:20, includeMixed:false };
 for (const current of [142,182]) {
  const r=api.planTargetMerge({...input,destinationLevel:current});
  assert.equal(r.ok,true,r.message); assert.ok(r.checked>0); assert.ok(r.options.length>0);
@@ -34,7 +34,7 @@ assert.equal(forbidden.ok,true); assert.equal(forbidden.options.length,0,'Ember 
 // Independent small catalogue: time-only rubble, exact boundary and donor limit.
 const rows=[1,2,3,4].map(level=>({level,seconds:100,xp:10,cost:'piercing:5'}));
 sandbox.NoirBaseCatalog={towerLevels:{Keep:rows,Donor:rows},towers:[]};
-const tiny={destinationType:'Keep',destinationLevel:1,targetLevel:3,maximumTowerLevel:4,maxQuantity:2,sourceType:'Donor'};
+const tiny={destinationType:'Keep',destinationLevel:1,targetLevel:3,maximumTowerLevel:4,maxQuantity:2,sourceType:'Donor',includeMixed:false};
 const result=api.planTargetMerge(tiny);
 assert.equal(result.ok,true); assert.equal(result.options.length,2);
 assert.equal(result.options[0].sourceLevel,3); assert.equal(result.options[0].quantity,2);
