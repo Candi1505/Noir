@@ -831,6 +831,13 @@
       );
     }
 
+    // Proxyman can export newest-first. Select snapshots in actual time order.
+    parsed = { ...parsed, log: { ...parsed.log, entries: parsed.log.entries
+      .map((entry, order) => ({ entry, order }))
+      .sort((a, b) => {
+        const at = Date.parse(a.entry.startedDateTime), bt = Date.parse(b.entry.startedDateTime);
+        return Number.isFinite(at) && Number.isFinite(bt) ? at - bt || a.order - b.order : a.order - b.order;
+      }).map(item => item.entry) } };
     const extracted = extractAboutV2FromHar(parsed);
     const eventKey =
       findEventKey(extracted.payload);
@@ -879,6 +886,7 @@
           arcaneBonusVerification
       },
       diagnostics: {
+        sourceTimestamp: parsed.log.entries[extracted.entryIndex]?.startedDateTime || null,
         sourceEntryIndex: extracted.entryIndex,
         sourceUrl: extracted.url,
         score: extracted.score,

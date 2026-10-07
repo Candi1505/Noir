@@ -18,7 +18,7 @@
     freedom: "F",
     arcane: "A"
   };
-  const STORAGE_PREFIX = "chestCompanionDoubleArmory";
+  const STORAGE_PREFIX = "chestCompanionDoubleArmoryV2";
   const PREFERENCE_LABELS = {
     favourite: "Favourite",
     wanted: "Wanted",
@@ -218,11 +218,16 @@
   }
 
   function getData() {
-    const eventData =
-      window.LivePredictorEngine?.getEventData?.() ||
-      window.currentEventData ||
-      null;
-    return eventData?.doubleArmory || null;
+    const event = window.LivePredictorEngine?.getEventData?.() || window.currentEventData;
+    const bundled = window.OnyxDoubleArmoryEvent;
+    const now = Date.now();
+    if (bundled && now >= Date.parse(bundled.validFrom) && now < Date.parse(bundled.validUntil)
+        && (!event?.doubleArmory?.ready || !event.importedAt || Date.parse(event.importedAt) <= Date.parse(bundled.validFrom))) return bundled;
+    if (event?.doubleArmory?.ready) {
+      if (bundled && now >= Date.parse(bundled.validUntil) && event.doubleArmory.sides?.assault?.eventKey === bundled.sides.assault.eventKey) return null;
+      return event.doubleArmory;
+    }
+    return null;
   }
 
   function getAvailableChestTypes(data = getData()) {
@@ -234,99 +239,13 @@
       : [];
   }
 
-  function normaliseIndex(value, length) {
-    if (!length) return 0;
-    const numeric = Number(value);
-    const safe = Number.isFinite(numeric) ? Math.floor(numeric) : 0;
-    return ((safe % length) + length) % length;
+  function decorate(reward) {
+    return { ...reward, name: reward.name || humaniseCode(reward.code),
+      score: /mythic/i.test(reward.rarity) ? 50 : /legendary/i.test(reward.rarity) ? 30 : 10 };
   }
 
-  function take(deckKey, side, cursors) {
-    const deck = side?.decks?.[deckKey];
-    if (!Array.isArray(deck) || !deck.length) return null;
-    const index = normaliseIndex(
-      cursors[deckKey] ?? side?.deckIndices?.[deckKey],
-      deck.length
-    );
-    cursors[deckKey] = (index + 1) % deck.length;
-    return { deckKey, index, value: deck[index] };
-  }
-
-  function resolve(deckKey, value, side, cursors, depth = 0) {
-    if (depth > 8) return null;
-    const definitions = side?.drops?.[deckKey];
-    const definition = Array.isArray(definitions)
-      ? definitions[Number(value)]
-      : null;
-    if (!definition) return null;
-
-    const nestedKey = String(
-      definition.id || definition.deck || definition.pool || ""
-    );
-    if (Array.isArray(side?.decks?.[nestedKey])) {
-      const nested = take(nestedKey, side, cursors);
-      return nested
-        ? resolve(nestedKey, nested.value, side, cursors, depth + 1)
-        : null;
-    }
-
-    const code = String(definition.id || definition.code || "");
-    const rarity = String(
-      definition.drop_type ||
-      (deckKey.includes("mythic") ? "Mythic" :
-        deckKey.includes("legendary") ? "Legendary" : "Epic")
-    );
-    return {
-      name: humaniseCode(code),
-      code,
-      amount: Number.isFinite(Number(definition.mu)) ? Number(definition.mu) : null,
-      rarity,
-      score: rarity.toLowerCase() === "mythic" ? 50 :
-        rarity.toLowerCase() === "legendary" ? 30 : 10
-    };
-  }
-
-  function isFavourite(reward) {
-    return /sigil|token|fragment|shard|mythic/i.test(
-      `${reward?.name || ""} ${reward?.rarity || ""}`
-    );
-  }
-
-  function buildSequence(side, chestType = selectedChestType, count = 100) {
-    const chest = side?.chests?.[chestType];
-    if (!side?.ready || !chest?.ready) return [];
-    const mainKey = chest.mainKey;
-    const mainDeck = side.decks?.[mainKey];
-    if (!Array.isArray(mainDeck) || !mainDeck.length) return [];
-
-    const cursors = { ...side.deckIndices };
-    const start = normaliseIndex(side.deckIndices?.[mainKey], mainDeck.length);
-    const rows = [];
-
-    for (let offset = 0; offset < count; offset += 1) {
-      const mainIndex = (start + offset) % mainDeck.length;
-      let reward = null;
-      try {
-        reward = resolve(mainKey, mainDeck[mainIndex], side, cursors);
-      } catch (error) {
-        console.warn("[Double Armory] One reward could not be resolved.", error);
-      }
-      reward ||= {
-          name: "Reward unavailable",
-          code: "",
-          amount: null,
-          rarity: "Unknown",
-          score: 0
-        };
-      rows.push({
-        number: offset + 1,
-        deckPosition: mainIndex + 1,
-        ...reward,
-        favourite: isFavourite(reward),
-        bonusAfter: (offset + 1) % (chest.bonusEvery || 30) === 0
-      });
-    }
-    return rows;
+  function buildSequence(side, chestType = selectedChestType) {
+    return window.DoubleArmoryCore.catalogue(side, chestType).map(decorate);
   }
 
   function rewardSignature(reward) {
@@ -345,30 +264,14 @@
     return rewardSignature(first) === rewardSignature(second);
   }
 
-  function solvePlayerPosition(assault, breeding, observations = chestState().observations) {
-    const length = Math.min(assault.length, breeding.length);
-    if (!length || !observations.length) {
-      return { solved: false, candidates: [], nextIndex: null, confidence: 0 };
-    }
-    const candidates = [];
-    for (let start = 0; start < length; start += 1) {
-      const matches = observations.every((observation, offset) => {
-        const index = (start + offset) % length;
-        const sequence = observation.armory === "breeding" ? breeding : assault;
-        return rewardsEqual(sequence[index], observation.reward);
-      });
-      if (matches) candidates.push(start);
-    }
-    const solved = candidates.length === 1;
-    const nextIndex = solved
-      ? (candidates[0] + observations.length) % length
-      : null;
-    return {
-      solved,
-      candidates,
-      nextIndex,
-      confidence: solved ? 100 : candidates.length ? Math.max(5, Math.round(100 / candidates.length)) : 0
-    };
+  function solvePlayerPosition() {
+    const data = getData(), state = chestState();
+    const result = window.DoubleArmoryCore.solve(data, selectedChestType, state.observations, state.initialState || {});
+    const forecasts = Object.fromEntries(['assault', 'breeding'].map(side => [side,
+      window.DoubleArmoryCore.forecast(data, selectedChestType, result, side).map(decorate)]));
+    return { ...result, forecasts, candidates: result.states || [],
+      solved: forecasts.assault[0]?.exact === true && forecasts.breeding[0]?.exact === true,
+      nextIndex: 0 };
   }
 
   function preferenceFor(reward) {
@@ -380,45 +283,14 @@
   }
 
   function recommendation(assault, breeding, solution) {
-    if (!solution.solved) {
-      if (!chestState().observations.length) {
-        return { title: "Record a reward to locate your position", detail: "Choose the armory you opened and the exact reward you received." };
-      }
-      if (!solution.candidates.length) {
-        return { title: "Sequence does not match", detail: "Check the last armory and reward, then undo it and try again." };
-      }
-      return {
-        title: `${solution.candidates.length} possible positions remain`,
-        detail: "Record the next consecutive reward to narrow the sequence further."
-      };
-    }
-    const left = assault[solution.nextIndex];
-    const right = breeding[solution.nextIndex];
-    if (!left || !right) return { title: "Position solved", detail: "Upcoming rewards are not available." };
-    const leftPreference = preferenceFor(left);
-    const rightPreference = preferenceFor(right);
-    const leftScore = scoreReward(left);
-    const rightScore = scoreReward(right);
-    if (leftPreference === "never" && rightPreference === "never") {
-      return { title: "Both next rewards are on your Never list", detail: "Neither armory is recommended. Compare the following rows before opening." };
-    }
-    if (leftScore === rightScore) {
-      return { title: "Either armory is equally suitable", detail: `${left.name} and ${right.name} have the same personal strategy score.` };
-    }
-    const armory = leftScore > rightScore ? "Assault" : "Breeding";
-    const chosen = leftScore > rightScore ? left : right;
-    const other = leftScore > rightScore ? right : left;
-    const chosenPreference = preferenceFor(chosen);
-    const reason = chosenPreference === "favourite" ? "a Favourite reward" :
-      chosenPreference === "wanted" ? "a Wanted reward" :
-      preferenceFor(other) === "avoid" || preferenceFor(other) === "never" ? `it avoids ${other.name}` :
-      `${chosen.rarity} has the stronger rarity value`;
-    return { title: `Open ${armory} next`, detail: `${chosen.name} is recommended because ${reason}.` };
-  }
-
-  function rotateSequence(sequence, startIndex) {
-    if (!Number.isInteger(startIndex)) return sequence;
-    return sequence.map((_, offset) => sequence[(startIndex + offset) % sequence.length]);
+    if (!solution.matched) return { title: 'Sequence needs checking', detail: solution.reason };
+    if (!chestState().observations.length) return { title: 'Import your capture or record a reward', detail: 'Your position is unknown. No importing administrator position is used for you.' };
+    if (!solution.solved) return { title: 'Next reward is not yet resolved for both armouries', detail: 'Only rewards agreed on by every remaining pool position are shown. More consecutive observations may narrow the possibilities.' };
+    const left = assault[0], right = breeding[0];
+    if (preferenceFor(left) === 'never' && preferenceFor(right) === 'never') return { title: 'Both next rewards are on your Never list', detail: 'Neither armoury is recommended.' };
+    const difference = scoreReward(left) - scoreReward(right);
+    return { title: difference === 0 ? 'Both next rewards have equal preference scores' : `Next choice: ${difference > 0 ? 'Assault' : 'Breeding'}`,
+      detail: 'Both next rewards agree across the positions consistent with your recorded history. This is a deck-model forecast, not a guarantee against game changes.' };
   }
 
   function rewardOptions(sequence) {
@@ -438,6 +310,7 @@
     const style = document.createElement("style");
     style.id = "noirDoubleArmoryStyles";
     style.textContent = `
+      #${OVERLAY_ID},#${OVERLAY_ID} *{box-sizing:border-box}#daCaptureFile{width:100%;max-width:100%}.da-name{overflow-wrap:anywhere}
       #${OVERLAY_ID}{position:fixed;inset:0;z-index:2147483647;background:radial-gradient(circle at top,#17130d 0,#050505 34%);color:#e8e5de;overflow:auto;font-family:inherit;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
       .da-shell{width:min(1100px,100%);margin:auto;padding:18px}
       .da-top{position:sticky;top:0;z-index:3;display:flex;justify-content:space-between;gap:14px;align-items:center;padding:18px;background:rgba(5,5,5,.97);border-bottom:1px solid #a8873a;box-shadow:0 12px 30px rgba(0,0,0,.45)}
@@ -470,7 +343,7 @@
       <div class="da-cell da-${escapeHTML(rarity)} ${reward.favourite ? "da-favourite" : ""} ${reward.bonusAfter ? "da-bonus" : ""} ${isNext ? "da-next" : ""}">
         <div class="da-reward">
           <div class="da-name">${escapeHTML(reward.name)}</div>
-          <div class="da-meta">${escapeHTML(reward.rarity)} • sequence ${formatNumber(reward.deckPosition)}/100</div>
+          <div class="da-meta">${escapeHTML(reward.rarity || "Unknown")} • ${reward.exact ? "Model forecast" : "More evidence needed"}</div>
           <div class="da-amount">${reward.amount === null ? "—" : formatNumber(reward.amount)}</div>
         </div>
       </div>`;
@@ -522,10 +395,10 @@
       const assault = buildSequence(data.sides.assault, selectedChestType);
       const breeding = buildSequence(data.sides.breeding, selectedChestType);
       const solution = solvePlayerPosition(assault, breeding);
-      const strategy = recommendation(assault, breeding, solution);
-      const displayStart = solution.solved ? solution.nextIndex : 0;
-      const displayAssault = rotateSequence(assault, displayStart);
-      const displayBreeding = rotateSequence(breeding, displayStart);
+      const displayAssault = solution.forecasts.assault;
+      const displayBreeding = solution.forecasts.breeding;
+      
+      const strategy = recommendation(displayAssault, displayBreeding, solution);
       const observations = chestState().observations;
       const defaultArmory = "assault";
       const initialOptions = rewardOptions(assault);
@@ -543,8 +416,10 @@
         </nav>
         <section class="da-solver">
           <p class="da-eyebrow">PERSONAL DA PREDICTOR</p>
-          <h2>${solution.solved ? `Position located — next is ${displayStart + 1}` : "Locate your position"}</h2>
-          <div class="da-note">Record consecutive rewards and which armory they came from. Your progress is kept separate for the signed-in player on this device.</div>
+          <h2>${solution.solved ? "Next rewards resolved" : "Locate your position"}</h2>
+          <div class="da-note">Record every opening in order, including bonus claims. Bulk result cards may be sorted: import a capture for batch order. Progress stays with the signed-in player on this device.</div>
+          <label class="da-field"><span>PRIVATE CAPTURE (.HAR OR .ZIP)</span><input id="daCaptureFile" type="file" accept=".har,.json,.zip"><span id="daImportStatus" role="status">Verified positions are restored locally after replaying your captured drops.</span></label>
+          <label class="da-field"><span><input id="daIsBonus" type="checkbox"> This was a bonus claim</span></label>
           <div class="da-solver-grid">
             <div class="da-field"><span>ARMORY OPENED</span><div class="da-armory-choice"><button class="da-armory" type="button" data-armory="assault" aria-selected="true">◆ Assault</button><button class="da-armory" type="button" data-armory="breeding" aria-selected="false">✦ Breeding</button></div></div>
             <label class="da-field"><span>REWARD RECEIVED</span><select id="daRewardSelect" class="da-select">${initialOptions.map(optionMarkup).join("")}</select></label>
@@ -552,16 +427,16 @@
           </div>
           <div class="da-status">
             <div class="da-stat"><strong>${observations.length}</strong><span>RECORDED</span></div>
-            <div class="da-stat"><strong>${solution.candidates.length}</strong><span>MATCHES</span></div>
-            <div class="da-stat"><strong>${solution.confidence}%</strong><span>CONFIDENCE</span></div>
+            <div class="da-stat"><strong>${solution.candidates.length}</strong><span>MODEL STATES</span></div>
+            <div class="da-stat"><strong>${chestState().captureVerified ? "Replayed" : "Matching"}</strong><span>EVIDENCE</span></div>
           </div>
-          <div class="da-history">${observations.length ? observations.map((observation, index) => `<span class="da-observation">${index + 1}. ${observation.armory === "assault" ? "◆" : "✦"} ${escapeHTML(observation.reward.name)}${observation.reward.amount === null ? "" : ` ${formatNumber(observation.reward.amount)}`}</span>`).join("") : `<span class="da-note">No DA rewards recorded yet.</span>`}</div>
+          <div class="da-history">${observations.length ? observations.map((observation, index) => `<span class="da-observation">${index + 1}${observation.isBonus ? " bonus" : ""}. ${observation.armory === "assault" ? "◆" : "✦"} ${escapeHTML(observation.reward.name || humaniseCode(observation.reward.code))}${observation.reward.amount === null ? "" : ` ${formatNumber(observation.reward.amount)}`}</span>`).join("") : `<span class="da-note">No DA rewards recorded yet.</span>`}</div>
           <div class="da-controls"><button id="daUndoButton" class="da-action da-action-secondary" type="button" ${observations.length ? "" : "disabled"}>Undo last</button><button id="daResetButton" class="da-action da-action-secondary" type="button" ${observations.length ? "" : "disabled"}>Reset</button></div>
         </section>
         <section class="da-summary">
           <div class="da-recommend">${escapeHTML(strategy.title)}</div>
           <div class="da-note">${escapeHTML(strategy.detail)}</div>
-          <div class="da-note">Comparing ${escapeHTML(chest?.label || selectedChestType)} rewards. The green line marks each ${chest?.bonusEvery || 30}-chest bonus point.</div>
+          <div class="da-note">Each column assumes all following regular openings use that armoury, with no bonus claims in between. Switching armouries or claiming a bonus changes the later rows; record it to recalculate. The list stops when the next reward is ambiguous.</div>
           <div class="da-key" aria-label="Reward rarity colour key">
             <span class="da-key-item"><i class="da-key-swatch da-key-epic"></i>Violet — Epic</span>
             <span class="da-key-item"><i class="da-key-swatch da-key-legendary"></i>Gold — Legendary</span>
@@ -574,10 +449,10 @@
         </details>
         <div class="da-table">
           <div class="da-cell da-head">#</div><div class="da-cell da-head da-head-assault">◆ Assault</div><div class="da-cell da-head da-head-breeding">✦ Breeding</div>
-          ${displayAssault.map((left, index) => `
-            <div class="da-cell da-number">${index + 1}${left.bonusAfter ? " · BONUS" : ""}</div>
-            ${rewardMarkup(left, solution.solved && index === 0)}${rewardMarkup(displayBreeding[index], solution.solved && index === 0)}
-          `).join("")}
+          ${Array.from({length: Math.max(displayAssault.length, displayBreeding.length)}, (_, index) => { const left = displayAssault[index] || {name:"Unresolved",exact:false}; return `
+            <div class="da-cell da-number">${index + 1}</div>
+            ${rewardMarkup(left, left.exact && index === 0)}${rewardMarkup(displayBreeding[index] || {name:"Unresolved",exact:false}, displayBreeding[index]?.exact && index === 0)}
+          `; }).join("")}
         </div>
       </div>`;
       overlay.querySelector(".da-close")?.addEventListener("click", closePlanner);
@@ -591,11 +466,41 @@
       let selectedArmory = defaultArmory;
       const rewardSelect = overlay.querySelector("#daRewardSelect");
       const refreshRewardOptions = () => {
-        const sequence = selectedArmory === "breeding" ? breeding : assault;
-        const options = rewardOptions(sequence);
+        const options = rewardOptions(window.DoubleArmoryCore.catalogue(data.sides[selectedArmory], selectedChestType,
+          overlay.querySelector('#daIsBonus').checked).map(decorate));
         rewardSelect.innerHTML = options.map(optionMarkup).join("");
         rewardSelect.dataset.armory = selectedArmory;
       };
+      overlay.querySelector('#daIsBonus').addEventListener('change', refreshRewardOptions);
+      overlay.querySelector('#daCaptureFile').addEventListener('change', async event => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        const status = overlay.querySelector('#daImportStatus');
+        if (!playerId) { status.textContent = 'Sign in before importing personal positions.'; return; }
+        status.textContent = 'Reading privately and replaying captured drops…';
+        const worker = new Worker('chest-har-import-worker.js?v=20261008-da-1');
+        const importingPlayer = playerId;
+        const importingState = JSON.stringify(playerState);
+        const importingEvent = eventFingerprint(data);
+        const timeout = setTimeout(() => { worker.terminate(); status.textContent = 'Import timed out. Please try again.'; }, 60000);
+        worker.onerror = () => { clearTimeout(timeout); worker.terminate(); status.textContent = 'The private capture reader could not load.'; };
+        worker.onmessage = async ({data: result}) => {
+          clearTimeout(timeout); worker.terminate();
+          try {
+            if (result.type !== 'success') throw Error(result.message || 'Capture could not be read.');
+            if (await resolvePlayerId() !== importingPlayer) throw Error('Account changed; import cancelled.');
+            if (!overlay.isConnected || eventFingerprint() !== importingEvent || JSON.stringify(playerState) !== importingState)
+              throw Error('The planner changed during import. Please select the capture again.');
+            const prepared = window.DoubleArmoryCore.prepareCapture(data, result);
+            for (const [type, value] of Object.entries(prepared.chests)) value.preferences = playerState.chests[type]?.preferences || {};
+            playerState.chests = { ...playerState.chests, ...prepared.chests };
+            savePlayerState();
+            window.alert(`${prepared.verifiedDrops} captured drops replayed successfully. Your positions have been restored on this device.`);
+            overlay.remove(); open();
+          } catch (error) { status.textContent = error.message; }
+        };
+        worker.postMessage({type:'import',file});
+      });
       overlay.querySelectorAll(".da-armory").forEach(button => {
         button.addEventListener("click", () => {
           selectedArmory = button.dataset.armory;
@@ -606,18 +511,19 @@
         });
       });
       overlay.querySelector("#daRecordButton")?.addEventListener("click", () => {
-        const sequence = selectedArmory === "breeding" ? breeding : assault;
-        const options = rewardOptions(sequence);
+        const options = rewardOptions(window.DoubleArmoryCore.catalogue(data.sides[selectedArmory], selectedChestType,
+          overlay.querySelector('#daIsBonus').checked).map(decorate));
         const reward = options[Number(rewardSelect.value)];
         if (!reward) {
           window.alert("Choose the reward you received first.");
           return;
         }
-        chestState().observations.push({
-          armory: selectedArmory,
-          reward: clone(reward),
-          recordedAt: new Date().toISOString()
-        });
+        const observation = { armory: selectedArmory, isBonus: overlay.querySelector('#daIsBonus').checked,
+          reward: clone(reward), recordedAt: new Date().toISOString() };
+        const proposed = [...chestState().observations, observation];
+        const checked = window.DoubleArmoryCore.solve(data, selectedChestType, proposed, chestState().initialState || {});
+        if (!checked.matched) { window.alert(`Not saved: ${checked.reason} Check the armoury, reward and bonus setting.`); return; }
+        chestState().observations = proposed;
         savePlayerState();
         overlay.remove();
         open();
@@ -631,6 +537,8 @@
       overlay.querySelector("#daResetButton")?.addEventListener("click", () => {
         if (!window.confirm(`Reset your ${chest?.label || selectedChestType} DA progress?`)) return;
         chestState().observations = [];
+        delete chestState().initialState;
+        delete chestState().captureVerified;
         savePlayerState();
         overlay.remove();
         open();
@@ -696,3 +604,4 @@
     installButton
   });
 })(window);
+

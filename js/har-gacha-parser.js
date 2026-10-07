@@ -544,6 +544,12 @@
       count,
 
       rewards,
+      // Keep server draw order separately from aggregated inventory totals.
+      orderedDrops: Array.isArray(response.drops) ? response.drops.map(drop => ({
+        code: String(drop.id || ""),
+        amount: Number(drop.quantity),
+        pool: String(drop.src || "")
+      })).filter(drop => drop.code && Number.isFinite(drop.amount)) : [],
 
       costs,
 

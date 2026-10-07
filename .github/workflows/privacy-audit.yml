@@ -23,9 +23,16 @@ jobs:
           node test-merge-har-validation.cjs
           node test-target-merge.cjs
           node test-mixed-merge.cjs
+      - name: Check Double Armoury sequencing and private import
+        run: |
+          node test-double-armory-shared-counters.cjs
+          node test-chest-har-private-import.cjs
+          node test-har-privacy-boundary.cjs
+          node test-cloud-player-sanitization.cjs
       - name: Check JavaScript syntax
         shell: bash
         run: |
           while IFS= read -r -d '' file; do
             node --check "$file"
           done < <(find . -type f \( -name '*.js' -o -name '*.cjs' -o -name '*.mjs' \) -not -path './.git/*' -print0)
+

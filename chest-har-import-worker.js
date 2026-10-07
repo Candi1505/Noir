@@ -19,11 +19,11 @@ const ChestHarImportWorker = (() => {
     2 * 1024 * 1024;
   const MAX_COMPRESSION_RATIO = 64;
   const PARSER_SCRIPTS = Object.freeze([
-    "event-parser.js?v=20260828-audit-2",
-    "base-adviser-catalog-towers.js?v=20260828-audit-2",
-    "onyx-tower-inventory-bridge.js?v=20260828-audit-2",
-    "har-event-adapter.js?v=20260828-audit-2",
-    "js/har-gacha-parser.js?v=20260828-audit-2"
+    "event-parser.js?v=20261008-da-1",
+    "base-adviser-catalog-towers.js?v=20261008-da-1",
+    "onyx-tower-inventory-bridge.js?v=20261008-da-1",
+    "har-event-adapter.js?v=20261008-da-1",
+    "js/har-gacha-parser.js?v=20261008-da-1"
   ]);
 
   function fail(message) {
@@ -544,6 +544,8 @@ const ChestHarImportWorker = (() => {
           : "json",
       importedAt: new Date().toISOString(),
       diagnostics: {
+        sourceTimestamp: Number.isFinite(Date.parse(diagnostics.sourceTimestamp))
+          ? new Date(diagnostics.sourceTimestamp).toISOString() : null,
         eventName:
           typeof diagnostics.eventName === "string"
             ? diagnostics.eventName.slice(0, 160)

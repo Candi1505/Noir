@@ -228,6 +228,31 @@ class EventParser {
           }
         });
 
+        // Follow nested pools (including current festive-dragon fragments).
+        // A display-name pattern alone is not a complete reward graph.
+        const visitedPools = new Set();
+        const includePool = key => {
+          if (visitedPools.has(key)) return;
+          visitedPools.add(key);
+          if (Array.isArray(params.decks?.[key])) selectedDecks[key] = structuredClone(params.decks[key]);
+          if (params.deck_indices?.[key] !== undefined) selectedIndices[key] = params.deck_indices[key];
+          if (Array.isArray(params.drops?.[key])) {
+            selectedDrops[key] = structuredClone(params.drops[key]);
+            for (const entry of params.drops[key]) if (entry.kind === 'drop') includePool(entry.id);
+          }
+        };
+        keys.forEach(includePool);
+        const regularSpin = (params.spin_types || []).find(spin =>
+          Number(spin.drops?.default?.[definition.mainKey]) > 0 && spin.credit_spin_currency
+        );
+        const bonusSpin = regularSpin && (params.spin_types || []).find(spin =>
+          Number(spin.costOptions?.[regularSpin.credit_spin_currency]) > 0
+        );
+        const bonusEntries = Object.entries(bonusSpin?.drops?.default || {})
+          .filter(([, count]) => Number(count) > 0);
+        const bonusKey = bonusEntries.length === 1 && Number(bonusEntries[0][1]) === 1
+          && selectedDecks[bonusEntries[0][0]] && selectedDrops[bonusEntries[0][0]]
+          ? bonusEntries[0][0] : null;
         const poolKeys = keys.filter(key => key !== definition.mainKey);
         const resolvablePools = poolKeys.filter(key =>
           Array.isArray(params.drops?.[key])
@@ -237,6 +262,7 @@ class EventParser {
           label: definition.label,
           mainKey: definition.mainKey,
           bonusEvery: definition.bonusEvery,
+          bonusKey,
           ready: mainDeck.length > 0 && resolvablePools.length > 0,
           availableKeys: keys
         };
