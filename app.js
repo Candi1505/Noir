@@ -2351,7 +2351,7 @@
           "activeSessionTitle"
         ),
 
-        "No saved predictor progress"
+        window.DoubleArmoryPlanner?.isReady?.() ? "Double Armoury progress" : "No saved predictor progress"
 
       );
 
@@ -2362,7 +2362,7 @@
           "activeSessionText"
         ),
 
-        "Open Chest Command and record rewards to begin."
+        window.DoubleArmoryPlanner?.isReady?.() ? "Open Chest Command → Double Armoury to view your saved rewards and compare both armouries." : "Open Chest Command and record rewards to begin."
 
       );
 
