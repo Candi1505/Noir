@@ -588,6 +588,7 @@
      ========================================================== */
 
   function getEventData() {
+    if (window.OnyxChestContext) return window.OnyxChestContext.getData();
     const liveData =
       window.currentEventData;
 
@@ -6305,3 +6306,4 @@ function inspectGachaHistory(
     getStatus()
   );
 })(window);
+

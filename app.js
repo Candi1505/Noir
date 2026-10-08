@@ -1533,7 +1533,7 @@
               event === "SIGNED_IN" ||
               event === "SIGNED_OUT"
             ) &&
-            nextUserId !== currentUserId
+            nextUserId !== (currentUser?.isDevice ? null : currentUserId)
           ) {
             window.location.reload();
           }
@@ -1577,7 +1577,7 @@
       }
 
 
-      const player =
+      let player =
         await withTimeout(
 
           window
@@ -1591,11 +1591,7 @@
       }
 
       if (!player?.user) {
-        window.NoirAccessControl?.show?.({
-          message:
-            "Sign in or create a player account to enter Onyx Command."
-        });
-        return;
+        player = {user:{id:window.OnyxDevicePlayer.getId(),isDevice:true},isApproved:true};
       }
 
       if (!player?.isApproved) {
@@ -1764,34 +1760,16 @@
         return;
       }
 
-      console.error(
-        "Onyx secure access failed:",
-        error
-      );
-
-
-      updateCloudBadge(
-        "Access unavailable",
-        false
-      );
-
-
-      setText(
-
-        getElement(
-          "loadingStatus"
-        ),
-
-        "Secure access could not be verified"
-
-      );
-
-      window.NoirAccessControl?.show?.({
-        message:
-          "Onyx could not verify secure access. Please try again shortly.",
-        failed: true,
-        signedIn: Boolean(currentUser)
-      });
+      // Public tools remain available when optional account services are offline.
+      // This local identity grants no database or administrator privileges.
+      currentUser = {id:window.OnyxDevicePlayer.getId(),isDevice:true};
+      window.LivePredictorEngine?.setPlayerIdentity?.(currentUser.id);
+      appState = loadLocalState(currentUser.id);
+      applyDefaultChestPreference();
+      updateCloudBadge('Saved on this device',false);
+      accessGranted = true;
+      window.dispatchEvent(new CustomEvent('onyx:player-ready',{detail:{userId:currentUser.id}}));
+      window.ChestPredictorCloud?.load?.().catch(()=>{});
 
     } finally {
 
@@ -2107,7 +2085,7 @@
 
       if (
 
-        currentUser?.id &&
+        currentUser?.id && !currentUser.isDevice &&
 
         window
           .ChestDatabase
@@ -2220,7 +2198,7 @@
     renderHomeScreen();
 
     if (
-      currentUser?.id &&
+      currentUser?.id && !currentUser.isDevice &&
       window.ChestDatabase?.saveProfile
     ) {
       await withTimeout(
@@ -4528,3 +4506,4 @@ function getArmoryPage(position, positionsPerPage = 20) {
   }
 
 })();
+

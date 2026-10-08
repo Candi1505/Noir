@@ -779,6 +779,11 @@ async savePredictor({
 },
 
 async getActivePredictors() {
+  if (window.OnyxDevicePlayer?.isDevice(window.OnyxCommandCore?.getCurrentUserId?.())) {
+    const response = await fetch('https://prjixwuvyhiqzoekoadj.supabase.co/functions/v1/onyx-public-chests');
+    if (!response.ok) throw new Error('Shared chest data is temporarily unavailable.');
+    return (await response.json()).records || [];
+  }
   const supabaseClient =
     window.chestSupabase;
 
@@ -1275,3 +1280,4 @@ async publishLiveEvent(
 console.log(
   "Onyx Command: Database tools loaded."
 );
+

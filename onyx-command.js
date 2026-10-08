@@ -329,6 +329,7 @@
   async function loadCloudState() {
     readLocalState();
     renderKeyProgress();
+    if (window.OnyxDevicePlayer?.isDevice(window.OnyxCommandCore?.getCurrentUserId?.())) return;
     const loader = window.ChestDatabase?.loadOnyxCommandState;
     if (typeof loader !== "function") return;
     try {
@@ -347,6 +348,7 @@
     if (!key) return false;
     localStorage.setItem(key, JSON.stringify(commandState));
     renderKeyProgress();
+    if (window.OnyxDevicePlayer?.isDevice(window.OnyxCommandCore?.getCurrentUserId?.())) return true;
     const saver = window.ChestDatabase?.saveOnyxCommandState;
     if (typeof saver !== "function") return false;
     try {
@@ -1352,3 +1354,4 @@
     install();
   }
 })();
+

@@ -431,7 +431,7 @@
     }
 
     const engine = window.LivePredictorEngine;
-    const rawProgress = engine?.getBonusProgress?.(chestType);
+    const rawProgress = window.DoubleArmoryPlanner?.isReady?.() ? window.DoubleArmoryPlanner.personalForecast(chestType,window.OnyxChestContext?.getArmory?.() || 'assault',1).bonusProgress : engine?.getBonusProgress?.(chestType);
     const progressKnown =
       rawProgress !== null &&
       rawProgress !== undefined &&
@@ -466,6 +466,10 @@
   }
 
   function getBudgetPrediction(chestType, openings) {
+    if (window.DoubleArmoryPlanner?.isReady?.()) {
+      const result=window.DoubleArmoryPlanner.personalForecast(chestType,window.OnyxChestContext?.getArmory?.() || 'assault',Math.min(100,openings));
+      return {...result,predictions:result.predictions.map((r,i)=>({...r,budgetRegularNumber:i+1})),regularOpenings:openings,bonusProgressKnown:result.bonusProgress!==null,limited:result.limited||openings>100};
+    }
     const engine = window.LivePredictorEngine;
     const safeOpenings = Math.max(0, Math.floor(Number(openings) || 0));
 
@@ -523,6 +527,10 @@
   function getVerificationSummary() {
     const summary = {};
     CHEST_ORDER.forEach(chestType => {
+      if(window.DoubleArmoryPlanner?.isReady?.()) {
+        const result=window.DoubleArmoryPlanner.personalForecast(chestType,window.OnyxChestContext?.getArmory?.() || 'assault',1);
+        summary[chestType]={recorded:result.observations||0,solved:result.solved,confidence:0};return;
+      }
       let observations = [];
       let confidence = 0;
       try {
@@ -747,7 +755,7 @@
               <p class="eyebrow">YOUR SOLVED SEQUENCE</p>
               <h3>Predicted rewards</h3>
             </div>
-            <span>100% confidence</span>
+            <span>Model forecast</span>
           </div>
           <p class="nct-help">
             These come from your saved ${meta.label} prediction—not general
@@ -755,13 +763,12 @@
           </p>
           ${!prediction.bonusProgressKnown ? `
             <p class="nct-budget-warning">
-              Enter your in-game bonus progress in Live Predictor to include
-              the exact bonus-chest position.
+              Enter your in-game bonus meter in the sequencer. These regular-opening forecasts assume no bonus claims in between.
             </p>
           ` : ""}
           ${prediction.limited ? `
             <p class="nct-budget-warning">
-              Onyx Command displays the first 100 regular chest predictions at a time.
+              The list stops at uncertainty, the next known bonus boundary, or 100 regular openings. Record bonus claims and armoury switches to recalculate.
             </p>
           ` : ""}
           <div class="nct-predicted-list">
@@ -1025,6 +1032,7 @@
       </div>
     `;
 
+    window.OnyxChestContext?.mountSelector?.(overlay, render);
     overlay.querySelector("#nctClose")?.addEventListener("click", close);
     overlay.querySelectorAll("[data-nct-view]").forEach(button => {
       button.addEventListener("click", () => {
@@ -1245,3 +1253,4 @@
     install();
   }
 })(window, document);
+

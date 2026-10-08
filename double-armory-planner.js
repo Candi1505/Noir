@@ -158,12 +158,14 @@
   }
 
   async function resolvePlayerId() {
+    const current = window.OnyxCommandCore?.getCurrentUserId?.();
+    if (current) return current;
     try {
       const result = await window.chestSupabase?.auth?.getSession?.();
-      return result?.data?.session?.user?.id || null;
+      return result?.data?.session?.user?.id || window.OnyxDevicePlayer?.getId?.() || null;
     } catch (error) {
       console.warn("[Double Armory] Could not read the signed-in player.", error);
-      return null;
+      return window.OnyxDevicePlayer?.getId?.() || null;
     }
   }
 
@@ -181,7 +183,10 @@
       // Migrate matching progress from the earlier player-only key, without
       // deleting or overwriting it. Other events retain their own saved state.
       const previous = JSON.parse(localStorage.getItem(key) || "{}");
-      if (previous.eventFingerprint === legacyEventFingerprint(data)) {
+      const bundled = window.OnyxDoubleArmoryEvent;
+      const sameBundledEvent = bundled && eventFingerprint(bundled) === fingerprint;
+      if (previous.eventFingerprint === legacyEventFingerprint(data) ||
+          (sameBundledEvent && previous.eventFingerprint === legacyEventFingerprint(bundled))) {
         const migrated = {eventFingerprint:fingerprint,chests:previous.chests || {}};
         try { localStorage.setItem(`${key}:${fingerprint}`, JSON.stringify(migrated)); } catch (_) { /* Keep usable progress in memory. */ }
         return migrated;
@@ -236,7 +241,7 @@
   }
 
   function getData() {
-    const event = window.LivePredictorEngine?.getEventData?.() || window.currentEventData;
+    const event = window.OnyxChestContext?.getRaw?.() || window.LivePredictorEngine?.getEventData?.() || window.currentEventData;
     const bundled = window.OnyxDoubleArmoryEvent;
     const now = Date.now();
     if (bundled && now >= Date.parse(bundled.validFrom) && now < Date.parse(bundled.validUntil)
@@ -290,6 +295,20 @@
     return { ...result, forecasts, candidates: result.states || [],
       solved: forecasts.assault[0]?.exact === true && forecasts.breeding[0]?.exact === true,
       nextIndex: 0 };
+  }
+
+  function personalForecast(type, armory, count = 20) {
+    const identity = window.OnyxCommandCore?.getCurrentUserId?.() || playerId || window.OnyxDevicePlayer?.getId?.();
+    if (!identity) return {predictions:[],solved:false,bonusProgress:null};
+    playerId = identity;
+    const saved = loadPlayerState().chests[type] || emptyChestState();
+    const data = getData();
+    const solved = window.DoubleArmoryCore.solve(data,type,saved.observations,saved.initialState || {});
+    const progress = Number.isInteger(saved.bonusProgress) ? saved.bonusProgress : null;
+    const cadence = data?.sides?.[armory]?.chests?.[type]?.bonusEvery || 30;
+    const limit = progress === null ? count : Math.min(count,cadence-progress);
+    const predictions = window.DoubleArmoryCore.forecast(data,type,solved,armory,limit).filter(r=>r.exact).map(decorate);
+    return {predictions,solved:predictions.length>0,bonusProgress:progress,observations:saved.observations.length,limited:predictions.length<count};
   }
 
   function preferenceFor(reward) {
@@ -390,7 +409,8 @@
     }).join("");
   }
 
-  async function open() {
+  async function open(chestType) {
+    if (typeof chestType === "string") selectedChestType = chestType;
     if (opening) return;
     opening = true;
     try {
@@ -415,9 +435,20 @@
       const solution = solvePlayerPosition(assault, breeding);
       const displayAssault = solution.forecasts.assault;
       const displayBreeding = solution.forecasts.breeding;
+      const sigilSummary = rewards => {
+        const resolved = rewards.filter(reward => reward.exact);
+        if (!resolved.length) return 'Unresolved';
+        const total = resolved.reduce((sum,reward) => sum + (/sigil/i.test(reward.code || '') ? Number(reward.amount || 0) : 0),0);
+        return `${formatNumber(total)} sigils across ${resolved.length} resolved regular openings`;
+      };
       
       const strategy = recommendation(displayAssault, displayBreeding, solution);
       const observations = chestState().observations;
+      const knownCounters = Object.keys(data.sides.assault.decks).sort().map(key => {
+        const values = solution.states?.map(state => state[key]);
+        const known = values?.length && values.every(value => value?.length === 1 && value[0] === values[0][0]);
+        return known ? `<div>${escapeHTML(key)}: <strong>${values[0][0]-1}</strong></div>` : '';
+      }).filter(Boolean).join('');
       const defaultArmory = "assault";
       const initialOptions = rewardOptions(assault);
       const chest = data.sides.assault?.chests?.[selectedChestType];
@@ -435,9 +466,10 @@
         <section class="da-solver">
           <p class="da-eyebrow">PERSONAL DA PREDICTOR</p>
           <h2>${solution.solved ? "Next rewards resolved" : "Locate your position"}</h2>
-          <div class="da-note">Record every opening in order, including bonus claims. Bulk result cards may be sorted: import a capture for batch order. Progress stays with the signed-in player on this device.</div>
+          <div class="da-note">Record every opening in order, including bonus claims. Bulk result cards may be sorted: import a capture for batch order. Progress is saved separately for your profile on this browser/device.</div>
           <details><summary>Optional: restore your own position from a capture</summary><label class="da-field"><span>YOUR PRIVATE CAPTURE (.HAR OR .ZIP)</span><input id="daCaptureFile" type="file" accept=".har,.json,.zip"><span id="daImportStatus" role="status">Only use your own capture here. This restores your position on this device and does not update other players.</span></label></details>
           <label class="da-field"><span><input id="daIsBonus" type="checkbox"> This was a bonus claim</span></label>
+          <label class="da-field"><span>Your current in-game bonus meter (optional, 0–${(chest?.bonusEvery || 30)-1})</span><input id="daBonusProgress" class="da-select" type="number" min="0" max="${(chest?.bonusEvery || 30)-1}" value="${Number.isInteger(chestState().bonusProgress)?chestState().bonusProgress:''}" placeholder="Unknown"><span>Enter the meter shown in your game. It is never copied from the shared import.</span></label>
           <div class="da-solver-grid">
             <div class="da-field"><span>ARMORY OPENED</span><div class="da-armory-choice"><button class="da-armory" type="button" data-armory="assault" aria-selected="true">◆ Assault</button><button class="da-armory" type="button" data-armory="breeding" aria-selected="false">✦ Breeding</button></div></div>
             <label class="da-field"><span>REWARD RECEIVED</span><select id="daRewardSelect" class="da-select">${initialOptions.map(optionMarkup).join("")}</select></label>
@@ -450,11 +482,13 @@
           </div>
           <div class="da-history">${observations.length ? observations.map((observation, index) => `<span class="da-observation">${index + 1}${observation.isBonus ? " bonus" : ""}. ${observation.armory === "assault" ? "◆" : "✦"} ${escapeHTML(observation.reward.name || humaniseCode(observation.reward.code))}${observation.reward.amount === null ? "" : ` ${formatNumber(observation.reward.amount)}`}</span>`).join("") : `<span class="da-note">No DA rewards recorded yet.</span>`}</div>
           <div class="da-controls"><button id="daUndoButton" class="da-action da-action-secondary" type="button" ${observations.length ? "" : "disabled"}>Undo last</button><button id="daResetButton" class="da-action da-action-secondary" type="button" ${observations.length ? "" : "disabled"}>Reset</button></div>
+          <details><summary>My resolved counters for the spreadsheet</summary><p class="da-note">Copy these values into the matching Starting positions rows. They represent your last drawn counters modulo the shared pool period. Leave other pools blank. Update them after any further opening.</p>${knownCounters || '<p class="da-note">No individual pool counters are fully resolved yet.</p>'}</details>
         </section>
         <section class="da-summary">
           <div class="da-recommend">${escapeHTML(strategy.title)}</div>
           <div class="da-note">${escapeHTML(strategy.detail)}</div>
           <div class="da-note">Each column assumes all following regular openings use that armoury, with no bonus claims in between. Switching armouries or claiming a bonus changes the later rows; record it to recalculate. The list stops when the next reward is ambiguous.</div>
+          <div class="da-note">Assault: ${sigilSummary(displayAssault)}. Breeding: ${sigilSummary(displayBreeding)}. These totals cover only the displayed rows and exclude bonus claims.</div>
           <div class="da-key" aria-label="Reward rarity colour key">
             <span class="da-key-item"><i class="da-key-swatch da-key-epic"></i>Violet — Epic</span>
             <span class="da-key-item"><i class="da-key-swatch da-key-legendary"></i>Gold — Legendary</span>
@@ -490,6 +524,11 @@
         rewardSelect.dataset.armory = selectedArmory;
       };
       overlay.querySelector('#daIsBonus').addEventListener('change', refreshRewardOptions);
+      overlay.querySelector('#daBonusProgress').addEventListener('change',event=>{
+        const text=event.target.value.trim(),value=Number(text),cadence=chest?.bonusEvery || 30;
+        if(text!==''&&(!Number.isInteger(value)||value<0||value>=cadence)){window.alert('Enter the bonus meter shown in your game.');return;}
+        chestState().bonusProgress=text===''?null:value;savePlayerState();
+      });
       overlay.querySelector('#daCaptureFile').addEventListener('change', async event => {
         const file = event.target.files?.[0];
         if (!file) return;
@@ -537,17 +576,19 @@
           return;
         }
         const observation = { armory: selectedArmory, isBonus: overlay.querySelector('#daIsBonus').checked,
-          reward: clone(reward), recordedAt: new Date().toISOString() };
+          reward: clone(reward), previousBonusProgress:chestState().bonusProgress ?? null, recordedAt: new Date().toISOString() };
         const proposed = [...chestState().observations, observation];
         const checked = window.DoubleArmoryCore.solve(data, selectedChestType, proposed, chestState().initialState || {});
         if (!checked.matched) { window.alert(`Not saved: ${checked.reason} Check the armoury, reward and bonus setting.`); return; }
         chestState().observations = proposed;
+        if(!observation.isBonus&&Number.isInteger(chestState().bonusProgress)) chestState().bonusProgress=(chestState().bonusProgress+1)%(chest?.bonusEvery || 30);
         savePlayerState();
         overlay.remove();
         open();
       });
       overlay.querySelector("#daUndoButton")?.addEventListener("click", () => {
-        chestState().observations.pop();
+        const removed=chestState().observations.pop();
+        chestState().bonusProgress=removed?.previousBonusProgress ?? null;
         savePlayerState();
         overlay.remove();
         open();
@@ -557,6 +598,7 @@
         chestState().observations = [];
         delete chestState().initialState;
         delete chestState().captureVerified;
+        delete chestState().bonusProgress;
         savePlayerState();
         overlay.remove();
         open();
@@ -618,6 +660,7 @@
     buildSequence: (armoryType, chestType) =>
       buildSequence(getData()?.sides?.[armoryType], chestType),
     getPlayerState: () => clone(playerState),
+    personalForecast,
     open,
     installButton
   });

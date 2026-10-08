@@ -86,9 +86,9 @@
   <section id="accessGate" class="access-gate hidden">
     <div class="access-gate-card glass-panel">
       <p class="eyebrow">ONYX COMMAND</p>
-      <h1>Player access</h1>
+      <h1>Account access</h1>
       <p id="accessGateMessage" class="muted-text">
-        Sign in or create a player account to enter Onyx Command.
+        Optional account access. Player tools work without signing in.
       </p>
 
       <div id="accessGateCredentials" class="profile-form">
@@ -195,7 +195,7 @@
       </div>
 
       <p class="access-gate-note">
-        Email and password are required. New accounts are player-only and cannot publish event data.
+        Player tools require no login. Account access is optional; publishing requires an administrator account.
       </p>
     </div>
   </section>
@@ -1567,7 +1567,8 @@
   =========================================== -->
 
 <script src="supabase.js?v=20260828-audit-2"></script>
-<script src="database.js?v=20260922-atlas-account-sync-1"></script>
+<script src="player-device-profile.js?v=20261008-public-1"></script>
+<script src="database.js?v=20261008-public-1"></script>
 <script src="access-control.js?v=20260828-audit-2"></script>
 
 <script src="predictor-cloud.js?v=20260828-audit-2"></script>
@@ -1576,14 +1577,16 @@
 <script src="js/har-gacha-parser.js?v=20261008-da-2"></script>
 <script src="event-import.js?v=20260828-audit-2"></script>
 <script src="admin-event-publisher.js?v=20260828-audit-2"></script>
-<script src="live-predictor-engine.js?v=20260828-first-run-1"></script>
-<script src="live-predictor-ui.js?v=20260828-first-run-1"></script>
-  <script src="chest-drop-rates.js?v=20260828-audit-2"></script>
-  <script src="chest-planner.js?v=20260828-audit-2"></script>
-  <script src="noir-chest-tools.js?v=20260828-audit-2"></script>
+<script src="current-chest-event-data.js?v=20261008-public-1"></script>
+<script src="chest-event-context.js?v=20261008-public-1"></script>
+<script src="live-predictor-engine.js?v=20261008-public-1"></script>
+<script src="live-predictor-ui.js?v=20261008-public-1"></script>
+  <script src="chest-drop-rates.js?v=20261008-public-1"></script>
+  <script src="chest-planner.js?v=20261008-public-1"></script>
+  <script src="noir-chest-tools.js?v=20261008-public-1"></script>
   <script src="double-armory-core.js?v=20261008-da-2"></script>
 <script src="double-armory-event-data.js?v=20261008-da-2"></script>
-<script src="double-armory-planner.js?v=20261008-da-3"></script>
+<script src="double-armory-planner.js?v=20261008-public-1"></script>
 
 <script src="predictor-engine.js?v=20260828-audit-2"></script>
 
@@ -1593,7 +1596,7 @@
 <script src="base-adviser-catalog-people.js?v=20260828-audit-2"></script>
   <script src="onyx-rider-intelligence-data.js?v=20260828-audit-2"></script>
   <script src="onyx-tower-inventory-bridge.js?v=20260828-audit-2"></script>
-  <script src="app.js?v=20260828-audit-2"></script>
+  <script src="app.js?v=20261008-public-1"></script>
   <script src="onyx-war-dragons-api.js?v=20260922-name-retry-1"></script>
   <script src="onyx-war-dragons-auth.js?v=20260923-shared-atlas-1"></script>
   <script src="onyx-atlas-castle-hunter-core.js?v=20260922-name-queue-1"></script>
@@ -1602,7 +1605,7 @@
   <script src="onyx-base-command.js?v=20260925-mixed-merge-3"></script>
   <script src="onyx-atlas-command.js?v=20260923-shared-atlas-1"></script>
   <script src="onyx-season-data.js?v=20260828-audit-2"></script>
-  <script src="onyx-command.js?v=20260828-help-tidy-1"></script>
+  <script src="onyx-command.js?v=20261008-public-1"></script>
 
 </body>
 </html>

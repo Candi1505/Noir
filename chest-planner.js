@@ -650,7 +650,8 @@
           </div>
         </div>
       `;
-      attachEvents();
+      window.OnyxChestContext?.mountSelector?.(overlay, render);
+    attachEvents();
       return;
     }
 
@@ -1196,3 +1197,4 @@
     install();
   }
 })(window, document);
+

@@ -30,6 +30,8 @@ jobs:
           node test-chest-har-private-import.cjs
           node test-har-privacy-boundary.cjs
           node test-cloud-player-sanitization.cjs
+          node test-public-chest-access.cjs
+          node test-current-chest-context.cjs
       - name: Check JavaScript syntax
         shell: bash
         run: |

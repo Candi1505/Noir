@@ -156,6 +156,7 @@
   }
 
   function getEventData() {
+    if (window.OnyxChestContext) return window.OnyxChestContext.getData();
     const direct =
       window.currentEventData;
 
@@ -1013,7 +1014,8 @@
           </div>
         </div>
       `;
-      attachOverlayEvents();
+      window.OnyxChestContext?.mountSelector?.(overlay, render);
+    attachOverlayEvents();
       return;
     }
 
@@ -1741,3 +1743,4 @@
     install();
   }
 })(window, document);
+

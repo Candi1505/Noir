@@ -6100,6 +6100,10 @@
   function open(
     chestType = null
   ) {
+    if (window.DoubleArmoryPlanner?.isReady?.()) {
+      window.DoubleArmoryPlanner.open(typeof chestType === 'string' ? chestType : undefined);
+      return;
+    }
     closeLegacyPredictor();
 
     if (
@@ -7497,3 +7501,4 @@
       render
     });
 })(window);
+
