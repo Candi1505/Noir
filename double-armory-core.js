@@ -130,7 +130,14 @@
         const armory = ['assault', 'breeding'].find(side => data.sides[side].eventKey === opening.eventId);
         if (!armory || opening.responseSuccess === false) continue;
         if (opening.orderedDrops?.length !== opening.count) throw Error('A batch has incomplete draw order; it cannot anchor the sequence.');
-        for (const reward of opening.orderedDrops) observations.push({ armory, isBonus: opening.isBonus, reward, recordedAt: opening.timestamp });
+        for (const reward of opening.orderedDrops) {
+          const definitions = data.sides[armory].drops[reward.pool] || [];
+          const useAlias = reward.canonicalCode && !definitions.some(def => def.id === reward.code)
+            && definitions.some(def => def.id === reward.canonicalCode);
+          observations.push({ armory, isBonus: opening.isBonus,
+            reward: useAlias ? { ...reward, code: reward.canonicalCode, reportedCode: reward.code } : reward,
+            recordedAt: opening.timestamp });
+        }
       }
       if (!observations.length) continue;
       const solution = solve(data, type, observations, nextPositions);

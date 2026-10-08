@@ -19,11 +19,11 @@ const ChestHarImportWorker = (() => {
     2 * 1024 * 1024;
   const MAX_COMPRESSION_RATIO = 64;
   const PARSER_SCRIPTS = Object.freeze([
-    "event-parser.js?v=20261008-da-1",
-    "base-adviser-catalog-towers.js?v=20261008-da-1",
-    "onyx-tower-inventory-bridge.js?v=20261008-da-1",
-    "har-event-adapter.js?v=20261008-da-1",
-    "js/har-gacha-parser.js?v=20261008-da-1"
+    "event-parser.js?v=20261008-da-2",
+    "base-adviser-catalog-towers.js?v=20261008-da-2",
+    "onyx-tower-inventory-bridge.js?v=20261008-da-2",
+    "har-event-adapter.js?v=20261008-da-2",
+    "js/har-gacha-parser.js?v=20261008-da-2"
   ]);
 
   function fail(message) {

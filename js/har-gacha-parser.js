@@ -774,6 +774,25 @@
       MAX_HAR_ENTRIES
     );
 
+    // Level-scaled food packs have a generic deck ID and a concrete claim ID.
+    // Only accept aliases explicitly paired by the game's prize metadata.
+    const foodAliases = new Map();
+    const inspectPrize = value => {
+      if (!value || typeof value !== 'object') return;
+      const logged = Object.entries(value.meta?.item_to_log || {}).filter(([id]) => /^foodConsumable\d+$/.test(id));
+      const actual = Object.entries(value.consumables || {}).filter(([id]) => /^foodPack_\d+$/.test(id));
+      if (logged.length === 1 && actual.length === 1 && Number(logged[0][1]) > 0 && Number(logged[0][1]) === Number(actual[0][1])) {
+        const [code] = actual[0], [generic] = logged[0];
+        if (!foodAliases.has(code)) foodAliases.set(code, generic);
+        else if (foodAliases.get(code) !== generic) foodAliases.set(code, null);
+      }
+      for (const child of Object.values(value)) if (child && typeof child === 'object') inspectPrize(child);
+    };
+    for (const entry of scannedEntries) {
+      if (!/\/about_v2(?:\?|$)/i.test(String(entry?.request?.url || ''))) continue;
+      try { inspectPrize(JSON.parse(getResponseText(entry))); } catch (_) { /* Unverified aliases stay unresolved. */ }
+    }
+
     for (
       let entryIndex = 0;
       entryIndex < scannedEntries.length;
@@ -830,6 +849,11 @@
 
       return leftTime - rightTime;
     });
+
+    for (const opening of openings) for (const drop of opening.orderedDrops) {
+      const canonicalCode = foodAliases.get(drop.code);
+      if (canonicalCode) drop.canonicalCode = canonicalCode;
+    }
 
     const totalRegularChestsOpened =
       openings.reduce(

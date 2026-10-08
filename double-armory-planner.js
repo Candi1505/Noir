@@ -35,6 +35,9 @@
 
   const REWARD_NAMES = {
     breedingToken: "Egg Tokens",
+    foodConsumable2: "Food Pack (level-scaled)",
+    foodPack_460000: "460,000 Food Pack",
+    foodPack_1400000: "1,400,000 Food Pack",
     elementalEmber: "Elemental Embers",
     electrumBar: "Electrum Bars",
     urbanflareSigil: "Urbanflare Sigil",
@@ -478,7 +481,7 @@
         const status = overlay.querySelector('#daImportStatus');
         if (!playerId) { status.textContent = 'Sign in before importing personal positions.'; return; }
         status.textContent = 'Reading privately and replaying captured drops…';
-        const worker = new Worker('chest-har-import-worker.js?v=20261008-da-1');
+        const worker = new Worker('chest-har-import-worker.js?v=20261008-da-2');
         const importingPlayer = playerId;
         const importingState = JSON.stringify(playerState);
         const importingEvent = eventFingerprint(data);
