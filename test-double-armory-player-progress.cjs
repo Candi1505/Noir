@@ -36,6 +36,10 @@ async function record(index){const el=nodes.get('noirDoubleArmoryOverlay');el.qu
  const legacy=JSON.stringify({eventFingerprint:(hash>>>0).toString(36),chests:{platinum:{observations:[{armory:'assault',reward:{code:'B',amount:1}}],preferences:{}}}});
  storage.set('chestCompanionDoubleArmoryV2:legacy-player',legacy);user='legacy-player';await DoubleArmoryPlanner.open();assert.equal(obs()[0].reward.code,'B');
  assert.equal(storage.get('chestCompanionDoubleArmoryV2:legacy-player'),legacy);
+ user='breeding-player';storage.set('chestCompanionDoubleArmoryV2:breeding-player',legacy.replace('"armory":"assault"','"armory":"breeding"'));
+ await DoubleArmoryPlanner.open();assert.match(nodes.get('noirDoubleArmoryOverlay').innerHTML,/data-armory="breeding" aria-selected="true"/);
+ await record(2);assert.equal(obs()[1].armory,'breeding');assert.equal(obs()[1].reward.code,'C');
+ user='legacy-player';
  shared.eventName='Another display title';await DoubleArmoryPlanner.open();assert.equal(obs()[0].reward.code,'B');
  assert.equal(alerts.length,0);assert(storage.size>=3);
  console.log('Double Armoury player isolation, shared-deck independence, metadata refresh and event progress preservation passed.');

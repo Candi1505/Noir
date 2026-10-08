@@ -449,8 +449,8 @@
         const known = values?.length && values.every(value => value?.length === 1 && value[0] === values[0][0]);
         return known ? `<div>${escapeHTML(key)}: <strong>${values[0][0]-1}</strong></div>` : '';
       }).filter(Boolean).join('');
-      const defaultArmory = "assault";
-      const initialOptions = rewardOptions(assault);
+      const defaultArmory = observations[observations.length-1]?.armory === 'breeding' ? 'breeding' : 'assault';
+      const initialOptions = rewardOptions(defaultArmory === 'breeding' ? breeding : assault);
       const chest = data.sides.assault?.chests?.[selectedChestType];
       const overlay = document.createElement("div");
       overlay.id = OVERLAY_ID;
@@ -471,7 +471,7 @@
           <label class="da-field"><span><input id="daIsBonus" type="checkbox"> This was a bonus claim</span></label>
           <label class="da-field"><span>Your current in-game bonus meter (optional, 0–${(chest?.bonusEvery || 30)-1})</span><input id="daBonusProgress" class="da-select" type="number" min="0" max="${(chest?.bonusEvery || 30)-1}" value="${Number.isInteger(chestState().bonusProgress)?chestState().bonusProgress:''}" placeholder="Unknown"><span>Enter the meter shown in your game. It is never copied from the shared import.</span></label>
           <div class="da-solver-grid">
-            <div class="da-field"><span>ARMORY OPENED</span><div class="da-armory-choice"><button class="da-armory" type="button" data-armory="assault" aria-selected="true">◆ Assault</button><button class="da-armory" type="button" data-armory="breeding" aria-selected="false">✦ Breeding</button></div></div>
+            <div class="da-field"><span>ARMORY OPENED</span><div class="da-armory-choice"><button class="da-armory" type="button" data-armory="assault" aria-selected="${defaultArmory === 'assault'}">◆ Assault</button><button class="da-armory" type="button" data-armory="breeding" aria-selected="${defaultArmory === 'breeding'}">✦ Breeding</button></div></div>
             <label class="da-field"><span>REWARD RECEIVED</span><select id="daRewardSelect" class="da-select">${initialOptions.map(optionMarkup).join("")}</select></label>
             <button id="daRecordButton" class="da-action" type="button">Record reward</button>
           </div>
