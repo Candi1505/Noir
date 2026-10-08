@@ -26,6 +26,7 @@ jobs:
       - name: Check Double Armoury sequencing and private import
         run: |
           node test-double-armory-shared-counters.cjs
+          node test-double-armory-player-progress.cjs
           node test-chest-har-private-import.cjs
           node test-har-privacy-boundary.cjs
           node test-cloud-player-sanitization.cjs

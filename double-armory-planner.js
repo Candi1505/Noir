@@ -132,7 +132,7 @@
     return (hash >>> 0).toString(36);
   }
 
-  function eventFingerprint(data = getData()) {
+  function legacyEventFingerprint(data = getData()) {
     if (!data) return "none";
     const completeSide = side => ({
       decks: side?.decks || {},
@@ -146,6 +146,15 @@
       breeding: completeSide(data.sides?.breeding),
       chestTypes: data.availableChestTypes
     }));
+  }
+
+  function eventFingerprint(data = getData()) {
+    if (!data) return 'none';
+    const ordered = object => Object.fromEntries(Object.keys(object || {}).sort().map(key => [key, object[key]]));
+    const side = value => ({eventKey:value?.eventKey, decks:ordered(value?.decks),
+      drops:ordered(Object.fromEntries(Object.entries(value?.drops || {}).map(([key, drops]) =>
+        [key, drops.map(drop => ({id:drop.id,kind:drop.kind,mu:drop.mu,sdev:drop.sdev || 0}))])))});
+    return hashText(JSON.stringify({assault:side(data.sides?.assault),breeding:side(data.sides?.breeding)}));
   }
 
   async function resolvePlayerId() {
@@ -167,11 +176,17 @@
     if (!playerId) return { eventFingerprint: fingerprint, chests: {} };
     const key = `${STORAGE_PREFIX}:${playerId}`;
     try {
-      const saved = JSON.parse(localStorage.getItem(key) || "{}");
-      if (saved.eventFingerprint !== fingerprint) {
-        return { eventFingerprint: fingerprint, chests: {} };
+      const saved = JSON.parse(localStorage.getItem(`${key}:${fingerprint}`) || "null");
+      if (saved?.eventFingerprint === fingerprint) return {eventFingerprint:fingerprint,chests:saved.chests || {}};
+      // Migrate matching progress from the earlier player-only key, without
+      // deleting or overwriting it. Other events retain their own saved state.
+      const previous = JSON.parse(localStorage.getItem(key) || "{}");
+      if (previous.eventFingerprint === legacyEventFingerprint(data)) {
+        const migrated = {eventFingerprint:fingerprint,chests:previous.chests || {}};
+        try { localStorage.setItem(`${key}:${fingerprint}`, JSON.stringify(migrated)); } catch (_) { /* Keep usable progress in memory. */ }
+        return migrated;
       }
-      return { eventFingerprint: fingerprint, chests: saved.chests || {} };
+      return { eventFingerprint: fingerprint, chests: {} };
     } catch (error) {
       console.warn("[Double Armory] Player progress could not be loaded.", error);
       return { eventFingerprint: fingerprint, chests: {} };
@@ -181,7 +196,7 @@
   function savePlayerState() {
     if (!playerState || !playerId) return;
     try {
-      localStorage.setItem(`${STORAGE_PREFIX}:${playerId}`, JSON.stringify(playerState));
+      localStorage.setItem(`${STORAGE_PREFIX}:${playerId}:${playerState.eventFingerprint}`, JSON.stringify(playerState));
     } catch (error) {
       console.warn("[Double Armory] Player progress could not be saved.", error);
     }
@@ -287,7 +302,7 @@
 
   function recommendation(assault, breeding, solution) {
     if (!solution.matched) return { title: 'Sequence needs checking', detail: solution.reason };
-    if (!chestState().observations.length) return { title: 'Import your capture or record a reward', detail: 'Your position is unknown. No importing administrator position is used for you.' };
+    if (!chestState().observations.length) return { title: 'Record your rewards to locate your position', detail: 'The shared event decks are already loaded. Record your own drops in order; you do not need a capture. Your position is separate from every other player’s.' };
     if (!solution.solved) return { title: 'Next reward is not yet resolved for both armouries', detail: 'Only rewards agreed on by every remaining pool position are shown. More consecutive observations may narrow the possibilities.' };
     const left = assault[0], right = breeding[0];
     if (preferenceFor(left) === 'never' && preferenceFor(right) === 'never') return { title: 'Both next rewards are on your Never list', detail: 'Neither armoury is recommended.' };
@@ -421,7 +436,7 @@
           <p class="da-eyebrow">PERSONAL DA PREDICTOR</p>
           <h2>${solution.solved ? "Next rewards resolved" : "Locate your position"}</h2>
           <div class="da-note">Record every opening in order, including bonus claims. Bulk result cards may be sorted: import a capture for batch order. Progress stays with the signed-in player on this device.</div>
-          <label class="da-field"><span>PRIVATE CAPTURE (.HAR OR .ZIP)</span><input id="daCaptureFile" type="file" accept=".har,.json,.zip"><span id="daImportStatus" role="status">Verified positions are restored locally after replaying your captured drops.</span></label>
+          <details><summary>Optional: restore your own position from a capture</summary><label class="da-field"><span>YOUR PRIVATE CAPTURE (.HAR OR .ZIP)</span><input id="daCaptureFile" type="file" accept=".har,.json,.zip"><span id="daImportStatus" role="status">Only use your own capture here. This restores your position on this device and does not update other players.</span></label></details>
           <label class="da-field"><span><input id="daIsBonus" type="checkbox"> This was a bonus claim</span></label>
           <div class="da-solver-grid">
             <div class="da-field"><span>ARMORY OPENED</span><div class="da-armory-choice"><button class="da-armory" type="button" data-armory="assault" aria-selected="true">◆ Assault</button><button class="da-armory" type="button" data-armory="breeding" aria-selected="false">✦ Breeding</button></div></div>
